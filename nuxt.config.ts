@@ -1,4 +1,16 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+
+// Calculate baseURL: defaults to '/staging-yberry.store/' for GitHub Pages, or '/' for local dev / root domains
+const getBaseURL = () => {
+  if (process.env.NUXT_APP_BASE_URL) return process.env.NUXT_APP_BASE_URL
+  if (process.env.NODE_ENV === 'development') return '/'
+  if (process.env.GITHUB_REPOSITORY) {
+    const repo = process.env.GITHUB_REPOSITORY.split('/')[1]
+    return `/${repo}/`
+  }
+  return '/staging-yberry.store/'
+}
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
@@ -29,7 +41,7 @@ export default defineNuxtConfig({
     }
   },
   app: {
-    baseURL: process.env.NUXT_APP_BASE_URL || '/',
+    baseURL: getBaseURL(),
     head: {
       title: 'Ystore | Premium Toys & Everyday Joys',
       meta: [
