@@ -48,10 +48,6 @@
       <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div class="max-w-2xl">
-            <div class="inline-flex items-center gap-2 bg-neutral-800/90 border border-neutral-700 text-[#F4EB6A] text-xs font-semibold px-3 py-1 rounded-full mb-3">
-              <span class="w-1.5 h-1.5 rounded-full bg-[#F4EB6A] animate-pulse"></span>
-              <span>Curated Ystore Collection</span>
-            </div>
             <h1 class="text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-white mb-3">
               {{ currentCategoryMeta.title }}
             </h1>
