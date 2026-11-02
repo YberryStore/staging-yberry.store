@@ -1,0 +1,24 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSuperAdmin() {
+      return request.auth != null && (
+        request.auth.token.admin == true ||
+        request.auth.token.role == 'super_admin' ||
+        (request.auth.token.email == 'info@yberry.co.za' && request.auth.token.email_verified == true)
+      );
+    }
+
+    // User profile avatars & user-uploaded content
+    match /users/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && (request.auth.uid == userId || isSuperAdmin());
+    }
+
+    // Storefront images & content (products, categories, specials, blog, banners, media)
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+  }
+}

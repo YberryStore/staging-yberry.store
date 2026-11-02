@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSuperAdmin() {
+      return request.auth != null && (
+        request.auth.token.admin == true ||
+        request.auth.token.role == 'super_admin' ||
+        (request.auth.token.email == 'info@yberry.co.za' && request.auth.token.email_verified == true)
+      );
+    }
+
+    // 1. Public Storefront Catalog (Public read, Super Admin write)
+    match /products/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    match /categories/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    match /collections/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    match /banners/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    match /blogs/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    match /discounts/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // 2. Public Store Configuration (Gateway enabled status, public keys, EFT deposit instructions)
+    match /settings/public_config {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // 3. User Accounts (Users can only read & edit their own profile; Super Admin has full access)
+    match /users/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isSuperAdmin());
+      allow create, update: if request.auth != null && (request.auth.uid == userId || isSuperAdmin());
+      allow delete: if isSuperAdmin();
+    }
+
+    // 4. Customer Orders (POPIA Protected)
+    // - Customers and guests can submit new orders at checkout
+    // - Authenticated users can only read their own orders (matched by userId)
+    // - Only Super Admin can view all orders, change status, or delete orders
+    match /orders/{orderId} {
+      allow create: if request.resource.data.orderNumber is string
+                    && request.resource.data.total is number;
+      allow read: if isSuperAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // 5. Confidential Financial & Business Records (STRICTLY Super Admin Only)
+    match /settings/payments {
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /admin_users/{docId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /purchase_orders/{docId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /customer_segments/{docId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    // Default deny for all other collections
+    match /{document=**} {
+      allow read, write: if isSuperAdmin();
+    }
+  }
+}
