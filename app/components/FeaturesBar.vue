@@ -10,7 +10,7 @@
           <!-- Feature Icon Box using provided SVG -->
           <div class="w-12 h-12 sm:w-13 sm:h-13 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-200">
             <img
-              :src="feature.icon"
+              :src="useAsset(feature.icon)"
               :alt="feature.title"
               class="w-full h-full object-contain"
               loading="lazy"

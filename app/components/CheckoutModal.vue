@@ -438,7 +438,7 @@
                 >
                   <div class="flex items-center gap-3">
                     <div class="relative w-12 h-12 rounded-xl overflow-hidden bg-white border border-neutral-200 shrink-0">
-                      <img :src="item.image || '/images/prod-robot.jpg'" :alt="item.name" class="w-full h-full object-cover" />
+                      <img :src="item.image || useAsset('/images/prod-robot.jpg')" :alt="item.name" class="w-full h-full object-cover" />
                       <span class="absolute top-0 right-0 bg-neutral-900 text-[#F4EB6A] text-[9px] font-bold px-1.5 py-0.2 rounded-bl-lg">
                         x{{ item.qty }}
                       </span>

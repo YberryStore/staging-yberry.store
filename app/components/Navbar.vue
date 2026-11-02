@@ -18,7 +18,7 @@
             aria-label="Ystore Home"
           >
             <img
-              src="/images/ystore-logo.svg"
+              :src="useAsset('/images/ystore-logo.svg')"
               alt="Ystore Logo"
               class="h-9 sm:h-10 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
             />
@@ -61,7 +61,7 @@
                 v-if="showSearchInput"
                 class="flex items-center bg-neutral-800/95 text-white pl-3.5 pr-2 py-1.5 rounded-full border border-[#F4EB6A] shadow-md transition-all duration-200 w-64 lg:w-72"
               >
-                <img src="/images/search-icon.svg" alt="Search" class="w-5 h-5 object-contain mr-2.5 shrink-0 opacity-80" />
+                <img :src="useAsset('/images/search-icon.svg')" alt="Search" class="w-5 h-5 object-contain mr-2.5 shrink-0 opacity-80" />
                 <input
                   ref="searchInputRef"
                   type="text"
@@ -89,7 +89,7 @@
                 class="p-2 text-neutral-300 hover:text-[#F4EB6A] hover:bg-neutral-800/80 rounded-full transition-all flex items-center justify-center hover:scale-105 active:scale-95"
                 aria-label="Search"
               >
-                <img src="/images/search-icon.svg" alt="Search" class="w-8 h-8 object-contain" />
+                <img :src="useAsset('/images/search-icon.svg')" alt="Search" class="w-8 h-8 object-contain" />
               </button>
             </div>
 
@@ -100,7 +100,7 @@
               class="sm:hidden p-2 text-neutral-300 hover:text-[#F4EB6A] hover:bg-neutral-800/80 rounded-full transition-all flex items-center justify-center hover:scale-105 active:scale-95"
               aria-label="Search"
             >
-              <img src="/images/search-icon.svg" alt="Search" class="w-8 h-8 object-contain" />
+              <img :src="useAsset('/images/search-icon.svg')" alt="Search" class="w-8 h-8 object-contain" />
             </button>
 
             <!-- Admin Dashboard Quick Button (Only visible to Super Admin) -->
@@ -133,7 +133,7 @@
               >
                 {{ (user.displayName || 'Y').slice(0, 2).toUpperCase() }}
               </div>
-              <img v-else src="/images/user-icon.svg" alt="Account" class="w-8 h-8 object-contain" />
+              <img v-else :src="useAsset('/images/user-icon.svg')" alt="Account" class="w-8 h-8 object-contain" />
               <span
                 v-if="user"
                 class="hidden lg:inline-block text-xs font-medium text-[#F4EB6A] max-w-[100px] truncate pr-1"
@@ -153,7 +153,7 @@
               class="relative p-2 text-white hover:text-[#F4EB6A] hover:bg-neutral-800/80 rounded-full transition-all flex items-center justify-center hover:scale-105 active:scale-95"
               aria-label="Shopping Cart"
             >
-              <img src="/images/cart-icon.svg" alt="Shopping Cart" class="w-8 h-8 object-contain" />
+              <img :src="useAsset('/images/cart-icon.svg')" alt="Shopping Cart" class="w-8 h-8 object-contain" />
               <span
                 v-if="cartCount > 0"
                 class="absolute -top-1 -right-1 w-7 h-7 bg-red-700 text-white font-medium text-xs rounded-full flex items-center justify-center shadow-sm"
@@ -179,7 +179,7 @@
             class="sm:hidden absolute inset-0 bg-[#151515] px-4 flex items-center gap-3 z-30"
           >
             <div class="flex-1 flex items-center bg-neutral-800/95 rounded-full pl-3.5 pr-2 py-1.5 border border-[#F4EB6A]">
-              <img src="/images/search-icon.svg" alt="Search" class="w-5 h-5 object-contain mr-2.5 shrink-0 opacity-80" />
+              <img :src="useAsset('/images/search-icon.svg')" alt="Search" class="w-5 h-5 object-contain mr-2.5 shrink-0 opacity-80" />
               <input
                 ref="mobileSearchInputRef"
                 type="text"

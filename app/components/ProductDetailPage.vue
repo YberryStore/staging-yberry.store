@@ -258,7 +258,7 @@
                   @click="addToCartHandler"
                   class="w-full bg-[#F4EB6A] hover:bg-[#FAF7BA] text-neutral-900 font-medium py-3.5 px-8 rounded-full shadow-xs flex items-center justify-center gap-2.5 transition-all text-sm sm:text-base cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
                 >
-                  <img src="/images/cart-icon.svg" alt="" class="w-5 h-5 object-contain filter brightness-0" />
+                  <img :src="useAsset('/images/cart-icon.svg')" alt="" class="w-5 h-5 object-contain filter brightness-0" />
                   <span>Add to Cart</span>
                 </button>
 
@@ -403,7 +403,7 @@
             <!-- Feature SVG Badge -->
             <div class="w-14 h-12 flex items-center justify-center shrink-0">
               <img
-                :src="feature.icon"
+                :src="useAsset(feature.icon)"
                 :alt="feature.title"
                 class="w-full h-full object-contain"
                 loading="lazy"

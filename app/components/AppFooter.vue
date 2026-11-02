@@ -8,7 +8,7 @@
           <!-- Logo -->
           <a href="#" class="flex items-center group mb-4" aria-label="Ystore Home">
             <img
-              src="/images/ystore-logo.svg"
+              :src="useAsset('/images/ystore-logo.svg')"
               alt="Ystore Logo"
               class="h-9 sm:h-10 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
             />
@@ -28,7 +28,7 @@
               aria-label="Facebook"
             >
               <img
-                src="/images/ystore-facebook-icon.svg"
+                :src="useAsset('/images/ystore-facebook-icon.svg')"
                 alt="Facebook"
                 class="w-5 h-5 filter brightness-100 group-hover:brightness-0 transition-all"
               />
@@ -41,7 +41,7 @@
               aria-label="Instagram"
             >
               <img
-                src="/images/ystore-instagram-icon.svg"
+                :src="useAsset('/images/ystore-instagram-icon.svg')"
                 alt="Instagram"
                 class="w-5 h-5 filter brightness-100 group-hover:brightness-0 transition-all"
               />
@@ -99,16 +99,16 @@
         <!-- Payment Badges (Using provided SVGs) -->
         <div class="flex items-center gap-3.5 flex-wrap justify-center">
           <div class="h-8 px-2.5 rounded bg-white/5 border border-neutral-800 flex items-center justify-center hover:bg-white/10 transition-colors">
-            <img src="/images/ystore-visa-icon.svg" alt="Visa" class="h-4 w-auto object-contain" />
+            <img :src="useAsset('/images/ystore-visa-icon.svg')" alt="Visa" class="h-4 w-auto object-contain" />
           </div>
           <div class="h-8 px-2.5 rounded bg-white/5 border border-neutral-800 flex items-center justify-center hover:bg-white/10 transition-colors">
-            <img src="/images/ystore-mastercard-icon.svg" alt="Mastercard" class="h-4 w-auto object-contain" />
+            <img :src="useAsset('/images/ystore-mastercard-icon.svg')" alt="Mastercard" class="h-4 w-auto object-contain" />
           </div>
           <div class="h-8 px-2.5 rounded bg-white/5 border border-neutral-800 flex items-center justify-center hover:bg-white/10 transition-colors">
-            <img src="/images/ystore-stripe-icon.svg" alt="Stripe" class="h-4 w-auto object-contain" />
+            <img :src="useAsset('/images/ystore-stripe-icon.svg')" alt="Stripe" class="h-4 w-auto object-contain" />
           </div>
           <div class="h-8 px-2.5 rounded bg-white/5 border border-neutral-800 flex items-center justify-center hover:bg-white/10 transition-colors">
-            <img src="/images/ystore-payflex-icon.svg" alt="Payflex" class="h-4 w-auto object-contain" />
+            <img :src="useAsset('/images/ystore-payflex-icon.svg')" alt="Payflex" class="h-4 w-auto object-contain" />
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@
       <div class="relative rounded-3xl overflow-hidden bg-neutral-900 text-white shadow-2xl min-h-[380px] sm:min-h-[420px] flex items-center">
         <!-- Background Image with Gradient Overlay -->
         <img
-          src="/images/promo-banner.jpg"
+          :src="useAsset('/images/promo-banner.jpg')"
           alt="Limited time offer"
           class="absolute inset-0 w-full h-full object-cover object-center opacity-40 mix-blend-luminosity filter brightness-90 hover:scale-103 transition-transform duration-700"
           style="object-fit: cover !important; object-position: center !important;"

@@ -21,7 +21,7 @@
             title="Return to Storefront"
           >
             <img
-              src="/images/ystore-logo.svg"
+              :src="useAsset('/images/ystore-logo.svg')"
               alt="Ystore"
               class="h-9 w-auto object-contain"
             />
@@ -34,7 +34,7 @@
             title="Expand Sidebar"
           >
             <img
-              src="/images/ystore-logo.svg"
+              :src="useAsset('/images/ystore-logo.svg')"
               alt="Ystore"
               class="h-7 w-7 object-contain object-left"
             />
@@ -88,7 +88,7 @@
             >
               <img
                 v-if="item.icon && item.icon.includes('.svg')"
-                :src="item.icon"
+                :src="useAsset(item.icon)"
                 :alt="item.label"
                 :class="[
                   'w-5 h-5 object-contain shrink-0 transition-opacity',
@@ -402,7 +402,7 @@
           title="Settings"
         >
           <img
-            src="/images/settings-icon.svg"
+            :src="useAsset('/images/settings-icon.svg')"
             alt="Settings"
             :class="[
               'w-5 h-5 object-contain shrink-0 transition-opacity',
@@ -703,7 +703,7 @@
                   class="w-full py-2.5 px-4 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-[#F4EB6A] text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer"
                 >
                   <span class="flex items-center gap-2.5">
-                    <img src="/images/products-icon.svg" alt="Products" class="w-4 h-4 object-contain brightness-125" />
+                    <img :src="useAsset('/images/products-icon.svg')" alt="Products" class="w-4 h-4 object-contain brightness-125" />
                     <span>Add New Product</span>
                   </span>
                   <FlowbiteIcon name="chevron-right" size="14" />
@@ -727,7 +727,7 @@
                   class="w-full py-2.5 px-4 rounded-xl border border-neutral-200 hover:border-neutral-900 text-neutral-800 text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer"
                 >
                   <span class="flex items-center gap-2.5">
-                    <img src="/images/media-files-icon.svg" alt="Media files" class="w-4 h-4 object-contain invert opacity-75" />
+                    <img :src="useAsset('/images/media-files-icon.svg')" alt="Media files" class="w-4 h-4 object-contain invert opacity-75" />
                     <span>Upload Media Files</span>
                   </span>
                   <FlowbiteIcon name="chevron-right" size="14" />
@@ -739,7 +739,7 @@
                   class="w-full py-2.5 px-4 rounded-xl border border-neutral-200 hover:border-neutral-900 text-neutral-800 text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer"
                 >
                   <span class="flex items-center gap-2.5">
-                    <img src="/images/discount-icon.svg" alt="Discounts" class="w-4 h-4 object-contain invert opacity-75" />
+                    <img :src="useAsset('/images/discount-icon.svg')" alt="Discounts" class="w-4 h-4 object-contain invert opacity-75" />
                     <span>Create Discount / Coupon</span>
                   </span>
                   <FlowbiteIcon name="chevron-right" size="14" />
@@ -751,7 +751,7 @@
                   class="w-full py-2.5 px-4 rounded-xl border border-neutral-200 hover:border-neutral-900 text-neutral-800 text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer"
                 >
                   <span class="flex items-center gap-2.5">
-                    <img src="/images/blogs-icon-1.svg" alt="Blogs" class="w-4 h-4 object-contain invert opacity-75" />
+                    <img :src="useAsset('/images/blogs-icon-1.svg')" alt="Blogs" class="w-4 h-4 object-contain invert opacity-75" />
                     <span>Publish Blog Post</span>
                   </span>
                   <FlowbiteIcon name="chevron-right" size="14" />
@@ -843,7 +843,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-100">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-neutral-900 flex items-center justify-center shrink-0 p-2">
-              <img src="/images/orders-icon.svg" alt="Orders" class="w-5 h-5 object-contain" />
+              <img :src="useAsset('/images/orders-icon.svg')" alt="Orders" class="w-5 h-5 object-contain" />
             </div>
             <div>
               <h2 class="text-xl font-bold text-neutral-900">Orders ({{ filteredOrders.length }})</h2>
@@ -854,7 +854,7 @@
 
         <div v-if="filteredOrders.length === 0" class="py-16 text-center rounded-2xl border border-dashed border-neutral-200 bg-neutral-50/50">
           <div class="w-12 h-12 rounded-full bg-neutral-900 flex items-center justify-center mx-auto mb-3 text-neutral-400 p-3">
-            <img src="/images/orders-icon.svg" alt="Orders" class="w-6 h-6 object-contain" />
+            <img :src="useAsset('/images/orders-icon.svg')" alt="Orders" class="w-6 h-6 object-contain" />
           </div>
           <h3 class="text-sm font-semibold text-neutral-900">No orders placed yet</h3>
           <p class="text-xs text-neutral-500 mt-1">Customer orders completed at checkout will automatically appear here.</p>
@@ -915,7 +915,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-100">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-neutral-900 flex items-center justify-center shrink-0 p-2">
-              <img src="/images/products-icon.svg" alt="Products" class="w-5 h-5 object-contain" />
+              <img :src="useAsset('/images/products-icon.svg')" alt="Products" class="w-5 h-5 object-contain" />
             </div>
             <div>
               <div class="flex items-center gap-2">
@@ -2006,7 +2006,7 @@
         <!-- Products Empty State -->
         <div v-if="filteredProductsList.length === 0" class="py-16 text-center rounded-2xl border border-dashed border-neutral-200 bg-neutral-50/50">
           <div class="w-12 h-12 rounded-full bg-neutral-900 flex items-center justify-center mx-auto mb-3 text-neutral-400 p-3">
-            <img src="/images/products-icon.svg" alt="Products" class="w-6 h-6 object-contain" />
+            <img :src="useAsset('/images/products-icon.svg')" alt="Products" class="w-6 h-6 object-contain" />
           </div>
           <h3 class="text-sm font-semibold text-neutral-900">No products in your catalog</h3>
           <p class="text-xs text-neutral-500 mt-1 mb-4">Click "Add Product" to publish your first item to ystore-db.</p>
@@ -2489,7 +2489,7 @@
                       class="rounded accent-neutral-900 cursor-pointer"
                     />
                     <img
-                      :src="prod.image || '/images/prod-robot.jpg'"
+                      :src="prod.image || useAsset('/images/prod-robot.jpg')"
                       :alt="prod.name"
                       class="w-9 h-9 rounded-lg object-cover shrink-0 border border-neutral-200"
                     />
@@ -3119,7 +3119,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-100">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-neutral-900 flex items-center justify-center shrink-0 p-2">
-              <img src="/images/customer-icon.svg" alt="Customers" class="w-5 h-5 object-contain" />
+              <img :src="useAsset('/images/customer-icon.svg')" alt="Customers" class="w-5 h-5 object-contain" />
             </div>
             <div>
               <h2 class="text-xl font-bold text-neutral-900">Customers ({{ filteredCustomers.length }})</h2>
@@ -3175,7 +3175,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-100">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-neutral-900 flex items-center justify-center shrink-0 p-2">
-              <img src="/images/customer-icon.svg" alt="Segments" class="w-5 h-5 object-contain" />
+              <img :src="useAsset('/images/customer-icon.svg')" alt="Segments" class="w-5 h-5 object-contain" />
             </div>
             <div>
               <div class="flex items-center gap-2">
@@ -3421,7 +3421,7 @@
         <!-- Customers in Active Segment Table -->
         <div v-if="customersInActiveSegment.length === 0" class="py-16 text-center rounded-2xl border border-dashed border-neutral-200 bg-neutral-50/50">
           <div class="w-12 h-12 rounded-full bg-neutral-900 flex items-center justify-center mx-auto mb-3 p-3">
-            <img src="/images/customer-icon.svg" alt="Customers" class="w-6 h-6 object-contain" />
+            <img :src="useAsset('/images/customer-icon.svg')" alt="Customers" class="w-6 h-6 object-contain" />
           </div>
           <h3 class="text-sm font-semibold text-neutral-900">No customers in this segment</h3>
           <p class="text-xs text-neutral-500 mt-1 max-w-sm mx-auto">
@@ -3503,7 +3503,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-100">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-neutral-900 flex items-center justify-center shrink-0 p-2">
-              <img src="/images/discount-icon.svg" alt="Discounts" class="w-5 h-5 object-contain" />
+              <img :src="useAsset('/images/discount-icon.svg')" alt="Discounts" class="w-5 h-5 object-contain" />
             </div>
             <div>
               <h2 class="text-xl font-bold text-neutral-900">Discounts &amp; Coupons ({{ discounts.length }})</h2>
@@ -4321,7 +4321,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-100">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-neutral-900 flex items-center justify-center shrink-0 p-2">
-              <img src="/images/media-files-icon.svg" alt="Media files" class="w-5 h-5 object-contain" />
+              <img :src="useAsset('/images/media-files-icon.svg')" alt="Media files" class="w-5 h-5 object-contain" />
             </div>
             <div>
               <h2 class="text-xl font-bold text-neutral-900">Media Files</h2>
@@ -4372,7 +4372,7 @@
 
         <div v-else-if="uploadedItems.length === 0" class="py-16 text-center rounded-2xl border border-dashed border-neutral-200 bg-neutral-50/50">
           <div class="w-12 h-12 rounded-full bg-neutral-900 flex items-center justify-center mx-auto mb-3 text-neutral-400 p-3">
-            <img src="/images/media-files-icon.svg" alt="Media files" class="w-6 h-6 object-contain" />
+            <img :src="useAsset('/images/media-files-icon.svg')" alt="Media files" class="w-6 h-6 object-contain" />
           </div>
           <h3 class="text-sm font-semibold text-neutral-900">No files in {{ activeStorageFolder }}/</h3>
           <p class="text-xs text-neutral-500 mt-1">Upload product photos, banners, or blog images above.</p>
@@ -4426,7 +4426,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-100">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-neutral-900 flex items-center justify-center shrink-0 p-2">
-              <img src="/images/blogs-icon-1.svg" alt="Blogs" class="w-5 h-5 object-contain" />
+              <img :src="useAsset('/images/blogs-icon-1.svg')" alt="Blogs" class="w-5 h-5 object-contain" />
             </div>
             <div>
               <h2 class="text-xl font-bold text-neutral-900">Blogs &amp; Stories ({{ blogs.length }})</h2>
@@ -4542,7 +4542,7 @@
 
         <div v-if="blogs.length === 0" class="py-16 text-center rounded-2xl border border-dashed border-neutral-200 bg-neutral-50/50">
           <div class="w-12 h-12 rounded-full bg-neutral-900 flex items-center justify-center mx-auto mb-3 text-neutral-400 p-3">
-            <img src="/images/blogs-icon-1.svg" alt="Blogs" class="w-6 h-6 object-contain" />
+            <img :src="useAsset('/images/blogs-icon-1.svg')" alt="Blogs" class="w-6 h-6 object-contain" />
           </div>
           <h3 class="text-sm font-semibold text-neutral-900">No blog posts yet</h3>
           <p class="text-xs text-neutral-500 mt-1">Publish stories and play guides to engage your shoppers.</p>
@@ -4594,7 +4594,7 @@
         <div class="pb-4 border-b border-neutral-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-neutral-900 flex items-center justify-center shrink-0 p-2">
-              <img src="/images/settings-icon.svg" alt="Settings" class="w-5 h-5 object-contain" />
+              <img :src="useAsset('/images/settings-icon.svg')" alt="Settings" class="w-5 h-5 object-contain" />
             </div>
             <div>
               <div class="flex items-center gap-2">
@@ -6562,7 +6562,7 @@ const adminFirstName = computed(() => {
 })
 
 const adminAvatarUrl = computed(() => {
-  return currentUser.value?.photoURL || '/images/avatar-laban.jpg'
+  return currentUser.value?.photoURL || useAsset('/images/avatar-laban.jpg')
 })
 
 const navItems = computed(() => [

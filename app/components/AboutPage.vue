@@ -103,7 +103,7 @@
           <div class="relative">
             <div class="rounded-3xl overflow-hidden aspect-4/3 shadow-2xl border border-neutral-100 bg-neutral-100">
               <img
-                src="/images/promo-banner.jpg"
+                :src="useAsset('/images/promo-banner.jpg')"
                 alt="Yellow Berry product design studio"
                 class="w-full h-full object-cover"
                 loading="lazy"
@@ -329,7 +329,7 @@
           <!-- Maker 1 -->
           <div class="bg-neutral-800/70 p-6 rounded-3xl border border-neutral-700/80 flex flex-col items-center text-center">
             <div class="w-24 h-24 rounded-full bg-neutral-700 overflow-hidden mb-4 border-2 border-[#F4EB6A]">
-              <img src="/images/user-icon.svg" alt="Laban M." class="w-full h-full object-cover p-3 invert opacity-80" />
+              <img :src="useAsset('/images/user-icon.svg')" alt="Laban M." class="w-full h-full object-cover p-3 invert opacity-80" />
             </div>
             <h3 class="text-lg font-semibold text-white">Laban M.</h3>
             <div class="text-xs text-[#F4EB6A] font-medium mt-0.5">Founder &amp; Chief Creative Director</div>
@@ -341,7 +341,7 @@
           <!-- Maker 2 -->
           <div class="bg-neutral-800/70 p-6 rounded-3xl border border-neutral-700/80 flex flex-col items-center text-center">
             <div class="w-24 h-24 rounded-full bg-neutral-700 overflow-hidden mb-4 border-2 border-neutral-600">
-              <img src="/images/user-icon.svg" alt="Elena Rostova" class="w-full h-full object-cover p-3 invert opacity-80" />
+              <img :src="useAsset('/images/user-icon.svg')" alt="Elena Rostova" class="w-full h-full object-cover p-3 invert opacity-80" />
             </div>
             <h3 class="text-lg font-semibold text-white">Elena Rostova</h3>
             <div class="text-xs text-[#F4EB6A] font-medium mt-0.5">Sustainable Materials Engineer</div>
@@ -353,7 +353,7 @@
           <!-- Maker 3 -->
           <div class="bg-neutral-800/70 p-6 rounded-3xl border border-neutral-700/80 flex flex-col items-center text-center">
             <div class="w-24 h-24 rounded-full bg-neutral-700 overflow-hidden mb-4 border-2 border-neutral-600">
-              <img src="/images/user-icon.svg" alt="Sarah Van Der Merwe" class="w-full h-full object-cover p-3 invert opacity-80" />
+              <img :src="useAsset('/images/user-icon.svg')" alt="Sarah Van Der Merwe" class="w-full h-full object-cover p-3 invert opacity-80" />
             </div>
             <h3 class="text-lg font-semibold text-white">Sarah Van Der Merwe</h3>
             <div class="text-xs text-[#F4EB6A] font-medium mt-0.5">Child Development &amp; Play Specialist</div>
@@ -453,28 +453,28 @@
       <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div class="flex items-center gap-4 p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-xs">
-            <img src="/images/free-shipping-icon.svg" alt="Free delivery" class="w-12 h-12 shrink-0" />
+            <img :src="useAsset('/images/free-shipping-icon.svg')" alt="Free delivery" class="w-12 h-12 shrink-0" />
             <div>
               <div class="text-sm font-semibold text-neutral-900">Free Delivery</div>
               <div class="text-xs text-neutral-500">On all orders over R550</div>
             </div>
           </div>
           <div class="flex items-center gap-4 p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-xs">
-            <img src="/images/secure-payments-icon.svg" alt="Secure payments" class="w-12 h-12 shrink-0" />
+            <img :src="useAsset('/images/secure-payments-icon.svg')" alt="Secure payments" class="w-12 h-12 shrink-0" />
             <div>
               <div class="text-sm font-semibold text-neutral-900">100% Secure Checkout</div>
               <div class="text-xs text-neutral-500">PayFlex, Stripe &amp; Card</div>
             </div>
           </div>
           <div class="flex items-center gap-4 p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-xs">
-            <img src="/images/easy-returns-icon.svg" alt="Easy returns" class="w-12 h-12 shrink-0" />
+            <img :src="useAsset('/images/easy-returns-icon.svg')" alt="Easy returns" class="w-12 h-12 shrink-0" />
             <div>
               <div class="text-sm font-semibold text-neutral-900">30-Day Easy Returns</div>
               <div class="text-xs text-neutral-500">Hassle-free peace of mind</div>
             </div>
           </div>
           <div class="flex items-center gap-4 p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-xs">
-            <img src="/images/24-7-customer-support.svg" alt="Dedicated support" class="w-12 h-12 shrink-0" />
+            <img :src="useAsset('/images/24-7-customer-support.svg')" alt="Dedicated support" class="w-12 h-12 shrink-0" />
             <div>
               <div class="text-sm font-semibold text-neutral-900">Maker Studio Support</div>
               <div class="text-xs text-neutral-500">Talk to real toy craftspeople</div>

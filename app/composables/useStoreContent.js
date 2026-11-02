@@ -747,7 +747,7 @@ export const useStoreContent = () => {
       author: {
         name: blogData.authorName || 'Laban Le Fleur',
         role: blogData.authorRole || 'Founder & Creative Director',
-        avatar: blogData.authorAvatar || '/images/avatar-laban.jpg',
+        avatar: blogData.authorAvatar || useAsset('/images/avatar-laban.jpg'),
         bio: blogData.authorBio || 'Passionate about quality handcrafted products, thoughtful design, and joyful living at Yellow Berry Store.'
       },
       updatedAt: serverTimestamp()

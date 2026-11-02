@@ -64,7 +64,7 @@
         <div class="relative rounded-3xl overflow-hidden bg-neutral-900 text-white shadow-2xl p-8 sm:p-12 lg:p-16 min-h-[420px] flex flex-col justify-between">
           <!-- Background image with gradient blend -->
           <img
-            src="/images/promo-banner.jpg"
+            :src="useAsset('/images/promo-banner.jpg')"
             alt="Specials and promotional offers"
             class="absolute inset-0 w-full h-full object-cover object-center opacity-30 mix-blend-luminosity filter brightness-90 hover:scale-102 transition-transform duration-700"
             style="object-fit: cover !important; object-position: center !important;"
@@ -155,7 +155,7 @@
           >
             <div class="w-14 h-12 flex items-center justify-center shrink-0">
               <img
-                :src="feature.icon"
+                :src="useAsset(feature.icon)"
                 :alt="feature.title"
                 class="w-full h-full object-contain"
                 loading="lazy"

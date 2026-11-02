@@ -228,7 +228,7 @@
               <div class="relative w-full h-full min-h-[460px] rounded-3xl overflow-hidden shadow-md flex flex-col justify-between p-6 sm:p-8 bg-neutral-900 group">
                 <!-- Background Image -->
                 <img
-                  src="/images/robot-angle.jpg"
+                  :src="useAsset('/images/robot-angle.jpg')"
                   alt="Ystore Featured Products"
                   class="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-104 transition-transform duration-700 ease-out"
                 />
@@ -351,7 +351,7 @@
             <div class="lg:col-span-6 grid grid-cols-2 gap-4 sm:gap-6">
               <div class="relative aspect-[4/5] rounded-2xl overflow-hidden bg-neutral-200 shadow-sm group cursor-pointer" @click="$emit('back-home')">
                 <img
-                  src="/images/prod-robot.jpg"
+                  :src="useAsset('/images/prod-robot.jpg')"
                   alt="Collectible Figure Model"
                   class="w-full h-full object-cover object-center group-hover:scale-106 transition-transform duration-500"
                   loading="lazy"
@@ -364,7 +364,7 @@
 
               <div class="relative aspect-[4/5] rounded-2xl overflow-hidden bg-neutral-200 shadow-sm group cursor-pointer" @click="$emit('back-home')">
                 <img
-                  src="/images/robot-wave.jpg"
+                  :src="useAsset('/images/robot-wave.jpg')"
                   alt="Playroom creations"
                   class="w-full h-full object-cover object-center group-hover:scale-106 transition-transform duration-500"
                   loading="lazy"
