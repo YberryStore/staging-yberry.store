@@ -203,7 +203,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import Navbar from './components/Navbar.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import ProductDetailPage from './components/ProductDetailPage.vue'
@@ -239,17 +239,24 @@ const {
   initContentListeners
 } = useStoreContent()
 
-onMounted(() => {
-  initFirebase()
-  initContentListeners()
-})
+// Permitted navigation views
+const VALID_VIEWS = ['home', 'category', 'product', 'specials', 'blog', 'contact', 'about', 'admin']
 
-// Active View: 'home' for the landing storefront with Hero Banner & catalog, or 'category'/'product'/'specials'/'blog'/'contact'/'about'/'admin'
+// Active View: 'home' for landing storefront, or 'category'/'product'/'specials'/'blog'/'contact'/'about'/'admin'
 const getInitialView = () => {
   if (typeof window !== 'undefined') {
     try {
+      const params = new URLSearchParams(window.location.search)
+      const viewParam = params.get('view')
+      if (viewParam && VALID_VIEWS.includes(viewParam)) {
+        return viewParam
+      }
+      const hash = window.location.hash.replace('#', '')
+      if (hash && VALID_VIEWS.includes(hash)) {
+        return hash
+      }
       const saved = sessionStorage.getItem('ystore_current_view')
-      if (saved) return saved
+      if (saved && VALID_VIEWS.includes(saved)) return saved
     } catch {}
   }
   return 'home'
@@ -258,11 +265,66 @@ const getInitialView = () => {
 const currentView = ref(getInitialView())
 const selectedCategoryFilter = ref('All')
 
+// Synchronize URL with view so other users can navigate, share direct links, and bookmark pages
+const syncUrlWithView = (view) => {
+  if (typeof window === 'undefined') return
+  try {
+    const url = new URL(window.location.href)
+    if (view === 'home') {
+      url.searchParams.delete('view')
+    } else {
+      url.searchParams.set('view', view)
+    }
+    if (view === 'category' && selectedCategoryFilter.value && selectedCategoryFilter.value !== 'All') {
+      url.searchParams.set('cat', selectedCategoryFilter.value)
+    } else {
+      url.searchParams.delete('cat')
+    }
+    window.history.pushState({ view, cat: selectedCategoryFilter.value }, '', url.toString())
+  } catch {}
+}
+
 watch(currentView, (newView) => {
   if (typeof window !== 'undefined') {
     try {
       sessionStorage.setItem('ystore_current_view', newView)
+      syncUrlWithView(newView)
     } catch {}
+  }
+})
+
+// Support browser Back / Forward buttons (popstate)
+const handlePopState = () => {
+  if (typeof window === 'undefined') return
+  const params = new URLSearchParams(window.location.search)
+  const viewParam = params.get('view')
+  const catParam = params.get('cat')
+  if (catParam) {
+    selectedCategoryFilter.value = catParam
+  }
+  if (viewParam && VALID_VIEWS.includes(viewParam)) {
+    currentView.value = viewParam
+  } else {
+    currentView.value = 'home'
+  }
+}
+
+onMounted(() => {
+  initFirebase()
+  initContentListeners()
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search)
+    const catParam = params.get('cat')
+    if (catParam) {
+      selectedCategoryFilter.value = catParam
+    }
+    window.addEventListener('popstate', handlePopState)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('popstate', handlePopState)
   }
 })
 

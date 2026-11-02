@@ -2,6 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  ssr: false, // Pure client-side SPA mode for zero-latency static hosting
   modules: ['@nuxtjs/tailwindcss'],
   css: ['~/assets/css/main.css'],
   nitro: {
@@ -27,6 +28,7 @@ export default defineNuxtConfig({
     }
   },
   app: {
+    baseURL: process.env.NUXT_APP_BASE_URL || '/',
     head: {
       title: 'Ystore | Premium Toys & Everyday Joys',
       meta: [
