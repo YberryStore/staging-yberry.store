@@ -1,12 +1,21 @@
 <template>
   <div class="min-h-screen bg-white text-neutral-900 font-poppins selection:bg-[#F4EB6A] selection:text-neutral-900">
     <!-- ==========================================
-         FULL-SCREEN ADMIN DASHBOARD (Admin Only)
+         FULL-SCREEN ADMIN DASHBOARD (CMS - Admin Only)
          ========================================== -->
     <AdminDashboard
       v-if="currentView === 'admin' && isAdmin"
       @view-storefront="currentView = 'home'"
       @signed-out="handleAdminSignedOut"
+    />
+
+    <!-- ==========================================
+         SECRET CMS AUTHENTICATION GATEWAY
+         ========================================== -->
+    <CmsAuthGateway
+      v-else-if="currentView === 'cms-auth'"
+      @authenticated="currentView = 'admin'"
+      @back-to-storefront="currentView = 'home'"
     />
 
     <!-- ==========================================
@@ -206,6 +215,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import Navbar from './components/Navbar.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
+import CmsAuthGateway from './components/CmsAuthGateway.vue'
 import ProductDetailPage from './components/ProductDetailPage.vue'
 import SpecialsPage from './components/SpecialsPage.vue'
 import CategoryPage from './components/CategoryPage.vue'
@@ -239,24 +249,89 @@ const {
   initContentListeners
 } = useStoreContent()
 
-// Permitted navigation views
-const VALID_VIEWS = ['home', 'category', 'product', 'specials', 'blog', 'contact', 'about', 'admin']
+// Runtime config for secret access keys
+const config = useRuntimeConfig()
 
-// Active View: 'home' for landing storefront, or 'category'/'product'/'specials'/'blog'/'contact'/'about'/'admin'
+// Secret CMS Access Keys allowed to unlock the CMS Gateway
+const CMS_SECRET_KEYS = [
+  'yberry-admin-2026',
+  'yberry-admin',
+  'yberry-mgmt',
+  'yberry-secure',
+  'yberry-cms'
+]
+if (config?.public?.cmsSecretKey && !CMS_SECRET_KEYS.includes(config.public.cmsSecretKey)) {
+  CMS_SECRET_KEYS.unshift(config.public.cmsSecretKey)
+}
+
+// Permitted navigation views (including secret cms-auth gateway)
+const VALID_VIEWS = ['home', 'category', 'product', 'specials', 'blog', 'contact', 'about', 'admin', 'cms-auth']
+
+// Verify secret URL parameters (e.g. ?cms_auth=..., ?portal=..., ?cms_key=...)
+// Sets session authorization and purges secret parameters from address bar for anti-shoulder-surfing
+const verifyAndAuthorizeCmsUrl = () => {
+  if (typeof window === 'undefined') return { authorized: false, isSecretEntry: false }
+  try {
+    const url = new URL(window.location.href)
+    const secretParams = ['cms_auth', 'cms_portal', 'portal', 'cms_key', 'access_key']
+    let foundKey = null
+
+    for (const param of secretParams) {
+      const val = url.searchParams.get(param)
+      if (val && CMS_SECRET_KEYS.includes(val.trim())) {
+        foundKey = param
+        break
+      }
+    }
+
+    if (foundKey) {
+      sessionStorage.setItem('ystore_cms_authorized', 'true')
+      // Clean query parameter from address bar immediately
+      url.searchParams.delete(foundKey)
+      window.history.replaceState({}, '', url.pathname + (url.search || '') + (url.hash || ''))
+      return { authorized: true, isSecretEntry: true }
+    }
+
+    const authorized = sessionStorage.getItem('ystore_cms_authorized') === 'true'
+    return { authorized, isSecretEntry: false }
+  } catch {
+    return { authorized: false, isSecretEntry: false }
+  }
+}
+
+// Active View: 'home' for landing storefront, or 'category'/'product'/'specials'/'blog'/'contact'/'about'/'admin'/'cms-auth'
 const getInitialView = () => {
   if (typeof window !== 'undefined') {
     try {
+      const { authorized, isSecretEntry } = verifyAndAuthorizeCmsUrl()
+      if (isSecretEntry) {
+        return 'cms-auth'
+      }
+
       const params = new URLSearchParams(window.location.search)
       const viewParam = params.get('view')
       if (viewParam && VALID_VIEWS.includes(viewParam)) {
+        if ((viewParam === 'admin' || viewParam === 'cms-auth') && !authorized) {
+          return 'home'
+        }
         return viewParam
       }
+
       const hash = window.location.hash.replace('#', '')
       if (hash && VALID_VIEWS.includes(hash)) {
+        if ((hash === 'admin' || hash === 'cms-auth') && !authorized) {
+          return 'home'
+        }
         return hash
       }
+
       const saved = sessionStorage.getItem('ystore_current_view')
-      if (saved && VALID_VIEWS.includes(saved)) return saved
+      if (saved && VALID_VIEWS.includes(saved)) {
+        if ((saved === 'admin' || saved === 'cms-auth') && !authorized) {
+          return 'home'
+        }
+        return saved
+      }
     } catch {}
   }
   return 'home'
@@ -270,7 +345,8 @@ const syncUrlWithView = (view) => {
   if (typeof window === 'undefined') return
   try {
     const url = new URL(window.location.href)
-    if (view === 'home') {
+    if (view === 'home' || view === 'cms-auth') {
+      // Keep URL clean for home and secret CMS auth gateway
       url.searchParams.delete('view')
     } else {
       url.searchParams.set('view', view)
@@ -296,6 +372,7 @@ watch(currentView, (newView) => {
 // Support browser Back / Forward buttons (popstate)
 const handlePopState = () => {
   if (typeof window === 'undefined') return
+  const isCmsAuthorized = sessionStorage.getItem('ystore_cms_authorized') === 'true'
   const params = new URLSearchParams(window.location.search)
   const viewParam = params.get('view')
   const catParam = params.get('cat')
@@ -303,7 +380,11 @@ const handlePopState = () => {
     selectedCategoryFilter.value = catParam
   }
   if (viewParam && VALID_VIEWS.includes(viewParam)) {
-    currentView.value = viewParam
+    if ((viewParam === 'admin' || viewParam === 'cms-auth') && !isCmsAuthorized) {
+      currentView.value = 'home'
+    } else {
+      currentView.value = viewParam
+    }
   } else {
     currentView.value = 'home'
   }
@@ -340,12 +421,25 @@ const isAuthOpen = ref(false)
 const isQuickViewOpen = ref(false)
 const quickViewProduct = ref(null)
 
-// Route guard: Ensure non-admins cannot access the 'admin' view, without forcibly hijacking storefront page refreshes
+// Route guard: Ensure non-authorized visitors cannot access admin or cms-auth
 watch(
   [isAdmin, currentView],
   ([adminActive, view]) => {
-    if (view === 'admin' && !adminActive) {
-      currentView.value = 'home'
+    const isCmsAuthorized = typeof window !== 'undefined' && sessionStorage.getItem('ystore_cms_authorized') === 'true'
+
+    if (view === 'admin') {
+      if (!adminActive) {
+        // If not logged in as admin yet, route to cms-auth if secret-authorized, else back to storefront
+        currentView.value = isCmsAuthorized ? 'cms-auth' : 'home'
+      }
+    } else if (view === 'cms-auth') {
+      if (adminActive) {
+        // Already authenticated as admin, jump straight into dashboard
+        currentView.value = 'admin'
+      } else if (!isCmsAuthorized) {
+        // Unauthorized visitor trying to access cms gateway without secret URL
+        currentView.value = 'home'
+      }
     }
   },
   { immediate: true }
@@ -356,11 +450,18 @@ const openAdminDashboard = () => {
     showToast('Admin Access Only', 'Only the Super Admin can access the management dashboard.')
     return
   }
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem('ystore_cms_authorized', 'true')
+  }
   isAuthOpen.value = false
   currentView.value = 'admin'
 }
 
 const handleAdminSignedOut = () => {
+  if (typeof window !== 'undefined') {
+    sessionStorage.removeItem('ystore_cms_authorized')
+    sessionStorage.removeItem('ystore_current_view')
+  }
   currentView.value = 'home'
   showToast('Signed Out', 'You have signed out of the Admin Dashboard.')
 }

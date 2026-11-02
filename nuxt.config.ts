@@ -18,7 +18,8 @@ export default defineNuxtConfig({
       firebaseStorageBucket: process.env.NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'ystore-db.firebasestorage.app',
       firebaseMessagingSenderId: process.env.NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '669307805234',
       firebaseAppId: process.env.NUXT_PUBLIC_FIREBASE_APP_ID || '1:669307805234:web:be578670181474145ca62b',
-      firebaseMeasurementId: process.env.NUXT_PUBLIC_FIREBASE_MEASUREMENT_ID || 'G-XJ3BF4MRDF'
+      firebaseMeasurementId: process.env.NUXT_PUBLIC_FIREBASE_MEASUREMENT_ID || 'G-XJ3BF4MRDF',
+      cmsSecretKey: process.env.NUXT_PUBLIC_CMS_SECRET_KEY || 'yberry-admin-2026'
     }
   },
   postcss: {
