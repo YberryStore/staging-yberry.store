@@ -6359,7 +6359,145 @@
         </div>
       </div>
 
+      <!-- ==========================================
+           STAFF INVITATION & ACCESS DISPATCH MODAL
+           ========================================== -->
+      <transition name="fade">
+        <div
+          v-if="inviteDeliveryModal.show"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs font-poppins"
+          @click.self="inviteDeliveryModal.show = false"
+        >
+          <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-neutral-200 space-y-6 animate-scale-up max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="flex items-start justify-between pb-4 border-b border-neutral-100">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-neutral-900 text-[#F4EB6A] flex items-center justify-center shadow-md">
+                  <FlowbiteIcon name="mail" size="24" />
+                </div>
+                <div>
+                  <h3 class="text-lg font-bold text-neutral-900">
+                    Team Member Invitation Hub
+                  </h3>
+                  <p class="text-xs text-neutral-500">
+                    Onboarding instructions for <span class="font-semibold text-neutral-800">{{ inviteDeliveryModal.name }}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                @click="inviteDeliveryModal.show = false"
+                class="w-9 h-9 rounded-xl border border-neutral-200 hover:bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-neutral-900 cursor-pointer transition-colors"
+                aria-label="Close"
+              >
+                <FlowbiteIcon name="close" size="16" />
+              </button>
+            </div>
 
+            <!-- Recipient & Role Summary Card -->
+            <div class="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div>
+                <span class="text-neutral-400 block text-[10px] uppercase font-bold tracking-wider">Recipient Email</span>
+                <span class="font-semibold text-neutral-900 font-mono text-sm">{{ inviteDeliveryModal.email }}</span>
+              </div>
+              <div>
+                <span class="text-neutral-400 block text-[10px] uppercase font-bold tracking-wider">Assigned Role</span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-900 text-[#F4EB6A] font-bold text-[11px]">
+                  {{ inviteDeliveryModal.role }} • {{ inviteDeliveryModal.department }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Delivery Status Banner -->
+            <div
+              v-if="inviteDeliveryModal.firebaseDispatched"
+              class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1.5"
+            >
+              <div class="flex items-center gap-2 font-bold text-emerald-800">
+                <FlowbiteIcon name="check" size="16" class="text-emerald-600" />
+                <span>Firebase Auth Account Created & Password Link Dispatched</span>
+              </div>
+              <p class="text-emerald-700 leading-relaxed text-[11px]">
+                Firebase has dispatched a password creation link to <strong class="underline">{{ inviteDeliveryModal.email }}</strong> from <code class="bg-emerald-100 px-1 py-0.5 rounded text-[10px]">noreply@ystore-db.firebaseapp.com</code>.
+              </p>
+            </div>
+
+            <!-- Spam / Delivery Advisory -->
+            <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
+              <div class="flex items-center gap-2 font-bold text-amber-800">
+                <FlowbiteIcon name="shield-check" size="16" class="text-amber-600" />
+                <span>Important Delivery Note (Avoid Spam Filters)</span>
+              </div>
+              <p class="text-amber-800/90 leading-relaxed text-[11px]">
+                Automated emails from Firebase default domains are frequently directed to the user's <strong>Spam / Junk</strong> folder. To guarantee immediate delivery, send a direct invitation email from your verified address below.
+              </p>
+            </div>
+
+            <!-- Guaranteed 1-Click Email Dispatch Actions -->
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                Guaranteed Inbox Delivery (1-Click Send From Your Email)
+              </label>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <button
+                  type="button"
+                  @click="sendViaGmail"
+                  class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-xs transition-all shadow-xs cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <FlowbiteIcon name="mail" size="14" />
+                  <span>Send via Gmail</span>
+                </button>
+                <button
+                  type="button"
+                  @click="sendViaOutlook"
+                  class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#0078D4] hover:bg-[#106EBE] text-white font-semibold text-xs transition-all shadow-xs cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <FlowbiteIcon name="mail" size="14" />
+                  <span>Send via Outlook</span>
+                </button>
+                <button
+                  type="button"
+                  @click="sendViaMailto"
+                  class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white font-semibold text-xs transition-all shadow-xs cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <FlowbiteIcon name="mail" size="14" />
+                  <span>Default Mail App</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Message Copy & Preview -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                  Invitation Message & Access Instructions
+                </label>
+                <button
+                  type="button"
+                  @click="copyInviteText"
+                  class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold text-neutral-800 bg-neutral-100 hover:bg-[#F4EB6A] transition-colors cursor-pointer"
+                >
+                  <span>{{ inviteDeliveryModal.copied ? '✓ Copied to Clipboard!' : '📋 Copy Text (WhatsApp / Slack)' }}</span>
+                </button>
+              </div>
+              <div class="p-3.5 rounded-xl bg-neutral-100/80 border border-neutral-200 text-neutral-700 font-mono text-[11px] leading-relaxed max-h-36 overflow-y-auto whitespace-pre-wrap select-all">
+                {{ inviteDeliveryModal.body }}
+              </div>
+            </div>
+
+            <!-- Close Action -->
+            <div class="pt-2 flex justify-end">
+              <button
+                type="button"
+                @click="inviteDeliveryModal.show = false"
+                class="px-6 py-2.5 rounded-xl bg-neutral-900 hover:bg-black text-white text-xs font-semibold transition-all cursor-pointer"
+              >
+                Close &amp; Return to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
 
     </main>
   </div>
@@ -8236,28 +8374,81 @@ const openEditUserModal = (user) => {
 
 const sendingInviteId = ref(null)
 
-const openDirectMail = (user) => {
-  if (typeof window === 'undefined' || !user?.email) return
-  const origin = window.location.origin
-  const subject = encodeURIComponent('Welcome to the Yellow Berry Store Team — Staff Access Instructions')
-  const body = encodeURIComponent(
-`Hi ${user.name || 'Team Member'},
+const inviteDeliveryModal = ref({
+  show: false,
+  email: '',
+  name: '',
+  role: '',
+  department: '',
+  firebaseDispatched: false,
+  firebaseError: null,
+  subject: '',
+  body: '',
+  portalUrl: '',
+  copied: false
+})
 
-You have been granted access to the Yellow Berry Store administrative portal as "${user.role || 'Staff'}" (${user.department || 'Store Operations'}).
+const openInviteDeliveryModal = (data) => {
+  inviteDeliveryModal.value = {
+    show: true,
+    email: data.email || '',
+    name: data.name || 'Team Member',
+    role: data.role || 'Staff Member',
+    department: data.department || 'Operations',
+    firebaseDispatched: !!data.firebaseDispatched,
+    firebaseError: data.firebaseError || null,
+    subject: data.subject || 'Welcome to the Yellow Berry Store Team — Staff Access Instructions',
+    body: data.body || '',
+    portalUrl: data.portalUrl || '',
+    copied: false
+  }
+}
 
-Here are your instructions to access the system:
-1. Open the storefront portal: ${origin}
-2. Click the Account icon in the top right header and select "Sign In".
-3. Click "Forgot password?" and enter your email address (${user.email}).
-4. Check your inbox for the password creation link and set your private password.
-5. Return to the site, sign in, and you will have full access to your assigned administration dashboard permissions.
+const sendViaGmail = () => {
+  const to = inviteDeliveryModal.value.email
+  const su = inviteDeliveryModal.value.subject
+  const body = inviteDeliveryModal.value.body
+  const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(su)}&body=${encodeURIComponent(body)}`
+  window.open(url, '_blank')
+}
 
-If you have any questions or require assistance, please reach out to the store administrator.
+const sendViaOutlook = () => {
+  const to = inviteDeliveryModal.value.email
+  const su = inviteDeliveryModal.value.subject
+  const body = inviteDeliveryModal.value.body
+  const url = `https://outlook.live.com/mail/0/deeplink/compose?to=${encodeURIComponent(to)}&subject=${encodeURIComponent(su)}&body=${encodeURIComponent(body)}`
+  window.open(url, '_blank')
+}
 
-Warm regards,
-Yellow Berry Store Team`
-  )
-  window.open(`mailto:${user.email}?subject=${subject}&body=${body}`, '_blank')
+const sendViaMailto = () => {
+  const to = inviteDeliveryModal.value.email
+  const su = inviteDeliveryModal.value.subject
+  const body = inviteDeliveryModal.value.body
+  const url = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(su)}&body=${encodeURIComponent(body)}`
+  window.open(url, '_blank')
+}
+
+const copyInviteText = async () => {
+  if (typeof navigator !== 'undefined' && navigator.clipboard) {
+    try {
+      await navigator.clipboard.writeText(inviteDeliveryModal.value.body)
+      inviteDeliveryModal.value.copied = true
+      setTimeout(() => {
+        inviteDeliveryModal.value.copied = false
+      }, 2500)
+      return
+    } catch (_) {}
+  }
+  const ta = document.createElement('textarea')
+  ta.value = inviteDeliveryModal.value.body
+  document.body.appendChild(ta)
+  ta.select()
+  document.execCommand('copy')
+  document.body.removeChild(ta)
+  inviteDeliveryModal.value.copied = true
+  setTimeout(() => {
+    inviteDeliveryModal.value.copied = false
+  }, 2500)
 }
 
 const handleSendInviteEmail = async (user) => {
@@ -8273,12 +8464,18 @@ const handleSendInviteEmail = async (user) => {
       role: user.role,
       department: user.department
     })
-    if (res?.success) {
-      notify(`Login setup & access instructions sent to ${user.email}!`, 'success')
-    } else {
-      notify(`Email service response: ${res?.error || 'Direct dispatch unconfirmed'}. Opening email composer...`, 'warning')
-      openDirectMail(user)
-    }
+    openInviteDeliveryModal({
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      department: user.department,
+      firebaseDispatched: res?.success,
+      firebaseError: res?.error,
+      subject: res?.inviteDetails?.subject,
+      body: res?.inviteDetails?.body,
+      portalUrl: res?.inviteDetails?.portalUrl
+    })
+    notify(res?.success ? `Invitation prepared & Firebase link triggered for ${user.email}!` : 'Direct dispatch hub ready.', res?.success ? 'success' : 'warning')
   } catch (err) {
     notify(`Failed to send instructions: ${err?.message || 'Error'}`, 'error')
   } finally {
@@ -8307,12 +8504,19 @@ const handleSaveUser = async () => {
         department: userForm.value.department
       })
 
-      if (inviteRes?.success) {
-        notify(`Team member saved & login setup instructions sent to ${userForm.value.email}!`, 'success')
-      } else {
-        notify(`User saved. Notice: ${inviteRes?.error || 'Email dispatch issue'}. Opening direct mail composer...`, 'warning')
-        openDirectMail(userForm.value)
-      }
+      openInviteDeliveryModal({
+        email: userForm.value.email,
+        name: userForm.value.name,
+        role: userForm.value.role,
+        department: userForm.value.department,
+        firebaseDispatched: inviteRes?.success,
+        firebaseError: inviteRes?.error,
+        subject: inviteRes?.inviteDetails?.subject,
+        body: inviteRes?.inviteDetails?.body,
+        portalUrl: inviteRes?.inviteDetails?.portalUrl
+      })
+
+      notify(`User saved & invitation delivery hub opened for ${userForm.value.email}!`, 'success')
     } else {
       notify(editingUserId.value ? 'User privileges updated successfully!' : 'Team member invitation saved successfully!', 'success')
     }

@@ -368,11 +368,38 @@ export const useFirebaseAuth = () => {
       console.warn('Failed to send invite email via Firebase:', err)
     }
 
+    const portalUrl = typeof window !== 'undefined' ? window.location.href.split('?')[0] : 'https://yberrystore.github.io/staging-yberry.store/'
+    const subject = 'Welcome to the Yellow Berry Store Team — Staff Access Instructions'
+    const body = `Hi ${name || 'Team Member'},
+
+You have been granted access to the Yellow Berry Store administrative portal as "${role || 'Staff'}" (${department || 'Store Operations'}).
+
+Here are your instructions to access the system:
+1. Open the storefront portal: ${portalUrl}
+2. Click the Account icon in the top header and select "Sign In".
+3. If you have not created your private password yet, click "Forgot password?" and enter your email address (${trimmedEmail}).
+4. Check your inbox (and Spam/Junk folder for sender noreply@ystore-db.firebaseapp.com) for the password creation link and set your private password.
+5. Return to the site, sign in, and you will have full access to your assigned administration dashboard permissions.
+
+If you have any questions or require assistance, please reach out to the store administrator.
+
+Warm regards,
+Yellow Berry Store Team`
+
     return {
       success: emailSent,
       emailSent,
       authUserCreated,
-      error: emailError
+      error: emailError,
+      inviteDetails: {
+        email: trimmedEmail,
+        name: name || '',
+        role: role || 'Store Staff',
+        department: department || 'Operations',
+        portalUrl,
+        subject,
+        body
+      }
     }
   }
 
