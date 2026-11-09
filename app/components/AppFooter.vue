@@ -57,9 +57,9 @@
           <ul class="space-y-2.5 text-sm text-neutral-400 font-light">
             <li><a href="#" @click.prevent="$emit('navigate-about')" class="hover:text-[#F4EB6A] transition-colors cursor-pointer">About us</a></li>
             <li><a href="#" class="hover:text-[#F4EB6A] transition-colors">Order history</a></li>
-            <li><a href="#" class="hover:text-[#F4EB6A] transition-colors">Returns</a></li>
-            <li><a href="#" @click.prevent="$emit('navigate-contact')" class="hover:text-[#F4EB6A] transition-colors">Custom Service</a></li>
-            <li><a href="#" class="hover:text-[#F4EB6A] transition-colors">Terms &amp; Conditions</a></li>
+            <li><a href="#" @click.prevent="$emit('navigate-terms')" class="hover:text-[#F4EB6A] transition-colors cursor-pointer">Returns</a></li>
+            <li><a href="#" @click.prevent="$emit('navigate-contact')" class="hover:text-[#F4EB6A] transition-colors cursor-pointer">Custom Service</a></li>
+            <li><a href="#" @click.prevent="$emit('navigate-terms')" class="hover:text-[#F4EB6A] transition-colors cursor-pointer">Terms &amp; Conditions</a></li>
           </ul>
         </div>
 
@@ -69,10 +69,11 @@
             Help
           </h4>
           <ul class="space-y-2.5 text-sm text-neutral-400 font-light">
-            <li><a href="#" @click.prevent="$emit('navigate-contact')" class="hover:text-[#F4EB6A] transition-colors">Customer Support</a></li>
-            <li><a href="#" class="hover:text-[#F4EB6A] transition-colors">Delivery Details</a></li>
-            <li><a href="#" class="hover:text-[#F4EB6A] transition-colors">Terms &amp; Conditions</a></li>
-            <li><a href="#" class="hover:text-[#F4EB6A] transition-colors">Privacy Policy</a></li>
+            <li><a href="#" @click.prevent="$emit('navigate-contact')" class="hover:text-[#F4EB6A] transition-colors cursor-pointer">Customer Support</a></li>
+            <li><a href="#" @click.prevent="$emit('navigate-terms')" class="hover:text-[#F4EB6A] transition-colors cursor-pointer">Delivery Details</a></li>
+            <li><a href="#" @click.prevent="$emit('navigate-terms')" class="hover:text-[#F4EB6A] transition-colors cursor-pointer">Terms &amp; Conditions</a></li>
+            <li><a href="#" @click.prevent="$emit('navigate-privacy')" class="hover:text-[#F4EB6A] transition-colors cursor-pointer">Privacy Policy</a></li>
+            <li><a href="#" @click.prevent="$emit('navigate-cookies')" class="hover:text-[#F4EB6A] transition-colors cursor-pointer">Cookie Preferences</a></li>
           </ul>
         </div>
 
@@ -92,9 +93,15 @@
 
       <!-- Bottom Bar: Copyright & Payment Badges -->
       <div class="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <p class="text-xs text-neutral-400 font-light">
-          Copyright &copy; 2026 Ystore. All rights reserved.
-        </p>
+        <div class="flex items-center gap-3 text-xs text-neutral-400 font-light flex-wrap">
+          <p>Copyright &copy; 2026 Ystore. All rights reserved.</p>
+          <span class="text-neutral-600 hidden sm:inline">&bull;</span>
+          <button type="button" @click="$emit('navigate-privacy')" class="hover:text-[#F4EB6A] transition-colors cursor-pointer">Privacy Policy</button>
+          <span class="text-neutral-600">&bull;</span>
+          <button type="button" @click="$emit('navigate-terms')" class="hover:text-[#F4EB6A] transition-colors cursor-pointer">Terms &amp; Conditions</button>
+          <span class="text-neutral-600">&bull;</span>
+          <button type="button" @click="$emit('navigate-cookies')" class="hover:text-[#F4EB6A] transition-colors cursor-pointer">Cookie Preferences</button>
+        </div>
 
         <!-- Payment Badges (Using provided SVGs) -->
         <div class="flex items-center gap-3.5 flex-wrap justify-center">
@@ -115,3 +122,13 @@
     </div>
   </footer>
 </template>
+
+<script setup>
+defineEmits([
+  'navigate-about',
+  'navigate-contact',
+  'navigate-privacy',
+  'navigate-terms',
+  'navigate-cookies'
+])
+</script>

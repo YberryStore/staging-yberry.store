@@ -94,6 +94,28 @@
           @contact-us="currentView = 'contact'"
         />
 
+        <!-- Dedicated Privacy Policy Page (POPIA & PAIA Compliant) -->
+        <PrivacyPolicyPage
+          v-else-if="currentView === 'privacy'"
+          @back-home="currentView = 'home'"
+          @navigate-cookies="currentView = 'cookies'"
+          @navigate-terms="currentView = 'terms'"
+        />
+
+        <!-- Dedicated Terms & Conditions Page (CPA Compliant) -->
+        <TermsPage
+          v-else-if="currentView === 'terms'"
+          @back-home="currentView = 'home'"
+          @navigate-contact="currentView = 'contact'"
+        />
+
+        <!-- Dedicated Cookie Policy & Interactive Preferences Page -->
+        <CookiesPage
+          v-else-if="currentView === 'cookies'"
+          @back-home="currentView = 'home'"
+          @navigate-privacy="currentView = 'privacy'"
+        />
+
         <!-- Homepage Catalog Sections -->
         <div v-else>
           <!-- Hero Banner Carousel (Hidden when no banner is loaded) -->
@@ -147,6 +169,9 @@
       <AppFooter
         @navigate-contact="currentView = 'contact'"
         @navigate-about="currentView = 'about'"
+        @navigate-privacy="currentView = 'privacy'"
+        @navigate-terms="currentView = 'terms'"
+        @navigate-cookies="currentView = 'cookies'"
       />
     </template>
 
@@ -208,6 +233,12 @@
         </div>
       </div>
     </transition>
+
+    <!-- POPIA Cookie Consent Banner & Preferences Modal -->
+    <CookieConsentModal
+      :current-view="currentView"
+      @navigate="(view) => currentView = view"
+    />
   </div>
 </template>
 
@@ -231,6 +262,10 @@ import BestSellers from './components/BestSellers.vue'
 import Testimonials from './components/Testimonials.vue'
 import Newsletter from './components/Newsletter.vue'
 import AppFooter from './components/AppFooter.vue'
+import PrivacyPolicyPage from './components/PrivacyPolicyPage.vue'
+import TermsPage from './components/TermsPage.vue'
+import CookiesPage from './components/CookiesPage.vue'
+import CookieConsentModal from './components/CookieConsentModal.vue'
 import CartDrawer from './components/CartDrawer.vue'
 import AuthModal from './components/AuthModal.vue'
 import QuickViewModal from './components/QuickViewModal.vue'
@@ -264,8 +299,8 @@ if (config?.public?.cmsSecretKey && !CMS_SECRET_KEYS.includes(config.public.cmsS
   CMS_SECRET_KEYS.unshift(config.public.cmsSecretKey)
 }
 
-// Permitted navigation views (including secret cms-auth gateway)
-const VALID_VIEWS = ['home', 'category', 'product', 'specials', 'blog', 'contact', 'about', 'admin', 'cms-auth']
+// Permitted navigation views (including secret cms-auth gateway and compliance pages)
+const VALID_VIEWS = ['home', 'category', 'product', 'specials', 'blog', 'contact', 'about', 'admin', 'cms-auth', 'privacy', 'terms', 'cookies']
 
 // Verify secret URL parameters (e.g. ?cms_auth=..., ?portal=..., ?cms_key=...)
 // Sets session authorization and purges secret parameters from address bar for anti-shoulder-surfing
