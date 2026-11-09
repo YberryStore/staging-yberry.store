@@ -54,7 +54,7 @@
             <span>Binding Consumer Agreement</span>
           </div>
           <p class="text-xs sm:text-sm text-neutral-300 leading-relaxed font-light">
-            Please read these Terms and Conditions carefully before browsing, ordering, or purchasing products from Yellow Berry Store. By accessing our catalog, registering an account, or placing an order, you agree to be bound by these Terms and our Privacy Policy.
+            Please read these Terms and Conditions carefully before browsing, ordering, or purchasing products from Yellow Berry Store. By accessing our catalog, registering an account, or placing an order, you agree to be bound by these Terms and our <button type="button" @click="$emit('navigate-privacy')" class="underline text-[#F4EB6A] hover:text-white cursor-pointer font-medium">Privacy Policy</button>.
           </p>
         </div>
 
@@ -184,6 +184,6 @@
 <script setup>
 import FlowbiteIcon from './FlowbiteIcon.vue'
 
-defineEmits(['back-home', 'navigate-contact'])
+defineEmits(['back-home', 'navigate-contact', 'navigate-privacy'])
 </script>
 

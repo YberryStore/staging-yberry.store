@@ -107,6 +107,7 @@
           v-else-if="currentView === 'terms'"
           @back-home="currentView = 'home'"
           @navigate-contact="currentView = 'contact'"
+          @navigate-privacy="currentView = 'privacy'"
         />
 
         <!-- Dedicated Cookie Policy & Interactive Preferences Page -->
@@ -167,8 +168,11 @@
 
       <!-- App Footer -->
       <AppFooter
-        @navigate-contact="currentView = 'contact'"
+        @navigate-home="currentView = 'home'"
         @navigate-about="currentView = 'about'"
+        @navigate-specials="currentView = 'specials'"
+        @navigate-blog="currentView = 'blog'"
+        @navigate-contact="currentView = 'contact'"
         @navigate-privacy="currentView = 'privacy'"
         @navigate-terms="currentView = 'terms'"
         @navigate-cookies="currentView = 'cookies'"
@@ -400,6 +404,7 @@ watch(currentView, (newView) => {
     try {
       sessionStorage.setItem('ystore_current_view', newView)
       syncUrlWithView(newView)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch {}
   }
 })
