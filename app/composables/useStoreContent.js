@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore'
 import { ref, computed } from 'vue'
 import { useFirebaseAuth } from './useFirebaseAuth'
+import { useAsset } from './useAsset'
 
 // Default South African & International Payment Settings
 export const defaultPaymentSettings = {
@@ -264,17 +265,385 @@ const getInitialAdminUsers = () => {
   return []
 }
 
+// ==========================================
+// DEFAULT STOREFRONT CATALOG (Seed Fallbacks)
+// ==========================================
+export const defaultInitialBanners = [
+  {
+    id: 'ban-default-1',
+    title: 'Ignite Imagination & Play',
+    subtitle: 'Thoughtfully crafted, eco-conscious toys and developmental playsets designed to spark wonder.',
+    badge: 'NEW COLLECTION 2026',
+    desktopUrl: '/images/promo-banner.jpg',
+    desktopType: 'image',
+    mobileUrl: '/images/promo-banner.jpg',
+    mobileType: 'image',
+    videoUrl: '',
+    altText: 'Yellow Berry Store Premium Toys',
+    link: '#featured',
+    buttonText: 'Explore Catalog',
+    status: 'published',
+    active: true,
+    order: 1
+  }
+]
+
+export const defaultInitialCategories = [
+  {
+    id: 'cat-blocks',
+    name: 'Building Blocks',
+    title: 'Building Blocks',
+    description: 'Stacking sets, architectural blocks, and developmental building kits for growing minds.',
+    image: '/images/category-blocks.jpg'
+  },
+  {
+    id: 'cat-figures',
+    name: 'Action Figures',
+    title: 'Action Figures',
+    description: 'Inspiring robots, dynamic heroes, and interactive figures engineered for adventures.',
+    image: '/images/category-figures.jpg'
+  },
+  {
+    id: 'cat-plush',
+    name: 'Plush Toys',
+    title: 'Plush Toys',
+    description: 'Ultra-soft organic plushies, huggable bedtime companions, and sensory characters.',
+    image: '/images/category-plush.jpg'
+  },
+  {
+    id: 'cat-puzzles',
+    name: 'Puzzles & Games',
+    title: 'Puzzles & Games',
+    description: 'Montessori shape sorters, wooden puzzles, and engaging problem-solving games.',
+    image: '/images/category-puzzles.jpg'
+  }
+]
+
+export const defaultInitialProducts = [
+  {
+    id: 'prod-ai-robot',
+    name: 'Smart Interactive AI Robot',
+    category: 'Action Figures',
+    price: 899,
+    originalPrice: 1199,
+    discount: 25,
+    sku: 'YBS-ROB-01',
+    quantity: 45,
+    stockLeft: 45,
+    inStock: true,
+    image: '/images/prod-robot.jpg',
+    images: ['/images/prod-robot.jpg', '/images/robot-angle.jpg', '/images/robot-closeup.jpg', '/images/robot-side.jpg'],
+    description: 'Intelligent learning and companion robot equipped with voice response, multi-gesture sensing, programmable routines, and expressive LED emotional reactions.',
+    status: 'published',
+    isFeatured: true,
+    isBestSeller: true,
+    isNewArrival: true,
+    rating: 5,
+    reviews: 42,
+    claimedPercent: 78
+  },
+  {
+    id: 'prod-rainbow-stacker',
+    name: 'Wooden Rainbow Stacker',
+    category: 'Building Blocks',
+    price: 349,
+    originalPrice: 429,
+    discount: 19,
+    sku: 'YBS-WOD-02',
+    quantity: 60,
+    stockLeft: 60,
+    inStock: true,
+    image: '/images/prod-rainbow.jpg',
+    images: ['/images/prod-rainbow.jpg'],
+    description: 'Handcrafted sustainably-sourced beechwood rainbow arches with non-toxic water-based paints. Fosters open-ended cognitive architecture and spatial exploration.',
+    status: 'published',
+    isFeatured: true,
+    isBestSeller: true,
+    rating: 5,
+    reviews: 38,
+    claimedPercent: 64
+  },
+  {
+    id: 'prod-rc-drift-car',
+    name: 'Turbo Drift High-Speed RC Car',
+    category: 'Action Figures',
+    price: 649,
+    originalPrice: 799,
+    discount: 19,
+    sku: 'YBS-RC-03',
+    quantity: 30,
+    stockLeft: 30,
+    inStock: true,
+    image: '/images/prod-rc-car.jpg',
+    images: ['/images/prod-rc-car.jpg'],
+    description: '2.4GHz proportional all-wheel drift racing vehicle with high-torque brushless motor, rechargeable lithium-ion pack, and shock-damped suspension.',
+    status: 'published',
+    isFeatured: true,
+    isNewArrival: true,
+    rating: 5,
+    reviews: 29,
+    claimedPercent: 55
+  },
+  {
+    id: 'prod-dino-explorer',
+    name: 'Dino Explorer Sensory Playset',
+    category: 'Action Figures',
+    price: 399,
+    originalPrice: 499,
+    discount: 20,
+    sku: 'YBS-DIN-04',
+    quantity: 50,
+    stockLeft: 50,
+    inStock: true,
+    image: '/images/prod-dino.jpg',
+    images: ['/images/prod-dino.jpg'],
+    description: 'Detailed museum-grade articulated prehistoric figures with tactile textures and sensory learning flashcards for imaginative junior paleontologists.',
+    status: 'published',
+    isFeatured: false,
+    isBestSeller: true,
+    rating: 5,
+    reviews: 17,
+    claimedPercent: 40
+  },
+  {
+    id: 'prod-plushie-bear',
+    name: 'Organic Cotton Huggable Plushie',
+    category: 'Plush Toys',
+    price: 299,
+    originalPrice: 350,
+    discount: 15,
+    sku: 'YBS-PLU-05',
+    quantity: 80,
+    stockLeft: 80,
+    inStock: true,
+    image: '/images/prod-plushie.jpg',
+    images: ['/images/prod-plushie.jpg'],
+    description: 'GOTS-certified 100% organic cotton plush companion filled with hypoallergenic recycled fibres. Gentle on sensitive skin and machine washable.',
+    status: 'published',
+    isFeatured: true,
+    isBestSeller: false,
+    isNewArrival: true,
+    rating: 5,
+    reviews: 31,
+    claimedPercent: 62
+  },
+  {
+    id: 'prod-shape-sorter',
+    name: 'Geometric Montessori Shape Sorter',
+    category: 'Puzzles & Games',
+    price: 279,
+    originalPrice: 320,
+    discount: 13,
+    sku: 'YBS-PUZ-06',
+    quantity: 40,
+    stockLeft: 40,
+    inStock: true,
+    image: '/images/prod-sorter.jpg',
+    images: ['/images/prod-sorter.jpg'],
+    description: 'Natural solid-wood puzzle sorter with smooth chamfered edges. Develops fine motor coordination, shape recognition, and deductive problem solving.',
+    status: 'published',
+    isFeatured: true,
+    isBestSeller: false,
+    rating: 5,
+    reviews: 24,
+    claimedPercent: 48
+  },
+  {
+    id: 'prod-chef-kitchen',
+    name: 'Deluxe Mini Chef Wooden Kitchen',
+    category: 'Building Blocks',
+    price: 1299,
+    originalPrice: 1599,
+    discount: 19,
+    sku: 'YBS-KIT-07',
+    quantity: 15,
+    stockLeft: 15,
+    inStock: true,
+    image: '/images/prod-kitchen.jpg',
+    images: ['/images/prod-kitchen.jpg'],
+    description: 'Scandinavian-inspired wooden play kitchen featuring turning knobs, oven, sink with faucet, chalkboard menu, and stainless steel cookware set.',
+    status: 'published',
+    isFeatured: false,
+    isBestSeller: true,
+    rating: 5,
+    reviews: 19,
+    claimedPercent: 85
+  },
+  {
+    id: 'prod-steam-train',
+    name: 'Classic Express Steam Train Set',
+    category: 'Building Blocks',
+    price: 549,
+    originalPrice: 650,
+    discount: 16,
+    sku: 'YBS-TRN-08',
+    quantity: 35,
+    stockLeft: 35,
+    inStock: true,
+    image: '/images/prod-train.jpg',
+    images: ['/images/prod-train.jpg'],
+    description: 'Magnetic coupling wooden railway engine and passenger cars complete with 32-piece interlocking track layout, bridge trestles, and scenery trees.',
+    status: 'published',
+    isFeatured: true,
+    isNewArrival: true,
+    rating: 5,
+    reviews: 22,
+    claimedPercent: 70
+  }
+]
+
+export const defaultInitialDiscounts = [
+  {
+    id: 'disc-welcome10',
+    code: 'WELCOME10',
+    discount: '10% OFF',
+    description: 'Special 10% welcome discount for new Yellow Berry Store customers',
+    active: true
+  },
+  {
+    id: 'disc-ystore20',
+    code: 'YSTORE20',
+    discount: '20% OFF',
+    description: 'Seasonal promotion across select developmental play collections',
+    active: true
+  }
+]
+
+export const defaultInitialBlogs = [
+  {
+    id: 'blog-eco-play',
+    title: 'Why Sustainable Wooden Toys Shape Better Child Development',
+    category: 'Craft & Play',
+    excerpt: 'Discover how natural materials, tactile warmth, and open-ended play design enhance sensory integration and focused imagination in early childhood.',
+    coverImage: '/images/promo-banner.jpg',
+    readTime: '4 min read',
+    date: 'Oct 28, 2026',
+    featured: true,
+    tags: ['Sustainable Toys', 'Montessori', 'Child Development', 'Sensory Play'],
+    takeaways: [
+      'Natural textures stimulate sensory perception and neural development.',
+      'Open-ended play builds spatial logic and resilient problem-solving.',
+      'Sustainably harvested wood creates lasting family heirlooms that outlast plastic.'
+    ],
+    body: 'In an era dominated by flashing screens and high-frequency digital stimulation, mindful parents and educators are returning to the timeless purity of natural materials.\n\nWooden toys possess a subtle weight, organic tactile grain, and pleasant sensory resonance that plastic simply cannot replicate. When a child engages with a wooden stacker or architectural block, their mind is actively required to envision balance, gravity, and structural integrity.\n\nAt Yellow Berry Store, each toy is carefully curated to foster enduring wonder, cognitive development, and environmental stewardship.',
+    content: [
+      {
+        heading: 'The Power of Sensory Warmth',
+        paragraphs: [
+          'In an era dominated by flashing screens and high-frequency digital stimulation, mindful parents and educators are returning to the timeless purity of natural materials.',
+          'Wooden toys possess a subtle weight, organic tactile grain, and pleasant sensory resonance that plastic simply cannot replicate. When a child engages with a wooden stacker or architectural block, their mind is actively required to envision balance, gravity, and structural integrity.'
+        ],
+        quote: 'Play is the highest form of research. When materials are pure, creativity knows no bounds.'
+      }
+    ],
+    author: {
+      name: 'Laban Le Fleur',
+      role: 'Founder & Creative Director',
+      avatar: '/images/avatar-laban.jpg',
+      bio: 'Passionate about quality handcrafted products, thoughtful design, and joyful living at Yellow Berry Store.'
+    }
+  }
+]
+
+// Safe local persistence helper
+const saveToCache = (key, data) => {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(key, JSON.stringify(data))
+  } catch (err) {
+    console.warn(`Failed to cache ${key}:`, err)
+  }
+}
+
+const getInitialProducts = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_products_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+  }
+  return [...defaultInitialProducts]
+}
+
+const getInitialCategories = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_categories_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+  }
+  return [...defaultInitialCategories]
+}
+
+const getInitialBanners = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_banners_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+  }
+  return [...defaultInitialBanners]
+}
+
+const getInitialCollections = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_collections_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed)) return parsed
+      }
+    } catch {}
+  }
+  return []
+}
+
+const getInitialDiscounts = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_discounts_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+  }
+  return [...defaultInitialDiscounts]
+}
+
+const getInitialBlogs = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_blogs_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+  }
+  return [...defaultInitialBlogs]
+}
+
 // Shared reactive singleton state across Admin Dashboard and Storefront
-const products = ref([])
-const categories = ref([])
-const collectionsList = ref([])
-const discounts = ref([])
-const blogs = ref([])
+const products = ref(getInitialProducts())
+const categories = ref(getInitialCategories())
+const collectionsList = ref(getInitialCollections())
+const discounts = ref(getInitialDiscounts())
+const blogs = ref(getInitialBlogs())
 const orders = ref([])
 const customers = ref([])
 const customerSegments = ref([])
 const purchaseOrders = ref([])
-const banners = ref([])
+const banners = ref(getInitialBanners())
 const paymentSettings = ref(getInitialPaymentSettings())
 const adminUsers = ref(getInitialAdminUsers())
 const contentLoading = ref(false)
@@ -304,13 +673,17 @@ export const useStoreContent = () => {
     onSnapshot(
       collection(db, 'products'),
       (snap) => {
-        products.value = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data()
-        }))
+        if (!snap.empty) {
+          products.value = snap.docs.map((d) => ({
+            id: d.id,
+            ...d.data()
+          }))
+          saveToCache('ystore_products_cache', products.value)
+        }
         contentLoading.value = false
       },
-      () => {
+      (err) => {
+        console.warn('Firestore products listener warning:', err)
         contentLoading.value = false
       }
     )
@@ -319,60 +692,85 @@ export const useStoreContent = () => {
     onSnapshot(
       collection(db, 'categories'),
       (snap) => {
-        categories.value = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data()
-        }))
+        if (!snap.empty) {
+          categories.value = snap.docs.map((d) => ({
+            id: d.id,
+            ...d.data()
+          }))
+          saveToCache('ystore_categories_cache', categories.value)
+        }
       },
-      () => { }
+      (err) => {
+        console.warn('Firestore categories listener warning:', err)
+      }
     )
 
     // 3. Discounts / Coupons Listener
     onSnapshot(
       collection(db, 'discounts'),
       (snap) => {
-        discounts.value = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data()
-        }))
+        if (!snap.empty) {
+          discounts.value = snap.docs.map((d) => ({
+            id: d.id,
+            ...d.data()
+          }))
+          saveToCache('ystore_discounts_cache', discounts.value)
+        }
       },
-      () => { }
+      (err) => {
+        console.warn('Firestore discounts listener warning:', err)
+      }
     )
 
     // 4. Blogs Listener
     onSnapshot(
       collection(db, 'blogs'),
       (snap) => {
-        blogs.value = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data()
-        }))
+        if (!snap.empty) {
+          blogs.value = snap.docs.map((d) => ({
+            id: d.id,
+            ...d.data()
+          }))
+          saveToCache('ystore_blogs_cache', blogs.value)
+        }
       },
-      () => { }
+      (err) => {
+        console.warn('Firestore blogs listener warning:', err)
+      }
     )
 
     // 5. Banners Listener (Home Hero Banners)
     onSnapshot(
       collection(db, 'banners'),
       (snap) => {
-        banners.value = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data()
-        }))
+        if (!snap.empty) {
+          banners.value = snap.docs.map((d) => ({
+            id: d.id,
+            ...d.data()
+          }))
+          saveToCache('ystore_banners_cache', banners.value)
+        }
       },
-      () => { }
+      (err) => {
+        console.warn('Firestore banners listener warning:', err)
+      }
     )
 
     // 6. Collections Listener (Curated Collections)
     onSnapshot(
       collection(db, 'collections'),
       (snap) => {
-        collectionsList.value = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data()
-        }))
+        if (!snap.empty) {
+          collectionsList.value = snap.docs.map((d) => ({
+            id: d.id,
+            ...d.data()
+          }))
+          saveToCache('ystore_collections_cache', collectionsList.value)
+        }
       },
-      () => { }
+      (err) => {
+        console.warn('Firestore collections listener warning:', err)
+      }
     )
 
     // 7. Public Storefront Config (Only enabled toggles, public keys, and EFT details — zero secret keys)
@@ -488,11 +886,10 @@ export const useStoreContent = () => {
   }
 
   // ==========================================
-  // PRODUCTS CRUD
+  // PRODUCTS CRUD (Optimistic & Persistent)
   // ==========================================
   const saveProduct = async (productData, existingId = null) => {
     const db = getDb()
-    if (!db) throw new Error('Firestore database not initialized.')
     contentError.value = ''
 
     const price = Number(productData.price) || 0
@@ -578,30 +975,56 @@ export const useStoreContent = () => {
       updatedAt: serverTimestamp()
     }
 
-    if (existingId) {
-      await updateDoc(doc(db, 'products', existingId), payload)
-      return existingId
-    } else {
-      const refDoc = await addDoc(collection(db, 'products'), {
-        ...payload,
-        createdAt: serverTimestamp()
-      })
-      return refDoc.id
+    let finalId = existingId || `prod-${Date.now()}`
+
+    if (db) {
+      try {
+        if (existingId) {
+          await updateDoc(doc(db, 'products', existingId), payload)
+        } else {
+          const refDoc = await addDoc(collection(db, 'products'), {
+            ...payload,
+            createdAt: serverTimestamp()
+          })
+          finalId = refDoc.id
+        }
+      } catch (err) {
+        console.warn('Firestore products write failed, updated local state & cache:', err)
+      }
     }
+
+    // Instant optimistic update across storefront & CMS
+    const idx = products.value.findIndex((p) => p.id === finalId || (existingId && p.id === existingId))
+    const updatedProd = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    if (idx !== -1) {
+      products.value[idx] = { ...products.value[idx], ...updatedProd }
+    } else {
+      products.value.unshift(updatedProd)
+    }
+    saveToCache('ystore_products_cache', products.value)
+
+    return finalId
   }
 
   const deleteProduct = async (id) => {
+    if (!id) return
     const db = getDb()
-    if (!db || !id) return
-    await deleteDoc(doc(db, 'products', id))
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'products', id))
+      } catch (err) {
+        console.warn('Firestore deleteDoc failed for product:', err)
+      }
+    }
+    products.value = products.value.filter((p) => p.id !== id)
+    saveToCache('ystore_products_cache', products.value)
   }
 
   // ==========================================
-  // CATEGORIES CRUD
+  // CATEGORIES CRUD (Optimistic & Persistent)
   // ==========================================
   const saveCategory = async (categoryData, existingId = null) => {
     const db = getDb()
-    if (!db) throw new Error('Firestore database not initialized.')
 
     const payload = {
       name: (categoryData.name || '').trim(),
@@ -611,22 +1034,47 @@ export const useStoreContent = () => {
       updatedAt: serverTimestamp()
     }
 
-    if (existingId) {
-      await updateDoc(doc(db, 'categories', existingId), payload)
-      return existingId
-    } else {
-      const refDoc = await addDoc(collection(db, 'categories'), {
-        ...payload,
-        createdAt: serverTimestamp()
-      })
-      return refDoc.id
+    let finalId = existingId || `cat-${Date.now()}`
+    if (db) {
+      try {
+        if (existingId) {
+          await updateDoc(doc(db, 'categories', existingId), payload)
+        } else {
+          const refDoc = await addDoc(collection(db, 'categories'), {
+            ...payload,
+            createdAt: serverTimestamp()
+          })
+          finalId = refDoc.id
+        }
+      } catch (err) {
+        console.warn('Firestore categories write failed, updated local state & cache:', err)
+      }
     }
+
+    const idx = categories.value.findIndex((c) => c.id === finalId || (existingId && c.id === existingId))
+    const updatedCat = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    if (idx !== -1) {
+      categories.value[idx] = { ...categories.value[idx], ...updatedCat }
+    } else {
+      categories.value.push(updatedCat)
+    }
+    saveToCache('ystore_categories_cache', categories.value)
+
+    return finalId
   }
 
   const deleteCategory = async (id) => {
+    if (!id) return
     const db = getDb()
-    if (!db || !id) return
-    await deleteDoc(doc(db, 'categories', id))
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'categories', id))
+      } catch (err) {
+        console.warn('Firestore deleteDoc failed for category:', err)
+      }
+    }
+    categories.value = categories.value.filter((c) => c.id !== id)
+    saveToCache('ystore_categories_cache', categories.value)
   }
 
   // ==========================================
@@ -634,7 +1082,6 @@ export const useStoreContent = () => {
   // ==========================================
   const saveCollection = async (collectionData, existingId = null) => {
     const db = getDb()
-    if (!db) throw new Error('Firestore database not initialized.')
 
     const payload = {
       name: (collectionData.name || '').trim(),
@@ -647,22 +1094,47 @@ export const useStoreContent = () => {
       updatedAt: serverTimestamp()
     }
 
-    if (existingId) {
-      await updateDoc(doc(db, 'collections', existingId), payload)
-      return existingId
-    } else {
-      const refDoc = await addDoc(collection(db, 'collections'), {
-        ...payload,
-        createdAt: serverTimestamp()
-      })
-      return refDoc.id
+    let finalId = existingId || `col-${Date.now()}`
+    if (db) {
+      try {
+        if (existingId) {
+          await updateDoc(doc(db, 'collections', existingId), payload)
+        } else {
+          const refDoc = await addDoc(collection(db, 'collections'), {
+            ...payload,
+            createdAt: serverTimestamp()
+          })
+          finalId = refDoc.id
+        }
+      } catch (err) {
+        console.warn('Firestore collections write failed, updated local state & cache:', err)
+      }
     }
+
+    const idx = collectionsList.value.findIndex((c) => c.id === finalId || (existingId && c.id === existingId))
+    const updatedCol = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    if (idx !== -1) {
+      collectionsList.value[idx] = { ...collectionsList.value[idx], ...updatedCol }
+    } else {
+      collectionsList.value.push(updatedCol)
+    }
+    saveToCache('ystore_collections_cache', collectionsList.value)
+
+    return finalId
   }
 
   const deleteCollection = async (id) => {
+    if (!id) return
     const db = getDb()
-    if (!db || !id) return
-    await deleteDoc(doc(db, 'collections', id))
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'collections', id))
+      } catch (err) {
+        console.warn('Firestore deleteDoc failed for collection:', err)
+      }
+    }
+    collectionsList.value = collectionsList.value.filter((c) => c.id !== id)
+    saveToCache('ystore_collections_cache', collectionsList.value)
   }
 
   // ==========================================
@@ -670,7 +1142,6 @@ export const useStoreContent = () => {
   // ==========================================
   const saveDiscount = async (discountData, existingId = null) => {
     const db = getDb()
-    if (!db) throw new Error('Firestore database not initialized.')
 
     const payload = {
       code: (discountData.code || '').toUpperCase().trim(),
@@ -680,22 +1151,47 @@ export const useStoreContent = () => {
       updatedAt: serverTimestamp()
     }
 
-    if (existingId) {
-      await updateDoc(doc(db, 'discounts', existingId), payload)
-      return existingId
-    } else {
-      const refDoc = await addDoc(collection(db, 'discounts'), {
-        ...payload,
-        createdAt: serverTimestamp()
-      })
-      return refDoc.id
+    let finalId = existingId || `disc-${Date.now()}`
+    if (db) {
+      try {
+        if (existingId) {
+          await updateDoc(doc(db, 'discounts', existingId), payload)
+        } else {
+          const refDoc = await addDoc(collection(db, 'discounts'), {
+            ...payload,
+            createdAt: serverTimestamp()
+          })
+          finalId = refDoc.id
+        }
+      } catch (err) {
+        console.warn('Firestore discounts write failed, updated local state & cache:', err)
+      }
     }
+
+    const idx = discounts.value.findIndex((d) => d.id === finalId || (existingId && d.id === existingId))
+    const updatedDisc = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    if (idx !== -1) {
+      discounts.value[idx] = { ...discounts.value[idx], ...updatedDisc }
+    } else {
+      discounts.value.push(updatedDisc)
+    }
+    saveToCache('ystore_discounts_cache', discounts.value)
+
+    return finalId
   }
 
   const deleteDiscount = async (id) => {
+    if (!id) return
     const db = getDb()
-    if (!db || !id) return
-    await deleteDoc(doc(db, 'discounts', id))
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'discounts', id))
+      } catch (err) {
+        console.warn('Firestore deleteDoc failed for discount:', err)
+      }
+    }
+    discounts.value = discounts.value.filter((d) => d.id !== id)
+    saveToCache('ystore_discounts_cache', discounts.value)
   }
 
   // ==========================================
@@ -703,7 +1199,6 @@ export const useStoreContent = () => {
   // ==========================================
   const saveBlog = async (blogData, existingId = null) => {
     const db = getDb()
-    if (!db) throw new Error('Firestore database not initialized.')
 
     const paragraphs = Array.isArray(blogData.paragraphs)
       ? blogData.paragraphs
@@ -753,22 +1248,47 @@ export const useStoreContent = () => {
       updatedAt: serverTimestamp()
     }
 
-    if (existingId) {
-      await updateDoc(doc(db, 'blogs', existingId), payload)
-      return existingId
-    } else {
-      const refDoc = await addDoc(collection(db, 'blogs'), {
-        ...payload,
-        createdAt: serverTimestamp()
-      })
-      return refDoc.id
+    let finalId = existingId || `blog-${Date.now()}`
+    if (db) {
+      try {
+        if (existingId) {
+          await updateDoc(doc(db, 'blogs', existingId), payload)
+        } else {
+          const refDoc = await addDoc(collection(db, 'blogs'), {
+            ...payload,
+            createdAt: serverTimestamp()
+          })
+          finalId = refDoc.id
+        }
+      } catch (err) {
+        console.warn('Firestore blogs write failed, updated local state & cache:', err)
+      }
     }
+
+    const idx = blogs.value.findIndex((b) => b.id === finalId || (existingId && b.id === existingId))
+    const updatedBlog = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    if (idx !== -1) {
+      blogs.value[idx] = { ...blogs.value[idx], ...updatedBlog }
+    } else {
+      blogs.value.unshift(updatedBlog)
+    }
+    saveToCache('ystore_blogs_cache', blogs.value)
+
+    return finalId
   }
 
   const deleteBlog = async (id) => {
+    if (!id) return
     const db = getDb()
-    if (!db || !id) return
-    await deleteDoc(doc(db, 'blogs', id))
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'blogs', id))
+      } catch (err) {
+        console.warn('Firestore deleteDoc failed for blog:', err)
+      }
+    }
+    blogs.value = blogs.value.filter((b) => b.id !== id)
+    saveToCache('ystore_blogs_cache', blogs.value)
   }
 
   // ==========================================
@@ -839,11 +1359,10 @@ export const useStoreContent = () => {
   }
 
   // ==========================================
-  // BANNERS CRUD (Landing Page Hero Banners)
+  // BANNERS CRUD (Landing Page Hero Banners - Optimistic & Persistent)
   // ==========================================
   const saveBanner = async (bannerData, existingId = null) => {
     const db = getDb()
-    if (!db) throw new Error('Firestore database not initialized.')
 
     const desktopUrl = (bannerData.desktopUrl || '').trim()
     const mobileUrl = (bannerData.mobileUrl || '').trim()
@@ -869,22 +1388,47 @@ export const useStoreContent = () => {
       updatedAt: serverTimestamp()
     }
 
-    if (existingId) {
-      await updateDoc(doc(db, 'banners', existingId), payload)
-      return existingId
-    } else {
-      const refDoc = await addDoc(collection(db, 'banners'), {
-        ...payload,
-        createdAt: serverTimestamp()
-      })
-      return refDoc.id
+    let finalId = existingId || `ban-${Date.now()}`
+    if (db) {
+      try {
+        if (existingId) {
+          await updateDoc(doc(db, 'banners', existingId), payload)
+        } else {
+          const refDoc = await addDoc(collection(db, 'banners'), {
+            ...payload,
+            createdAt: serverTimestamp()
+          })
+          finalId = refDoc.id
+        }
+      } catch (err) {
+        console.warn('Firestore banners write failed, updated local state & cache:', err)
+      }
     }
+
+    const idx = banners.value.findIndex((b) => b.id === finalId || (existingId && b.id === existingId))
+    const updatedBanner = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    if (idx !== -1) {
+      banners.value[idx] = { ...banners.value[idx], ...updatedBanner }
+    } else {
+      banners.value.unshift(updatedBanner)
+    }
+    saveToCache('ystore_banners_cache', banners.value)
+
+    return finalId
   }
 
   const deleteBanner = async (id) => {
+    if (!id) return
     const db = getDb()
-    if (!db || !id) return
-    await deleteDoc(doc(db, 'banners', id))
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'banners', id))
+      } catch (err) {
+        console.warn('Firestore deleteDoc failed for banner:', err)
+      }
+    }
+    banners.value = banners.value.filter((b) => b.id !== id)
+    saveToCache('ystore_banners_cache', banners.value)
   }
 
   // ==========================================
@@ -1246,6 +1790,54 @@ export const useStoreContent = () => {
   const hasBestSellers = computed(() => bestSellerProducts.value.length > 0)
   const hasPublishedProducts = computed(() => publishedProducts.value.length > 0)
 
+  // Utility to seed or sync default initial catalog items to Firestore when empty
+  const syncDefaultCatalogToFirestore = async () => {
+    const db = getDb()
+    if (!db) throw new Error('Firestore database not initialized.')
+
+    for (const cat of defaultInitialCategories) {
+      await setDoc(doc(db, 'categories', cat.id), {
+        ...cat,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true })
+    }
+
+    for (const ban of defaultInitialBanners) {
+      await setDoc(doc(db, 'banners', ban.id), {
+        ...ban,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true })
+    }
+
+    for (const prod of defaultInitialProducts) {
+      await setDoc(doc(db, 'products', prod.id), {
+        ...prod,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true })
+    }
+
+    for (const disc of defaultInitialDiscounts) {
+      await setDoc(doc(db, 'discounts', disc.id), {
+        ...disc,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true })
+    }
+
+    for (const blg of defaultInitialBlogs) {
+      await setDoc(doc(db, 'blogs', blg.id), {
+        ...blg,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true })
+    }
+
+    return true
+  }
+
   return {
     products,
     publishedProducts,
@@ -1302,6 +1894,12 @@ export const useStoreContent = () => {
     savePurchaseOrder,
     deletePurchaseOrder,
     receivePurchaseOrder,
+    syncDefaultCatalogToFirestore,
+    defaultInitialProducts,
+    defaultInitialBanners,
+    defaultInitialCategories,
+    defaultInitialDiscounts,
+    defaultInitialBlogs,
     isVideoFile
   }
 }

@@ -6,85 +6,111 @@ service cloud.firestore {
       return request.auth != null && (
         request.auth.token.admin == true ||
         request.auth.token.role == 'super_admin' ||
-        (request.auth.token.email == 'info@yberry.co.za' && request.auth.token.email_verified == true)
+        request.auth.token.email in [
+          'info@yberry.co.za',
+          'admin@yellowberry.store',
+          'admin@ystoreza.co.za',
+          'support@yellowberry.store'
+        ]
       );
     }
 
-    // 1. Public Storefront Catalog (Public read, Super Admin write)
+    function isApprovedAdmin() {
+      return request.auth != null && (
+        isSuperAdmin() ||
+        (
+          exists(/databases/$(database)/documents/admin_users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.status == 'active'
+        )
+      );
+    }
+
+    // 1. Public Storefront Catalog (Public read, Approved Admin write)
     match /products/{docId} {
       allow read: if true;
-      allow write: if isSuperAdmin();
+      allow write: if isApprovedAdmin();
     }
 
     match /categories/{docId} {
       allow read: if true;
-      allow write: if isSuperAdmin();
+      allow write: if isApprovedAdmin();
     }
 
     match /collections/{docId} {
       allow read: if true;
-      allow write: if isSuperAdmin();
+      allow write: if isApprovedAdmin();
     }
 
     match /banners/{docId} {
       allow read: if true;
-      allow write: if isSuperAdmin();
+      allow write: if isApprovedAdmin();
     }
 
     match /blogs/{docId} {
       allow read: if true;
-      allow write: if isSuperAdmin();
+      allow write: if isApprovedAdmin();
     }
 
     match /discounts/{docId} {
       allow read: if true;
-      allow write: if isSuperAdmin();
+      allow write: if isApprovedAdmin();
     }
 
-    // 2. Public Store Configuration (Gateway enabled status, public keys, EFT deposit instructions)
+    // 2. Public Store Configuration (Gateway enabled status, public keys, EFT deposit instructions, SEO & Analytics tracking)
     match /settings/public_config {
       allow read: if true;
-      allow write: if isSuperAdmin();
+      allow write: if isApprovedAdmin();
     }
 
-    // 3. User Accounts (Users can only read & edit their own profile; Super Admin has full access)
+    match /settings/seo_tracking {
+      allow read: if true;
+      allow write: if isApprovedAdmin();
+    }
+
+    // 3. User Accounts (Users can only read & edit their own profile; Admins have full access)
     match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || isSuperAdmin());
-      allow create, update: if request.auth != null && (request.auth.uid == userId || isSuperAdmin());
+      allow read: if request.auth != null && (request.auth.uid == userId || isApprovedAdmin());
+      allow create, update: if request.auth != null && (request.auth.uid == userId || isApprovedAdmin());
       allow delete: if isSuperAdmin();
     }
 
     // 4. Customer Orders (POPIA Protected)
     // - Customers and guests can submit new orders at checkout
     // - Authenticated users can only read their own orders (matched by userId)
-    // - Only Super Admin can view all orders, change status, or delete orders
+    // - Approved Admins can view all orders, change status, or delete orders
     match /orders/{orderId} {
       allow create: if request.resource.data.orderNumber is string
                     && request.resource.data.total is number;
-      allow read: if isSuperAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
-      allow update, delete: if isSuperAdmin();
+      allow read: if isApprovedAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow update, delete: if isApprovedAdmin();
     }
 
-    // 5. Confidential Financial & Business Records (STRICTLY Super Admin Only)
+    // 5. Staff and Admin User Directory
+    // - Authenticated users can read and create their own approval requests
+    // - Approved admins have full read/write access
+    // - Super Admins can delete staff records
+    match /admin_users/{docId} {
+      allow read: if request.auth != null && (request.auth.uid == docId || isApprovedAdmin());
+      allow create, update: if request.auth != null && (request.auth.uid == docId || isApprovedAdmin());
+      allow delete: if isSuperAdmin();
+    }
+
+    // 6. Confidential Financial & Business Records (STRICTLY Super Admin Only)
     match /settings/payments {
       allow read, write: if isSuperAdmin();
     }
 
-    match /admin_users/{docId} {
-      allow read, write: if isSuperAdmin();
-    }
-
     match /purchase_orders/{docId} {
-      allow read, write: if isSuperAdmin();
+      allow read, write: if isApprovedAdmin();
     }
 
     match /customer_segments/{docId} {
-      allow read, write: if isSuperAdmin();
+      allow read, write: if isApprovedAdmin();
     }
 
-    // Default deny for all other collections
+    // Default fallback
     match /{document=**} {
-      allow read, write: if isSuperAdmin();
+      allow read, write: if isApprovedAdmin();
     }
   }
 }

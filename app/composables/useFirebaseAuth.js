@@ -21,6 +21,7 @@ const userProfile = ref(null)
 const authReady = ref(false)
 const authLoading = ref(false)
 const authError = ref('')
+const pendingApprovalInfo = ref(null)
 
 let firebaseApp = null
 let firebaseAuth = null
@@ -28,7 +29,12 @@ let firestoreDb = null
 let firebaseStorage = null
 let authListenerInitialized = false
 
-const SUPER_ADMIN_EMAILS = ['info@yberry.co.za']
+const SUPER_ADMIN_EMAILS = [
+  'info@yberry.co.za',
+  'admin@yellowberry.store',
+  'admin@ystoreza.co.za',
+  'support@yellowberry.store'
+]
 const isSuperAdminEmail = (email) => SUPER_ADMIN_EMAILS.includes((email || '').toLowerCase().trim())
 
 // Friendly error messages for Firebase Auth error codes
@@ -96,6 +102,22 @@ export const useFirebaseAuth = () => {
             tokenResult?.claims?.role === 'super_admin' ||
             isSuperAdminEmail(user.email)
 
+          // Check if user is an approved CMS staff admin
+          let isStaffAdmin = false
+          let staffRole = 'customer'
+          if (!isSuperAdmin && user.email) {
+            try {
+              const cached = JSON.parse(localStorage.getItem('ystore_admin_users') || '[]')
+              const found = cached.find((u) => (u.email || '').toLowerCase() === user.email.toLowerCase())
+              if (found && found.status === 'active' && (found.approvedAt || found.active !== false)) {
+                isStaffAdmin = true
+                staffRole = found.role || 'Store Staff'
+              }
+            } catch {}
+          }
+
+          const hasAdminPrivilege = isSuperAdmin || isStaffAdmin
+
           currentUser.value = {
             uid: user.uid,
             email: user.email,
@@ -103,12 +125,12 @@ export const useFirebaseAuth = () => {
             photoURL: user.photoURL,
             isAnonymous: user.isAnonymous,
             emailVerified: user.emailVerified,
-            isAdmin: isSuperAdmin,
-            role: isSuperAdmin ? 'super_admin' : (user.isAnonymous ? 'guest' : 'customer'),
+            isAdmin: hasAdminPrivilege,
+            role: isSuperAdmin ? 'super_admin' : (isStaffAdmin ? staffRole : (user.isAnonymous ? 'guest' : 'customer')),
             providerId: user.providerData?.[0]?.providerId || (user.isAnonymous ? 'anonymous' : 'password'),
             createdAt: user.metadata?.creationTime
           }
-          await syncUserProfile(user, { isAdmin: isSuperAdmin, role: isSuperAdmin ? 'super_admin' : 'customer' })
+          await syncUserProfile(user, { isAdmin: hasAdminPrivilege, role: isSuperAdmin ? 'super_admin' : (isStaffAdmin ? staffRole : 'customer') })
         } else {
           currentUser.value = null
           userProfile.value = null
@@ -422,13 +444,299 @@ Yellow Berry Store Team`
     }
   }
 
+  // 9. Sign in with Google for CMS Portal Access
+  // Strictly checks administrator approval before allowing entry to CMS
+  const signInCmsWithGoogle = async () => {
+    initFirebase()
+    authLoading.value = true
+    authError.value = ''
+    pendingApprovalInfo.value = null
+
+    try {
+      const provider = new GoogleAuthProvider()
+      provider.addScope('profile')
+      provider.addScope('email')
+      provider.setCustomParameters({ prompt: 'select_account' })
+
+      const cred = await signInWithPopup(firebaseAuth, provider)
+      if (!cred || !cred.user) {
+        throw new Error('Google Sign-In was cancelled or failed to return a user session.')
+      }
+
+      const emailLower = (cred.user.email || '').trim().toLowerCase()
+      if (!emailLower) {
+        await signOut(firebaseAuth)
+        throw new Error('This Google account does not have a verified email address.')
+      }
+
+      // Check A: Super Administrator (Always granted full access)
+      if (isSuperAdminEmail(emailLower)) {
+        await syncUserProfile(cred.user, { isAdmin: true, role: 'super_admin' })
+        return { user: cred.user, isAdmin: true, error: null }
+      }
+
+      // Check B: Query admin_users in Firestore and local storage
+      let matched = null
+      if (firestoreDb) {
+        try {
+          const snap = await getDoc(doc(firestoreDb, 'admin_users', cred.user.uid))
+          if (snap.exists()) {
+            matched = { id: snap.id, ...snap.data() }
+          }
+        } catch (_) {}
+      }
+
+      if (!matched && typeof window !== 'undefined') {
+        try {
+          const cached = JSON.parse(localStorage.getItem('ystore_admin_users') || '[]')
+          matched = cached.find((u) => (u.email || '').toLowerCase() === emailLower)
+        } catch (_) {}
+      }
+
+      // Check C: If account is approved and active
+      if (matched && matched.status === 'active' && (matched.approvedAt || matched.active !== false)) {
+        await syncUserProfile(cred.user, { isAdmin: true, role: matched.role || 'Store Staff' })
+        return { user: cred.user, isAdmin: true, error: null }
+      }
+
+      // Check D: If account is explicitly suspended
+      if (matched && matched.status === 'suspended') {
+        await signOut(firebaseAuth)
+        currentUser.value = null
+        throw new Error('This staff account has been suspended by an administrator.')
+      }
+
+      // Check E: User is pending approval OR brand-new Google Sign-In
+      // Register or update pending record in admin_users
+      const pendingRecord = {
+        id: matched?.id || cred.user.uid,
+        uid: cred.user.uid,
+        email: emailLower,
+        name: cred.user.displayName || matched?.name || emailLower.split('@')[0],
+        displayName: cred.user.displayName || matched?.name || emailLower.split('@')[0],
+        role: matched?.role || 'Store Staff (Pending Approval)',
+        department: matched?.department || 'Store Operations',
+        photoURL: cred.user.photoURL || null,
+        provider: 'google',
+        status: 'pending',
+        active: false,
+        registeredAt: matched?.registeredAt || new Date().toISOString(),
+        createdAt: matched?.createdAt || new Date().toISOString()
+      }
+
+      if (firestoreDb) {
+        try {
+          await setDoc(doc(firestoreDb, 'admin_users', pendingRecord.id), {
+            ...pendingRecord,
+            updatedAt: serverTimestamp()
+          }, { merge: true })
+        } catch (e) {
+          console.warn('Could not write pending record to Firestore admin_users:', e)
+        }
+      }
+
+      if (typeof window !== 'undefined') {
+        try {
+          const cached = JSON.parse(localStorage.getItem('ystore_admin_users') || '[]')
+          const idx = cached.findIndex((u) => (u.email || '').toLowerCase() === emailLower)
+          if (idx !== -1) {
+            cached[idx] = { ...cached[idx], ...pendingRecord }
+          } else {
+            cached.push(pendingRecord)
+          }
+          localStorage.setItem('ystore_admin_users', JSON.stringify(cached))
+        } catch (_) {}
+      }
+
+      // REVOKE SESSION IMMEDIATELY: User cannot browse CMS until an admin approves
+      await signOut(firebaseAuth)
+      currentUser.value = null
+
+      pendingApprovalInfo.value = {
+        email: emailLower,
+        displayName: pendingRecord.displayName,
+        photoURL: cred.user.photoURL || null,
+        provider: 'google',
+        registeredAt: new Date().toLocaleDateString()
+      }
+
+      return {
+        user: null,
+        pendingApproval: true,
+        pendingInfo: pendingApprovalInfo.value,
+        error: null
+      }
+    } catch (err) {
+      const msg = formatAuthError(err)
+      authError.value = msg
+      return { user: null, error: msg }
+    } finally {
+      authLoading.value = false
+    }
+  }
+
+  // 10. Sign in with Email for CMS Portal Access
+  const signInCmsWithEmail = async (email, password) => {
+    initFirebase()
+    authLoading.value = true
+    authError.value = ''
+    pendingApprovalInfo.value = null
+    const emailLower = email.trim().toLowerCase()
+
+    try {
+      const cred = await signInWithEmailAndPassword(firebaseAuth, emailLower, password)
+      if (!cred || !cred.user) throw new Error('Authentication failed.')
+
+      if (isSuperAdminEmail(emailLower)) {
+        await syncUserProfile(cred.user, { isAdmin: true, role: 'super_admin' })
+        return { user: cred.user, isAdmin: true, error: null }
+      }
+
+      // Check admin_users
+      let matched = null
+      if (firestoreDb) {
+        try {
+          const snap = await getDoc(doc(firestoreDb, 'admin_users', cred.user.uid))
+          if (snap.exists()) matched = snap.data()
+        } catch (_) {}
+      }
+      if (!matched && typeof window !== 'undefined') {
+        try {
+          const cached = JSON.parse(localStorage.getItem('ystore_admin_users') || '[]')
+          matched = cached.find((u) => (u.email || '').toLowerCase() === emailLower)
+        } catch (_) {}
+      }
+
+      if (matched && matched.status === 'active' && (matched.approvedAt || matched.active !== false)) {
+        await syncUserProfile(cred.user, { isAdmin: true, role: matched.role || 'Store Staff' })
+        return { user: cred.user, isAdmin: true, error: null }
+      }
+
+      if (matched && matched.status === 'suspended') {
+        await signOut(firebaseAuth)
+        currentUser.value = null
+        throw new Error('This administrator account has been suspended by an administrator.')
+      }
+
+      // User exists or is pending: Revoke session and show awaiting approval
+      await signOut(firebaseAuth)
+      currentUser.value = null
+
+      pendingApprovalInfo.value = {
+        email: emailLower,
+        displayName: matched?.name || cred.user.displayName || emailLower.split('@')[0],
+        provider: 'email',
+        registeredAt: matched?.registeredAt || new Date().toLocaleDateString()
+      }
+
+      return {
+        user: null,
+        pendingApproval: true,
+        pendingInfo: pendingApprovalInfo.value,
+        error: null
+      }
+    } catch (err) {
+      const msg = formatAuthError(err)
+      authError.value = msg
+      return { user: null, error: msg }
+    } finally {
+      authLoading.value = false
+    }
+  }
+
+  // 11. Request CMS Staff Access (Self-Registration)
+  const requestCmsAccessWithEmail = async ({ name, email, password, department }) => {
+    initFirebase()
+    authLoading.value = true
+    authError.value = ''
+    pendingApprovalInfo.value = null
+    const emailLower = email.trim().toLowerCase()
+
+    try {
+      const cred = await createUserWithEmailAndPassword(firebaseAuth, emailLower, password)
+      if (name && cred.user) {
+        try {
+          await updateProfile(cred.user, { displayName: name.trim() })
+        } catch (_) {}
+      }
+
+      const pendingRecord = {
+        id: cred.user.uid,
+        uid: cred.user.uid,
+        email: emailLower,
+        name: name.trim() || emailLower.split('@')[0],
+        displayName: name.trim() || emailLower.split('@')[0],
+        role: 'Store Staff (Pending Approval)',
+        department: department || 'Store Operations',
+        status: 'pending',
+        active: false,
+        provider: 'email',
+        registeredAt: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      }
+
+      if (firestoreDb) {
+        try {
+          await setDoc(doc(firestoreDb, 'admin_users', cred.user.uid), {
+            ...pendingRecord,
+            createdAt: serverTimestamp()
+          }, { merge: true })
+        } catch (e) {
+          console.warn('Firestore admin_users write error:', e)
+        }
+      }
+
+      if (typeof window !== 'undefined') {
+        try {
+          const cached = JSON.parse(localStorage.getItem('ystore_admin_users') || '[]')
+          cached.push(pendingRecord)
+          localStorage.setItem('ystore_admin_users', JSON.stringify(cached))
+        } catch (_) {}
+      }
+
+      // Immediately sign out so account remains locked until approval
+      await signOut(firebaseAuth)
+      currentUser.value = null
+
+      pendingApprovalInfo.value = {
+        email: emailLower,
+        displayName: name.trim(),
+        provider: 'email',
+        registeredAt: new Date().toLocaleDateString()
+      }
+
+      return { success: true, pendingInfo: pendingApprovalInfo.value, error: null }
+    } catch (err) {
+      const msg = formatAuthError(err)
+      authError.value = msg
+      return { success: false, error: msg }
+    } finally {
+      authLoading.value = false
+    }
+  }
+
   const clearError = () => {
     authError.value = ''
   }
 
   const isAuthenticated = computed(() => !!currentUser.value)
   const isGuest = computed(() => !!currentUser.value?.isAnonymous)
-  const isAdmin = computed(() => !!currentUser.value?.isAdmin || userProfile.value?.role === 'super_admin')
+  const isAdmin = computed(() => {
+    if (!currentUser.value) return false
+    if (currentUser.value.isAdmin) return true
+    if (isSuperAdminEmail(currentUser.value.email)) return true
+    if (userProfile.value?.role === 'super_admin') return true
+    if (typeof window !== 'undefined' && currentUser.value.email) {
+      try {
+        const cached = JSON.parse(localStorage.getItem('ystore_admin_users') || '[]')
+        const found = cached.find((u) => (u.email || '').toLowerCase() === currentUser.value.email.toLowerCase())
+        if (found && found.status === 'active' && (found.approvedAt || found.active !== false)) {
+          return true
+        }
+      } catch (_) {}
+    }
+    return false
+  })
 
   return {
     currentUser,
@@ -436,6 +744,7 @@ Yellow Berry Store Team`
     authReady,
     authLoading,
     authError,
+    pendingApprovalInfo,
     isAuthenticated,
     isGuest,
     isAdmin,
@@ -443,6 +752,9 @@ Yellow Berry Store Team`
     signInWithEmail,
     signUpWithEmail,
     signInWithGoogle,
+    signInCmsWithGoogle,
+    signInCmsWithEmail,
+    requestCmsAccessWithEmail,
     signInAsGuest,
     resetPassword,
     updateUserDisplayName,

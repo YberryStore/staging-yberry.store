@@ -6360,6 +6360,254 @@
       </div>
 
       <!-- ==========================================
+           TAB 8.4: SETTINGS - SEO, ANALYTICS & CONVERSION PIXELS
+           ========================================== -->
+      <div v-else-if="activeSection === 'settings-seo'" class="space-y-6">
+        <div class="pb-4 border-b border-neutral-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-neutral-900 flex items-center justify-center shrink-0 p-2 text-[#F4EB6A]">
+              <FlowbiteIcon name="chart" size="20" stroke-width="2" />
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Settings /</span>
+                <h2 class="text-xl font-bold text-neutral-900">SEO, Analytics &amp; Conversion Pixels</h2>
+              </div>
+              <p class="text-xs text-neutral-500">Configure Google Analytics 4, Google Tag Manager, Meta Pixel, and page SEO metadata.</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2.5">
+            <button
+              type="button"
+              @click="handleSaveTracking"
+              :disabled="isSavingSeo"
+              class="px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-[#F4EB6A] text-xs font-bold cursor-pointer transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50"
+            >
+              <FlowbiteIcon v-if="isSavingSeo" name="refresh" size="14" class="animate-spin" />
+              <span>{{ isSavingSeo ? 'Syncing...' : 'Save Tracking Settings' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Settings Sub-Navigation Header -->
+        <div class="flex items-center gap-1.5 p-1 bg-neutral-100 rounded-xl w-fit">
+          <button
+            type="button"
+            @click="activeSection = 'settings'"
+            class="px-4 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors text-neutral-600 hover:text-neutral-900"
+          >
+            General
+          </button>
+          <button
+            type="button"
+            @click="activeSection = 'settings-payments'"
+            class="px-4 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors text-neutral-600 hover:text-neutral-900 flex items-center gap-1.5"
+          >
+            <FlowbiteIcon name="credit-card" size="14" />
+            <span>Payments</span>
+            <span class="text-[9px] bg-neutral-200 text-neutral-800 px-1.5 py-0.2 rounded-full font-bold">
+              {{ activePaymentGatewaysCount }} Active
+            </span>
+          </button>
+          <button
+            type="button"
+            @click="activeSection = 'settings-users'"
+            class="px-4 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors text-neutral-600 hover:text-neutral-900 flex items-center gap-1.5"
+          >
+            <FlowbiteIcon name="users" size="14" />
+            <span>Manage Users</span>
+            <span class="text-[9px] bg-neutral-200 text-neutral-800 px-1.5 py-0.2 rounded-full font-bold">
+              {{ adminUsers?.length || 0 }}
+            </span>
+          </button>
+          <button
+            type="button"
+            @click="activeSection = 'settings-seo'"
+            class="px-4 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors bg-white text-neutral-900 shadow-2xs flex items-center gap-1.5"
+          >
+            <FlowbiteIcon name="chart" size="14" />
+            <span>Analytics &amp; SEO</span>
+          </button>
+        </div>
+
+        <!-- Live Sync Status Banner -->
+        <div class="bg-neutral-900 text-white p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-neutral-800 shadow-sm">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="w-2.5 h-2.5 rounded-full bg-[#84CC16] shadow-[0_0_8px_#84CC16] inline-block animate-pulse"></span>
+              <span class="text-xs font-bold text-[#F4EB6A] uppercase tracking-wider">Live Storefront Telemetry Active</span>
+            </div>
+            <p class="text-xs text-neutral-300 font-light max-w-2xl">
+              Changes saved here instantly propagate to the live storefront (<code class="text-white font-semibold">https://ystoreza.co.za/</code>). Scripts are injected dynamically and strictly comply with Section 11 of POPIA cookie consent.
+            </p>
+          </div>
+        </div>
+
+        <!-- Analytics & Pixels Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <!-- 1. Google Analytics 4 (GA4) -->
+          <div class="bg-white p-5 rounded-2xl border border-neutral-200/80 shadow-2xs space-y-4 hover:border-neutral-300 transition-colors">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-bold text-neutral-900 block">Google Analytics 4</span>
+                <span class="text-[11px] text-neutral-400">Measurement ID</span>
+              </div>
+              <label class="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-700 cursor-pointer">
+                <input v-model="trackingConfig.enableGa4" type="checkbox" class="accent-neutral-900 w-4 h-4 rounded cursor-pointer" />
+                <span>Active</span>
+              </label>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-neutral-600 block mb-1">Measurement ID (G-XXXXXXXXXX)</label>
+              <input
+                v-model="trackingConfig.ga4Id"
+                type="text"
+                placeholder="G-XJ3BF4MRDF"
+                class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-xs font-mono uppercase focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <p class="text-[11px] text-neutral-400 leading-relaxed font-light">
+              Injects <code class="text-neutral-700 font-semibold">gtag.js</code> and fires real-time pageviews, view_item, add_to_cart, and purchases.
+            </p>
+          </div>
+
+          <!-- 2. Google Tag Manager (GTM) -->
+          <div class="bg-white p-5 rounded-2xl border border-neutral-200/80 shadow-2xs space-y-4 hover:border-neutral-300 transition-colors">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-bold text-neutral-900 block">Google Tag Manager</span>
+                <span class="text-[11px] text-neutral-400">Container ID</span>
+              </div>
+              <label class="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-700 cursor-pointer">
+                <input v-model="trackingConfig.enableGtm" type="checkbox" class="accent-neutral-900 w-4 h-4 rounded cursor-pointer" />
+                <span>Active</span>
+              </label>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-neutral-600 block mb-1">Container ID (GTM-XXXXXXX)</label>
+              <input
+                v-model="trackingConfig.gtmId"
+                type="text"
+                placeholder="GTM-PNT79WT8"
+                class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-xs font-mono uppercase focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <p class="text-[11px] text-neutral-400 leading-relaxed font-light">
+              Orchestrates triggers and tags via <code class="text-neutral-700 font-semibold">window.dataLayer</code> with automatic noscript fallback.
+            </p>
+          </div>
+
+          <!-- 3. Meta Pixel (Facebook Pixel) -->
+          <div class="bg-white p-5 rounded-2xl border border-neutral-200/80 shadow-2xs space-y-4 hover:border-neutral-300 transition-colors">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-bold text-neutral-900 block">Meta Pixel</span>
+                <span class="text-[11px] text-neutral-400">Dataset / Pixel ID</span>
+              </div>
+              <label class="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-700 cursor-pointer">
+                <input v-model="trackingConfig.enableMetaPixel" type="checkbox" class="accent-neutral-900 w-4 h-4 rounded cursor-pointer" />
+                <span>Active</span>
+              </label>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-neutral-600 block mb-1">Numeric Pixel ID</label>
+              <input
+                v-model="trackingConfig.metaPixelId"
+                type="text"
+                placeholder="3007632809594306"
+                class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-xs font-mono focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <p class="text-[11px] text-neutral-400 leading-relaxed font-light">
+              Initializes <code class="text-neutral-700 font-semibold">fbevents.js</code> and triggers PageView, AddToCart, InitiateCheckout &amp; Purchase events.
+            </p>
+          </div>
+
+          <!-- 4. Google AdSense -->
+          <div class="bg-white p-5 rounded-2xl border border-neutral-200/80 shadow-2xs space-y-4 hover:border-neutral-300 transition-colors">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-bold text-neutral-900 block">Google AdSense</span>
+                <span class="text-[11px] text-neutral-400">Publisher ID</span>
+              </div>
+              <label class="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-700 cursor-pointer">
+                <input v-model="trackingConfig.enableAdsense" type="checkbox" class="accent-neutral-900 w-4 h-4 rounded cursor-pointer" />
+                <span>Active</span>
+              </label>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-neutral-600 block mb-1">Publisher ID (ca-pub-...)</label>
+              <input
+                v-model="trackingConfig.adsensePublisherId"
+                type="text"
+                placeholder="ca-pub-1234567890123456"
+                class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-xs font-mono focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <p class="text-[11px] text-neutral-400 leading-relaxed font-light">
+              Injects AdSense verification tag into the storefront head for domain ownership verification.
+            </p>
+          </div>
+        </div>
+
+        <!-- Page-Level SEO Metadata Editor -->
+        <div class="bg-white p-6 rounded-2xl border border-neutral-200/80 shadow-2xs space-y-6">
+          <div class="border-b border-neutral-100 pb-3">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-neutral-400">Search Engine Optimization</span>
+            <h3 class="text-base font-bold text-neutral-900">Website Page Titles &amp; Meta Descriptions</h3>
+            <p class="text-xs text-neutral-500 font-light">Customize page-level meta tags to optimize Google search ranking and social preview cards.</p>
+          </div>
+
+          <div class="space-y-4">
+            <div
+              v-for="(page, key) in pagesSeo"
+              :key="key"
+              class="p-4 rounded-xl border border-neutral-100 bg-neutral-50/50 space-y-3"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-full bg-neutral-200 text-neutral-800 text-[10px] font-bold uppercase">{{ key }}</span>
+                  <span class="text-xs font-bold text-neutral-900">{{ page.label }}</span>
+                </div>
+                <span class="text-[11px] text-neutral-400 font-mono">{{ page.path }}</span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="text-[11px] font-semibold text-neutral-600 block mb-1">Page Title</label>
+                  <input
+                    v-model="page.title"
+                    type="text"
+                    class="w-full rounded-lg border border-neutral-200 px-3 py-2 text-xs bg-white focus:outline-none focus:border-neutral-900"
+                  />
+                </div>
+                <div>
+                  <label class="text-[11px] font-semibold text-neutral-600 block mb-1">Meta Description</label>
+                  <input
+                    v-model="page.description"
+                    type="text"
+                    class="w-full rounded-lg border border-neutral-200 px-3 py-2 text-xs bg-white focus:outline-none focus:border-neutral-900"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end pt-2">
+            <button
+              type="button"
+              @click="handleSaveTracking"
+              :disabled="isSavingSeo"
+              class="px-5 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-[#F4EB6A] text-xs font-bold cursor-pointer transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50"
+            >
+              <FlowbiteIcon v-if="isSavingSeo" name="refresh" size="14" class="animate-spin" />
+              <span>{{ isSavingSeo ? 'Syncing...' : 'Save All SEO &amp; Tracking Tags' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
            STAFF INVITATION & ACCESS DISPATCH MODAL
            ========================================== -->
       <transition name="fade">
