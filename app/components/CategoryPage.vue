@@ -40,24 +40,55 @@
     </section>
 
     <!-- Category Hero Header Banner -->
-    <section class="py-6 sm:py-8 bg-neutral-900 text-white relative overflow-hidden">
-      <!-- Background pattern & subtle glow -->
-      <div class="absolute -right-20 -top-20 w-96 h-96 rounded-full bg-[#F4EB6A]/10 blur-3xl pointer-events-none"></div>
-      <div class="absolute left-1/3 -bottom-20 w-80 h-80 rounded-full bg-amber-500/10 blur-3xl pointer-events-none"></div>
+    <section class="py-8 sm:py-12 bg-neutral-900 text-white relative overflow-hidden">
+      <!-- Custom Background Image if configured -->
+      <div v-if="activeCategoryBanner && (activeCategoryBanner.image || activeCategoryBanner.mobileImage)" class="absolute inset-0 z-0">
+        <picture>
+          <source
+            v-if="activeCategoryBanner.mobileImage"
+            media="(max-width: 640px)"
+            :srcset="useAsset(activeCategoryBanner.mobileImage)"
+          />
+          <img
+            :src="useAsset(activeCategoryBanner.image || activeCategoryBanner.mobileImage)"
+            :alt="activeCategoryBanner.title || currentCategoryMeta.title"
+            class="w-full h-full object-cover object-center"
+          />
+        </picture>
+        <!-- Configurable Dark Overlay -->
+        <div
+          class="absolute inset-0"
+          :style="{ backgroundColor: `rgba(0, 0, 0, ${((activeCategoryBanner.overlayOpacity ?? 70) / 100)})` }"
+        ></div>
+      </div>
+
+      <!-- Fallback Background pattern & subtle glow when no banner image is loaded -->
+      <template v-else>
+        <div class="absolute -right-20 -top-20 w-96 h-96 rounded-full bg-[#F4EB6A]/10 blur-3xl pointer-events-none"></div>
+        <div class="absolute left-1/3 -bottom-20 w-80 h-80 rounded-full bg-amber-500/10 blur-3xl pointer-events-none"></div>
+      </template>
 
       <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div class="max-w-2xl">
+            <!-- Badge pill -->
+            <div v-if="showBadgePills && activeCategoryBanner?.badge" class="mb-3">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F4EB6A] text-neutral-950 font-bold text-xs shadow-xs">
+                <FlowbiteIcon name="sparkles" size="13" class="text-neutral-950" />
+                <span>{{ activeCategoryBanner.badge }}</span>
+              </span>
+            </div>
+
             <h1 class="text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-white mb-3">
-              {{ currentCategoryMeta.title }}
+              {{ activeCategoryBanner?.title || currentCategoryMeta.title }}
             </h1>
             <p class="text-sm sm:text-base text-neutral-300 leading-relaxed font-light max-w-xl">
-              {{ currentCategoryMeta.description }}
+              {{ activeCategoryBanner?.subtitle || currentCategoryMeta.description }}
             </p>
           </div>
 
           <!-- Quick stats badge -->
-          <div class="flex items-center gap-4 bg-neutral-800/60 backdrop-blur-md border border-neutral-700/80 p-4 rounded-2xl self-start lg:self-auto">
+          <div class="flex items-center gap-4 bg-neutral-900/80 backdrop-blur-md border border-neutral-700/80 p-4 rounded-2xl self-start lg:self-auto shadow-lg">
             <div class="w-12 h-12 rounded-xl bg-[#F4EB6A]/20 text-[#F4EB6A] flex items-center justify-center shrink-0">
               <FlowbiteIcon name="sparkles" size="24" stroke-width="1.8" />
             </div>
@@ -1077,6 +1108,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import ProductCard from './ProductCard.vue'
 import FlowbiteIcon from './FlowbiteIcon.vue'
 import { useStoreContent } from '../composables/useStoreContent'
+import { useAsset } from '../composables/useAsset'
 
 const props = defineProps({
   initialCategory: {
@@ -1087,7 +1119,15 @@ const props = defineProps({
 
 const emit = defineEmits(['add-to-cart', 'quick-view', 'toggle-wishlist', 'view-product', 'back-home'])
 
-const { publishedProducts: masterProducts, categories: liveCategories, initContentListeners, contentLoading } = useStoreContent()
+const {
+  publishedProducts: masterProducts,
+  categories: liveCategories,
+  categoryBanners,
+  collectionBanners,
+  initContentListeners,
+  contentLoading,
+  showBadgePills
+} = useStoreContent()
 
 // Active filter states
 const activeCategory = ref(props.initialCategory || 'All')
@@ -1218,6 +1258,44 @@ const availableTags = computed(() => {
 const currentCategoryMeta = computed(() => {
   const match = allCategories.value.find(c => c.name === activeCategory.value)
   return match || allCategories.value[0]
+})
+
+const activeCategoryBanner = computed(() => {
+  const currentKey = (activeCategory.value || 'All').trim().toLowerCase()
+
+  // 1. Check matching category banner
+  if (categoryBanners && categoryBanners.value) {
+    const match = categoryBanners.value.find(
+      (b) => b.enabled !== false && (
+        (b.category && b.category.trim().toLowerCase() === currentKey) ||
+        (b.categoryName && b.categoryName.trim().toLowerCase() === currentKey)
+      )
+    )
+    if (match) return match
+  }
+
+  // 2. Check matching collection banner
+  if (collectionBanners && collectionBanners.value) {
+    const colMatch = collectionBanners.value.find(
+      (b) => b.enabled !== false && (
+        (b.collection && b.collection.trim().toLowerCase() === currentKey) ||
+        (b.collectionName && b.collectionName.trim().toLowerCase() === currentKey)
+      )
+    )
+    if (colMatch) return colMatch
+  }
+
+  // 3. Fallback to default category/collection banner
+  if (categoryBanners && categoryBanners.value) {
+    const defaultBanner = categoryBanners.value.find((b) => b.isDefault || b.category === 'All')
+    if (defaultBanner) return defaultBanner
+  }
+  if (collectionBanners && collectionBanners.value) {
+    const defaultColBanner = collectionBanners.value.find((b) => b.isDefault || b.collection === 'All Collections')
+    if (defaultColBanner) return defaultColBanner
+  }
+
+  return null
 })
 
 const getCategoryProductCount = (categoryName) => {

@@ -117,10 +117,25 @@
           @navigate-privacy="currentView = 'privacy'"
         />
 
+        <!-- Dedicated Thank You & Order Confirmation Page -->
+        <ThankYouPage
+          v-else-if="currentView === 'thank-you'"
+          :order="lastPlacedOrder"
+          @back-home="currentView = 'home'"
+          @view-specials="currentView = 'specials'"
+          @navigate-contact="currentView = 'contact'"
+        />
+
         <!-- Homepage Catalog Sections -->
         <div v-else>
+          <!-- Product Story Circles (Placed above Hero Banner) -->
+          <ProductStories @navigate="handleStoryNavigate" />
+
           <!-- Hero Banner Carousel (Hidden when no banner is loaded) -->
           <HeroBanner v-if="hasActiveBanners" />
+
+          <!-- Banner Categories (Latest categories under Hero Banner) -->
+          <BannerCategories @select-category="handleCategorySelect" />
 
           <!-- Value Propositions / Features Bar -->
           <FeaturesBar />
@@ -243,27 +258,6 @@
       :current-view="currentView"
       @navigate="(view) => currentView = view"
     />
-
-    <!-- Google Tag Manager (noscript) fallback for public pages (only active when analytics consent is granted) -->
-    <noscript v-if="currentView !== 'admin' && currentView !== 'cms-auth' && validGtmId && trackingConfig.enableGtm && allowsAnalytics">
-      <iframe
-        :src="`https://www.googletagmanager.com/ns.html?id=${validGtmId}`"
-        height="0"
-        width="0"
-        style="display:none;visibility:hidden"
-      ></iframe>
-    </noscript>
-
-    <!-- Meta Pixel (noscript) fallback for public pages (only active when advertising consent is granted) -->
-    <noscript v-if="currentView !== 'admin' && currentView !== 'cms-auth' && validMetaPixelId && trackingConfig.enableMetaPixel && allowsAdvertising">
-      <img
-        height="1"
-        width="1"
-        style="display:none"
-        :src="`https://www.facebook.com/tr?id=${validMetaPixelId}&ev=PageView&noscript=1`"
-        alt=""
-      />
-    </noscript>
   </div>
 </template>
 
@@ -279,6 +273,8 @@ import BlogPage from './components/BlogPage.vue'
 import AboutPage from './components/AboutPage.vue'
 import ContactPage from './components/ContactPage.vue'
 import HeroBanner from './components/HeroBanner.vue'
+import ProductStories from './components/ProductStories.vue'
+import BannerCategories from './components/BannerCategories.vue'
 import FeaturesBar from './components/FeaturesBar.vue'
 import CategoryGrid from './components/CategoryGrid.vue'
 import FeaturedProducts from './components/FeaturedProducts.vue'
@@ -290,6 +286,7 @@ import AppFooter from './components/AppFooter.vue'
 import PrivacyPolicyPage from './components/PrivacyPolicyPage.vue'
 import TermsPage from './components/TermsPage.vue'
 import CookiesPage from './components/CookiesPage.vue'
+import ThankYouPage from './components/ThankYouPage.vue'
 import CookieConsentModal from './components/CookieConsentModal.vue'
 import CartDrawer from './components/CartDrawer.vue'
 import AuthModal from './components/AuthModal.vue'
@@ -324,6 +321,97 @@ const {
 } = useSiteSeo()
 
 const { allowsAnalytics, allowsAdvertising, initConsent } = useCookieConsent()
+
+// Runtime config for secret access keys
+const config = useRuntimeConfig()
+
+// Secret CMS Access Keys allowed to unlock the CMS Gateway
+const CMS_SECRET_KEYS = [
+  'yberry-admin-2026',
+  'yberry-admin',
+  'yberry-mgmt',
+  'yberry-secure',
+  'yberry-cms'
+]
+if (config?.public?.cmsSecretKey && !CMS_SECRET_KEYS.includes(config.public.cmsSecretKey)) {
+  CMS_SECRET_KEYS.unshift(config.public.cmsSecretKey)
+}
+
+// Permitted navigation views (including secret cms-auth gateway and compliance pages)
+const VALID_VIEWS = ['home', 'category', 'product', 'specials', 'blog', 'contact', 'about', 'admin', 'cms-auth', 'privacy', 'terms', 'cookies', 'thank-you']
+
+// Verify secret URL parameters (e.g. ?cms_auth=..., ?portal=..., ?cms_key=...)
+// Sets session authorization and purges secret parameters from address bar for anti-shoulder-surfing
+const verifyAndAuthorizeCmsUrl = () => {
+  if (typeof window === 'undefined') return { authorized: false, isSecretEntry: false }
+  try {
+    const url = new URL(window.location.href)
+    const secretParams = ['cms_auth', 'cms_portal', 'portal', 'cms_key', 'access_key']
+    let foundKey = null
+
+    for (const param of secretParams) {
+      const val = url.searchParams.get(param)
+      if (val && CMS_SECRET_KEYS.includes(val.trim())) {
+        foundKey = param
+        break
+      }
+    }
+
+    if (foundKey) {
+      sessionStorage.setItem('ystore_cms_authorized', 'true')
+      // Clean query parameter from address bar immediately
+      url.searchParams.delete(foundKey)
+      window.history.replaceState({}, '', url.pathname + (url.search || '') + (url.hash || ''))
+      return { authorized: true, isSecretEntry: true }
+    }
+
+    const authorized = sessionStorage.getItem('ystore_cms_authorized') === 'true'
+    return { authorized, isSecretEntry: false }
+  } catch {
+    return { authorized: false, isSecretEntry: false }
+  }
+}
+
+// Active View: 'home' for landing storefront, or 'category'/'product'/'specials'/'blog'/'contact'/'about'/'admin'/'cms-auth'
+const getInitialView = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const { authorized, isSecretEntry } = verifyAndAuthorizeCmsUrl()
+      if (isSecretEntry) {
+        return 'cms-auth'
+      }
+
+      const params = new URLSearchParams(window.location.search)
+      const viewParam = params.get('view')
+      if (viewParam && VALID_VIEWS.includes(viewParam)) {
+        if ((viewParam === 'admin' || viewParam === 'cms-auth') && !authorized) {
+          return 'home'
+        }
+        return viewParam
+      }
+
+      const hash = window.location.hash.replace('#', '')
+      if (hash && VALID_VIEWS.includes(hash)) {
+        if ((hash === 'admin' || hash === 'cms-auth') && !authorized) {
+          return 'home'
+        }
+        return hash
+      }
+
+      const saved = sessionStorage.getItem('ystore_current_view')
+      if (saved && VALID_VIEWS.includes(saved)) {
+        if ((saved === 'admin' || saved === 'cms-auth') && !authorized) {
+          return 'home'
+        }
+        return saved
+      }
+    } catch {}
+  }
+  return 'home'
+}
+
+const currentView = ref(getInitialView())
+const selectedCategoryFilter = ref('All')
 
 // Dynamic Page SEO and Analytics Scripts (Reacts immediately to CMS & Firestore updates)
 useHead(() => {
@@ -401,162 +489,6 @@ useHead(() => {
     meta: metaTags
   }
 })
-
-// Hot-swap GTM script in document.head immediately whenever ID is updated
-watch(
-  [validGtmId, () => trackingConfig.enableGtm, allowsAnalytics, () => currentView.value],
-  ([gtmId, enabled, consentOk, view]) => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return
-    if (view === 'admin' || view === 'cms-auth' || !gtmId || !enabled || !consentOk) return
-
-    const expectedSrc = `https://www.googletagmanager.com/gtm.js?id=${gtmId}`
-    const existingScripts = Array.from(document.head.querySelectorAll('script'))
-    const alreadyLoaded = existingScripts.some((s) => s.src === expectedSrc)
-
-    if (!alreadyLoaded) {
-      existingScripts.forEach((s) => {
-        if (s.src && s.src.includes('googletagmanager.com/gtm.js?id=')) {
-          s.parentNode?.removeChild(s)
-        }
-      })
-
-      window.dataLayer = window.dataLayer || []
-      window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' })
-
-      const scriptEl = document.createElement('script')
-      scriptEl.async = true
-      scriptEl.src = expectedSrc
-      scriptEl.setAttribute('data-gtm-id', gtmId)
-      document.head.insertBefore(scriptEl, document.head.firstChild)
-    }
-  },
-  { immediate: true }
-)
-
-// Hot-swap Meta Pixel immediately whenever ID is updated
-watch(
-  [validMetaPixelId, () => trackingConfig.enableMetaPixel, allowsAdvertising, () => currentView.value],
-  ([pixelId, enabled, consentOk, view]) => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return
-    if (view === 'admin' || view === 'cms-auth' || !pixelId || !enabled || !consentOk) return
-
-    if (window.fbq) {
-      window.fbq('init', pixelId)
-      window.fbq('track', 'PageView')
-    } else {
-      !(function (f, b, e, v, n, t, s) {
-        if (f.fbq) return
-        n = f.fbq = function () {
-          n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments)
-        }
-        if (!f._fbq) f._fbq = n
-        n.push = n
-        n.loaded = !0
-        n.version = '2.0'
-        n.queue = []
-        t = b.createElement(e)
-        t.async = !0
-        t.src = v
-        s = b.getElementsByTagName(e)[0]
-        s.parentNode.insertBefore(t, s)
-      })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js')
-      window.fbq('init', pixelId)
-      window.fbq('track', 'PageView')
-    }
-  },
-  { immediate: true }
-)
-
-// Runtime config for secret access keys
-const config = useRuntimeConfig()
-
-// Secret CMS Access Keys allowed to unlock the CMS Gateway
-const CMS_SECRET_KEYS = [
-  'yberry-admin-2026',
-  'yberry-admin',
-  'yberry-mgmt',
-  'yberry-secure',
-  'yberry-cms'
-]
-if (config?.public?.cmsSecretKey && !CMS_SECRET_KEYS.includes(config.public.cmsSecretKey)) {
-  CMS_SECRET_KEYS.unshift(config.public.cmsSecretKey)
-}
-
-// Permitted navigation views (including secret cms-auth gateway and compliance pages)
-const VALID_VIEWS = ['home', 'category', 'product', 'specials', 'blog', 'contact', 'about', 'admin', 'cms-auth', 'privacy', 'terms', 'cookies']
-
-// Verify secret URL parameters (e.g. ?cms_auth=..., ?portal=..., ?cms_key=...)
-// Sets session authorization and purges secret parameters from address bar for anti-shoulder-surfing
-const verifyAndAuthorizeCmsUrl = () => {
-  if (typeof window === 'undefined') return { authorized: false, isSecretEntry: false }
-  try {
-    const url = new URL(window.location.href)
-    const secretParams = ['cms_auth', 'cms_portal', 'portal', 'cms_key', 'access_key']
-    let foundKey = null
-
-    for (const param of secretParams) {
-      const val = url.searchParams.get(param)
-      if (val && CMS_SECRET_KEYS.includes(val.trim())) {
-        foundKey = param
-        break
-      }
-    }
-
-    if (foundKey) {
-      sessionStorage.setItem('ystore_cms_authorized', 'true')
-      // Clean query parameter from address bar immediately
-      url.searchParams.delete(foundKey)
-      window.history.replaceState({}, '', url.pathname + (url.search || '') + (url.hash || ''))
-      return { authorized: true, isSecretEntry: true }
-    }
-
-    const authorized = sessionStorage.getItem('ystore_cms_authorized') === 'true'
-    return { authorized, isSecretEntry: false }
-  } catch {
-    return { authorized: false, isSecretEntry: false }
-  }
-}
-
-// Active View: 'home' for landing storefront, or 'category'/'product'/'specials'/'blog'/'contact'/'about'/'admin'/'cms-auth'
-const getInitialView = () => {
-  if (typeof window !== 'undefined') {
-    try {
-      const { authorized, isSecretEntry } = verifyAndAuthorizeCmsUrl()
-      if (isSecretEntry) {
-        return 'cms-auth'
-      }
-
-      const params = new URLSearchParams(window.location.search)
-      const viewParam = params.get('view')
-      if (viewParam && VALID_VIEWS.includes(viewParam)) {
-        if ((viewParam === 'admin' || viewParam === 'cms-auth') && !authorized) {
-          return 'home'
-        }
-        return viewParam
-      }
-
-      const hash = window.location.hash.replace('#', '')
-      if (hash && VALID_VIEWS.includes(hash)) {
-        if ((hash === 'admin' || hash === 'cms-auth') && !authorized) {
-          return 'home'
-        }
-        return hash
-      }
-
-      const saved = sessionStorage.getItem('ystore_current_view')
-      if (saved && VALID_VIEWS.includes(saved)) {
-        if ((saved === 'admin' || saved === 'cms-auth') && !authorized) {
-          return 'home'
-        }
-        return saved
-      }
-    } catch {}
-  }
-  return 'home'
-}
-
-const currentView = ref(getInitialView())
-const selectedCategoryFilter = ref('All')
 
 // Synchronize URL with view so other users can navigate, share direct links, and bookmark pages
 const syncUrlWithView = (view) => {
@@ -777,6 +709,37 @@ const handleCategorySelect = (categoryName) => {
   }
 }
 
+const handleStoryNavigate = (link) => {
+  if (!link) return
+  if (typeof link === 'string' && (link.startsWith('http://') || link.startsWith('https://'))) {
+    if (typeof window !== 'undefined') {
+      window.open(link, '_blank')
+    }
+    return
+  }
+
+  const clean = String(link).toLowerCase().trim()
+  if (clean === 'specials' || clean === 'deals' || clean === 'offers') {
+    currentView.value = 'specials'
+  } else if (clean === 'about' || clean === 'promise' || clean === 'about us') {
+    currentView.value = 'about'
+  } else if (clean === 'contact' || clean === 'support') {
+    currentView.value = 'contact'
+  } else if (clean === 'blog' || clean === 'stories') {
+    currentView.value = 'blog'
+  } else if (clean === 'categories' || clean === 'category' || clean === 'all') {
+    handleCategorySelect('All')
+  } else if (clean.startsWith('category:')) {
+    handleCategorySelect(link.substring(9).trim())
+  } else {
+    handleCategorySelect(link)
+  }
+
+  if (typeof window !== 'undefined') {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
 const handleOpenAccount = () => {
   isAuthOpen.value = true
 }
@@ -798,17 +761,37 @@ const handleStartCheckout = () => {
   isCheckoutOpen.value = true
 }
 
+const getInitialLastOrder = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = sessionStorage.getItem('ystore_last_order')
+      if (stored) return JSON.parse(stored)
+    } catch {}
+  }
+  return null
+}
+const lastPlacedOrder = ref(getInitialLastOrder())
+
 const handleCheckoutComplete = () => {
   handleStartCheckout()
 }
 
 const handleOrderPlaced = (order) => {
+  lastPlacedOrder.value = order
+  if (typeof window !== 'undefined') {
+    try {
+      sessionStorage.setItem('ystore_last_order', JSON.stringify(order))
+    } catch {}
+  }
   trackEcommerceEvent('purchase', {
     transaction_id: order?.id || order?.orderNumber,
     value: order?.total || 0,
+    currency: 'ZAR',
     items: order?.items || []
   })
   cartItems.value = []
+  isCheckoutOpen.value = false
+  currentView.value = 'thank-you'
   showToast(
     'Order Confirmed!',
     `Thank you! Order #${order?.orderNumber || ''} has been placed.`

@@ -14,7 +14,7 @@
       />
 
       <!-- Badge (Category / Sale) -->
-      <div class="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
+      <div v-if="showBadgePills && (product.tag || product.discount)" class="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
         <span
           v-if="product.tag"
           class="bg-[#FEFEEB] text-neutral-900 border border-[#F4EB6A] text-[11px] font-semibold px-2.5 py-0.5 rounded-full shadow-xs"
@@ -116,6 +116,9 @@
 <script setup>
 import { ref } from 'vue'
 import FlowbiteIcon from './FlowbiteIcon.vue'
+import { useStoreContent } from '../composables/useStoreContent'
+
+const { showBadgePills } = useStoreContent()
 
 const props = defineProps({
   product: {

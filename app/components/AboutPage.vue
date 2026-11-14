@@ -40,7 +40,7 @@
       <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div class="max-w-3xl">
           <!-- Brand Badge -->
-          <div class="inline-flex items-center gap-2 bg-neutral-800/90 border border-neutral-700 text-[#F4EB6A] text-xs font-semibold px-3.5 py-1.5 rounded-full mb-4 shadow-xs">
+          <div v-if="showBadgePills" class="inline-flex items-center gap-2 bg-neutral-800/90 border border-neutral-700 text-[#F4EB6A] text-xs font-semibold px-3.5 py-1.5 rounded-full mb-4 shadow-xs">
             <FlowbiteIcon name="sparkles" size="14" stroke-width="2" />
             <span>The Yellow Berry Story</span>
           </div>
@@ -517,6 +517,9 @@
 
 <script setup>
 import FlowbiteIcon from './FlowbiteIcon.vue'
+import { useStoreContent } from '../composables/useStoreContent'
+
+const { showBadgePills } = useStoreContent()
 
 defineEmits(['back-home', 'view-range', 'contact-us'])
 </script>

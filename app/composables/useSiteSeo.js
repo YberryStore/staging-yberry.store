@@ -86,6 +86,14 @@ export const defaultPagesSeo = {
     title: 'Cookie Policy & Consent Center | Ystore',
     description: 'Manage tracking cookies, telemetry preferences, and privacy controls in full compliance with Section 11 of POPIA.',
     keywords: 'cookie consent, cookie policy, POPIA cookies, telemetry settings'
+  },
+  'thank-you': {
+    key: 'thank-you',
+    label: 'Order Confirmation',
+    path: '/?view=thank-you',
+    title: 'Thank You For Your Order! | Ystore Cape Town',
+    description: 'Your order has been confirmed. Thank you for shopping with Yellow Berry Store.',
+    keywords: 'order confirmed, receipt, yellow berry store order confirmation'
   }
 }
 
@@ -348,21 +356,21 @@ export const useSiteSeo = () => {
       switch (eventName) {
         case 'add_to_cart':
           w.fbq('track', 'AddToCart', {
-            content_ids: data.items?.map((it) => it.id) || [],
+            content_ids: (data.items || []).map((it) => String(it.id || it.item_id || '')).filter(Boolean),
             value: data.value || 0,
             currency: 'ZAR'
           })
           break
         case 'begin_checkout':
           w.fbq('track', 'InitiateCheckout', {
-            num_items: data.items?.length || 1,
+            num_items: (data.items || []).length || 1,
             value: data.value || 0,
             currency: 'ZAR'
           })
           break
         case 'purchase':
           w.fbq('track', 'Purchase', {
-            content_ids: data.items?.map((it) => it.id) || [],
+            content_ids: (data.items || []).map((it) => String(it.id || it.item_id || '')).filter(Boolean),
             value: data.value || 0,
             currency: 'ZAR'
           })

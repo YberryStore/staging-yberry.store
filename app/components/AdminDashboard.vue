@@ -79,7 +79,7 @@
               @click="handleNavClick(item.id)"
               :class="[
                 'w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm transition-all cursor-pointer group',
-                (activeSection === item.id || (item.id === 'media' && activeSection === 'banners') || (item.id === 'products' && (activeSection === 'categories' || activeSection === 'collections' || activeSection === 'purchase-orders')) || (item.id === 'customers' && activeSection === 'customer-segments'))
+                (activeSection === item.id || (item.id === 'media' && (activeSection === 'banners' || activeSection === 'story-categories' || activeSection === 'category-banners' || activeSection === 'collections-banners')) || (item.id === 'products' && (activeSection === 'categories' || activeSection === 'collections' || activeSection === 'purchase-orders' || activeSection === 'banner-categories' || activeSection === 'product-reviews')) || (item.id === 'customers' && activeSection === 'customer-segments') || (item.id === 'theme' && (activeSection === 'guarantee-stats' || activeSection === 'theme-badges' || activeSection === 'heading-slides' || activeSection === 'theme-reviews')))
                   ? 'text-white font-medium bg-neutral-900/80'
                   : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900/40 font-normal',
                 isSidebarCollapsed ? 'justify-center px-2' : ''
@@ -92,7 +92,7 @@
                 :alt="item.label"
                 :class="[
                   'w-5 h-5 object-contain shrink-0 transition-opacity',
-                  (activeSection === item.id || (item.id === 'media' && activeSection === 'banners') || (item.id === 'products' && (activeSection === 'categories' || activeSection === 'collections' || activeSection === 'purchase-orders')) || (item.id === 'customers' && activeSection === 'customer-segments')) ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'
+                  (activeSection === item.id || (item.id === 'media' && (activeSection === 'banners' || activeSection === 'story-categories' || activeSection === 'category-banners' || activeSection === 'collections-banners')) || (item.id === 'products' && (activeSection === 'categories' || activeSection === 'collections' || activeSection === 'purchase-orders' || activeSection === 'banner-categories' || activeSection === 'product-reviews')) || (item.id === 'customers' && activeSection === 'customer-segments') || (item.id === 'theme' && (activeSection === 'guarantee-stats' || activeSection === 'theme-badges' || activeSection === 'heading-slides' || activeSection === 'theme-reviews'))) ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'
                 ]"
               />
               <FlowbiteIcon
@@ -102,7 +102,7 @@
                 stroke-width="1.5"
                 :class="[
                   'shrink-0 transition-colors',
-                  (activeSection === item.id || (item.id === 'media' && activeSection === 'banners') || (item.id === 'products' && (activeSection === 'categories' || activeSection === 'collections' || activeSection === 'purchase-orders')) || (item.id === 'customers' && activeSection === 'customer-segments')) ? 'text-white' : 'text-neutral-400 group-hover:text-neutral-200'
+                  (activeSection === item.id || (item.id === 'media' && (activeSection === 'banners' || activeSection === 'story-categories' || activeSection === 'category-banners' || activeSection === 'collections-banners')) || (item.id === 'products' && (activeSection === 'categories' || activeSection === 'collections' || activeSection === 'purchase-orders' || activeSection === 'banner-categories' || activeSection === 'product-reviews')) || (item.id === 'customers' && activeSection === 'customer-segments') || (item.id === 'theme' && (activeSection === 'guarantee-stats' || activeSection === 'theme-badges' || activeSection === 'heading-slides' || activeSection === 'theme-reviews'))) ? 'text-white' : 'text-neutral-400 group-hover:text-neutral-200'
                 ]"
               />
               <span v-if="!isSidebarCollapsed" class="truncate">{{ item.label }}</span>
@@ -112,32 +112,44 @@
               >
                 {{ item.count }}
               </span>
-              <!-- Submenu arrow indicators -->
+              <!-- Submenu arrow indicators with smooth rotation -->
               <FlowbiteIcon
                 v-if="item.id === 'products' && !isSidebarCollapsed"
-                :name="productsSubmenuOpen ? 'chevron-up' : 'chevron-down'"
+                name="chevron-down"
                 size="14"
-                class="ml-auto text-neutral-500 group-hover:text-neutral-300 shrink-0 transition-transform"
+                class="ml-auto text-neutral-500 group-hover:text-neutral-300 shrink-0 transition-transform duration-300"
+                :class="{ 'rotate-180 !text-white': productsSubmenuOpen }"
               />
               <FlowbiteIcon
                 v-else-if="item.id === 'media' && !isSidebarCollapsed"
-                :name="mediaSubmenuOpen ? 'chevron-up' : 'chevron-down'"
+                name="chevron-down"
                 size="14"
-                class="ml-auto text-neutral-500 group-hover:text-neutral-300 shrink-0 transition-transform"
+                class="ml-auto text-neutral-500 group-hover:text-neutral-300 shrink-0 transition-transform duration-300"
+                :class="{ 'rotate-180 !text-white': mediaSubmenuOpen }"
               />
               <FlowbiteIcon
                 v-else-if="item.id === 'customers' && !isSidebarCollapsed"
-                :name="customersSubmenuOpen ? 'chevron-up' : 'chevron-down'"
+                name="chevron-down"
                 size="14"
-                class="ml-auto text-neutral-500 group-hover:text-neutral-300 shrink-0 transition-transform"
+                class="ml-auto text-neutral-500 group-hover:text-neutral-300 shrink-0 transition-transform duration-300"
+                :class="{ 'rotate-180 !text-white': customersSubmenuOpen }"
+              />
+              <FlowbiteIcon
+                v-else-if="item.id === 'theme' && !isSidebarCollapsed"
+                name="chevron-down"
+                size="14"
+                class="ml-auto text-neutral-500 group-hover:text-neutral-300 shrink-0 transition-transform duration-300"
+                :class="{ 'rotate-180 !text-white': themeSubmenuOpen }"
               />
             </button>
 
             <!-- Products Sub-menu: "All Products", "Add Product +", "Categories", "Collections" -->
             <div
-              v-if="item.id === 'products' && !isSidebarCollapsed && productsSubmenuOpen"
-              class="pl-6 pr-1 space-y-1 py-1 transition-all"
+              v-if="item.id === 'products' && !isSidebarCollapsed"
+              class="submenu-accordion"
+              :class="{ 'is-open': productsSubmenuOpen }"
             >
+              <div class="submenu-accordion-inner pl-6 pr-1 space-y-1 py-1">
               <!-- Sub-menu Item: All Products -->
               <button
                 type="button"
@@ -240,6 +252,33 @@
                 </span>
               </button>
 
+              <!-- Sub-menu Item: Banner Categories (Below Hero Banner) -->
+              <button
+                type="button"
+                @click="activeSection = 'banner-categories'"
+                :class="[
+                  'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer group',
+                  activeSection === 'banner-categories'
+                    ? 'text-[#F4EB6A] font-semibold bg-neutral-900'
+                    : 'text-neutral-400 hover:text-white hover:bg-neutral-900/50 font-normal'
+                ]"
+                title="Manage 7 Categories Below Hero Banner"
+              >
+                <span class="flex items-center gap-2 truncate">
+                  <span
+                    class="w-1.5 h-1.5 rounded-full shrink-0 transition-colors"
+                    :class="activeSection === 'banner-categories' ? 'bg-[#F4EB6A]' : 'bg-neutral-600 group-hover:bg-neutral-400'"
+                  ></span>
+                  <span class="truncate">Banner Categories</span>
+                </span>
+                <span
+                  class="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                  :class="activeSection === 'banner-categories' ? 'bg-[#F4EB6A]/20 text-[#F4EB6A]' : 'bg-neutral-800 text-neutral-400'"
+                >
+                  {{ (bannerCategories && bannerCategories.length) || 0 }}
+                </span>
+              </button>
+
               <!-- Sub-menu Item: Purchase Orders -->
               <button
                 type="button"
@@ -266,13 +305,70 @@
                   {{ purchaseOrders.length }}
                 </span>
               </button>
+
+              <!-- Sub-menu Item: Customer Reviews (Product Reviews) -->
+              <button
+                type="button"
+                @click="activeSection = 'product-reviews'"
+                :class="[
+                  'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer group',
+                  activeSection === 'product-reviews'
+                    ? 'text-[#F4EB6A] font-semibold bg-neutral-900'
+                    : 'text-neutral-400 hover:text-white hover:bg-neutral-900/50 font-normal'
+                ]"
+                title="Manage Product Customer Reviews"
+              >
+                <span class="flex items-center gap-2 truncate">
+                  <span
+                    class="w-1.5 h-1.5 rounded-full shrink-0 transition-colors"
+                    :class="activeSection === 'product-reviews' ? 'bg-[#F4EB6A]' : 'bg-neutral-600 group-hover:bg-neutral-400'"
+                  ></span>
+                  <span class="truncate">Customer Reviews</span>
+                </span>
+                <span
+                  class="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                  :class="activeSection === 'product-reviews' ? 'bg-[#F4EB6A]/20 text-[#F4EB6A]' : 'bg-neutral-800 text-neutral-400'"
+                >
+                  {{ (productReviews && productReviews.length) || 0 }}
+                </span>
+              </button>
+              </div>
             </div>
 
-            <!-- Media files Sub-menu: "Home Banner" & "Storage Files" -->
+            <!-- Media files Sub-menu: "Stories Above Banner", "Home Banner", "Category Banner", "Collections Banner", & "Storage Files" -->
             <div
-              v-if="item.id === 'media' && !isSidebarCollapsed && mediaSubmenuOpen"
-              class="pl-6 pr-1 space-y-1 py-1 transition-all"
+              v-if="item.id === 'media' && !isSidebarCollapsed"
+              class="submenu-accordion"
+              :class="{ 'is-open': mediaSubmenuOpen }"
             >
+              <div class="submenu-accordion-inner pl-6 pr-1 space-y-1 py-1">
+              <!-- Sub-menu Item: Stories Above Banner -->
+              <button
+                type="button"
+                @click="activeSection = 'story-categories'"
+                :class="[
+                  'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer group',
+                  activeSection === 'story-categories'
+                    ? 'text-[#F4EB6A] font-semibold bg-neutral-900'
+                    : 'text-neutral-400 hover:text-white hover:bg-neutral-900/50 font-normal'
+                ]"
+                title="Manage Story Circles Above Banner"
+              >
+                <span class="flex items-center gap-2 truncate">
+                  <span
+                    class="w-1.5 h-1.5 rounded-full shrink-0 transition-colors"
+                    :class="activeSection === 'story-categories' ? 'bg-[#F4EB6A]' : 'bg-neutral-600 group-hover:bg-neutral-400'"
+                  ></span>
+                  <span class="truncate">Stories Above Banner</span>
+                </span>
+                <span
+                  class="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                  :class="activeSection === 'story-categories' ? 'bg-[#F4EB6A]/20 text-[#F4EB6A]' : 'bg-neutral-800 text-neutral-400'"
+                >
+                  {{ (productStories && productStories.length) || 0 }}
+                </span>
+              </button>
+
               <!-- Sub-menu Item: Home Banner -->
               <button
                 type="button"
@@ -300,6 +396,60 @@
                 </span>
               </button>
 
+              <!-- Sub-menu Item: Category Banner -->
+              <button
+                type="button"
+                @click="activeSection = 'category-banners'"
+                :class="[
+                  'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer group',
+                  activeSection === 'category-banners'
+                    ? 'text-[#F4EB6A] font-semibold bg-neutral-900'
+                    : 'text-neutral-400 hover:text-white hover:bg-neutral-900/50 font-normal'
+                ]"
+                title="Manage Category Hero Banners"
+              >
+                <span class="flex items-center gap-2 truncate">
+                  <span
+                    class="w-1.5 h-1.5 rounded-full shrink-0 transition-colors"
+                    :class="activeSection === 'category-banners' ? 'bg-[#F4EB6A]' : 'bg-neutral-600 group-hover:bg-neutral-400'"
+                  ></span>
+                  <span class="truncate">Category Banner</span>
+                </span>
+                <span
+                  class="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                  :class="activeSection === 'category-banners' ? 'bg-[#F4EB6A]/20 text-[#F4EB6A]' : 'bg-neutral-800 text-neutral-400'"
+                >
+                  {{ (categoryBanners && categoryBanners.length) || 0 }}
+                </span>
+              </button>
+
+              <!-- Sub-menu Item: Collections Banner -->
+              <button
+                type="button"
+                @click="activeSection = 'collections-banners'"
+                :class="[
+                  'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer group',
+                  activeSection === 'collections-banners'
+                    ? 'text-[#F4EB6A] font-semibold bg-neutral-900'
+                    : 'text-neutral-400 hover:text-white hover:bg-neutral-900/50 font-normal'
+                ]"
+                title="Manage Collection Hero Banners"
+              >
+                <span class="flex items-center gap-2 truncate">
+                  <span
+                    class="w-1.5 h-1.5 rounded-full shrink-0 transition-colors"
+                    :class="activeSection === 'collections-banners' ? 'bg-[#F4EB6A]' : 'bg-neutral-600 group-hover:bg-neutral-400'"
+                  ></span>
+                  <span class="truncate">Collections Banner</span>
+                </span>
+                <span
+                  class="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                  :class="activeSection === 'collections-banners' ? 'bg-[#F4EB6A]/20 text-[#F4EB6A]' : 'bg-neutral-800 text-neutral-400'"
+                >
+                  {{ (collectionBanners && collectionBanners.length) || 0 }}
+                </span>
+              </button>
+
               <!-- Sub-menu Item: All Storage Files -->
               <button
                 type="button"
@@ -321,13 +471,16 @@
                 </span>
                 <span class="text-[9px] uppercase tracking-wider text-neutral-500">bucket</span>
               </button>
+              </div>
             </div>
 
             <!-- Customers Sub-menu: "All Customers" & "Segment" -->
             <div
-              v-if="item.id === 'customers' && !isSidebarCollapsed && customersSubmenuOpen"
-              class="pl-6 pr-1 space-y-1 py-1 transition-all"
+              v-if="item.id === 'customers' && !isSidebarCollapsed"
+              class="submenu-accordion"
+              :class="{ 'is-open': customersSubmenuOpen }"
             >
+              <div class="submenu-accordion-inner pl-6 pr-1 space-y-1 py-1">
               <!-- Sub-menu Item: All Customers -->
               <button
                 type="button"
@@ -381,6 +534,124 @@
                   {{ allComputedSegments.length }}
                 </span>
               </button>
+              </div>
+            </div>
+
+            <!-- Theme Sub-menu: "Guarantee Stats" -->
+            <div
+              v-if="item.id === 'theme' && !isSidebarCollapsed"
+              class="submenu-accordion"
+              :class="{ 'is-open': themeSubmenuOpen }"
+            >
+              <div class="submenu-accordion-inner pl-6 pr-1 space-y-1 py-1">
+              <!-- Sub-menu Item: Guarantee Stats -->
+              <button
+                type="button"
+                @click="activeSection = 'guarantee-stats'"
+                :class="[
+                  'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer group',
+                  activeSection === 'guarantee-stats'
+                    ? 'text-[#F4EB6A] font-semibold bg-neutral-900'
+                    : 'text-neutral-400 hover:text-white hover:bg-neutral-900/50 font-normal'
+                ]"
+                title="Guarantee Stats & Trust Badges"
+              >
+                <span class="flex items-center gap-2 truncate">
+                  <span
+                    class="w-1.5 h-1.5 rounded-full shrink-0 transition-colors"
+                    :class="activeSection === 'guarantee-stats' ? 'bg-[#F4EB6A]' : 'bg-neutral-600 group-hover:bg-neutral-400'"
+                  ></span>
+                  <span class="truncate">Guarantee Stats</span>
+                </span>
+                <span
+                  class="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                  :class="activeSection === 'guarantee-stats' ? 'bg-[#F4EB6A]/20 text-[#F4EB6A]' : 'bg-neutral-800 text-neutral-400'"
+                >
+                  {{ (guaranteeStats && guaranteeStats.length) || 0 }}
+                </span>
+              </button>
+
+              <!-- Sub-menu Item: Badges & Pills -->
+              <button
+                type="button"
+                @click="activeSection = 'theme-badges'"
+                :class="[
+                  'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer group',
+                  activeSection === 'theme-badges'
+                    ? 'text-[#F4EB6A] font-semibold bg-neutral-900'
+                    : 'text-neutral-400 hover:text-white hover:bg-neutral-900/50 font-normal'
+                ]"
+                title="Website Badges & Pills"
+              >
+                <span class="flex items-center gap-2 truncate">
+                  <span
+                    class="w-1.5 h-1.5 rounded-full shrink-0 transition-colors"
+                    :class="activeSection === 'theme-badges' ? 'bg-[#F4EB6A]' : 'bg-neutral-600 group-hover:bg-neutral-400'"
+                  ></span>
+                  <span class="truncate">Badges &amp; Pills</span>
+                </span>
+                <span
+                  class="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                  :class="themeConfig?.showBadgePills ? 'bg-emerald-500/20 text-emerald-400' : 'bg-neutral-800 text-neutral-400'"
+                >
+                  {{ themeConfig?.showBadgePills ? 'ON' : 'OFF' }}
+                </span>
+              </button>
+
+              <!-- Sub-menu Item: Heading Slides -->
+              <button
+                type="button"
+                @click="activeSection = 'heading-slides'"
+                :class="[
+                  'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer group',
+                  activeSection === 'heading-slides'
+                    ? 'text-[#F4EB6A] font-semibold bg-neutral-900'
+                    : 'text-neutral-400 hover:text-white hover:bg-neutral-900/50 font-normal'
+                ]"
+                title="Heading Slides & Rotating Italic Words"
+              >
+                <span class="flex items-center gap-2 truncate">
+                  <span
+                    class="w-1.5 h-1.5 rounded-full shrink-0 transition-colors"
+                    :class="activeSection === 'heading-slides' ? 'bg-[#F4EB6A]' : 'bg-neutral-600 group-hover:bg-neutral-400'"
+                  ></span>
+                  <span class="truncate">Heading Slides</span>
+                </span>
+                <span
+                  class="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                  :class="headingSlides?.enabled ? 'bg-[#F4EB6A]/20 text-[#F4EB6A]' : 'bg-neutral-800 text-neutral-400'"
+                >
+                  {{ headingSlides?.enabled ? 'Active' : 'OFF' }}
+                </span>
+              </button>
+
+              <!-- Sub-menu Item: Customer Reviews (Theme + Google Reviews API Prep) -->
+              <button
+                type="button"
+                @click="activeSection = 'theme-reviews'"
+                :class="[
+                  'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer group',
+                  activeSection === 'theme-reviews'
+                    ? 'text-[#F4EB6A] font-semibold bg-neutral-900'
+                    : 'text-neutral-400 hover:text-white hover:bg-neutral-900/50 font-normal'
+                ]"
+                title="Store Customer Reviews & Google Reviews API"
+              >
+                <span class="flex items-center gap-2 truncate">
+                  <span
+                    class="w-1.5 h-1.5 rounded-full shrink-0 transition-colors"
+                    :class="activeSection === 'theme-reviews' ? 'bg-[#F4EB6A]' : 'bg-neutral-600 group-hover:bg-neutral-400'"
+                  ></span>
+                  <span class="truncate">Customer Reviews</span>
+                </span>
+                <span
+                  class="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                  :class="activeSection === 'theme-reviews' ? 'bg-[#F4EB6A]/20 text-[#F4EB6A]' : 'bg-neutral-800 text-neutral-400'"
+                >
+                  {{ (storeReviews && storeReviews.length) || 0 }}
+                </span>
+              </button>
+              </div>
             </div>
           </template>
         </nav>
@@ -410,20 +681,23 @@
             ]"
           />
           <span v-if="!isSidebarCollapsed" class="truncate">Settings</span>
-          <!-- Submenu arrow indicator -->
+          <!-- Submenu arrow indicator with smooth rotation -->
           <FlowbiteIcon
             v-if="!isSidebarCollapsed"
-            :name="settingsSubmenuOpen ? 'chevron-up' : 'chevron-down'"
+            name="chevron-down"
             size="14"
-            class="ml-auto text-neutral-500 group-hover:text-neutral-300 shrink-0 transition-transform"
+            class="ml-auto text-neutral-500 group-hover:text-neutral-300 shrink-0 transition-transform duration-300"
+            :class="{ 'rotate-180 !text-white': settingsSubmenuOpen }"
           />
         </button>
 
         <!-- Settings Sub-menu: "General", "Payments" & "Manage Users" (USER REQUIREMENT) -->
         <div
-          v-if="!isSidebarCollapsed && settingsSubmenuOpen"
-          class="pl-6 pr-1 space-y-1 py-1 transition-all"
+          v-if="!isSidebarCollapsed"
+          class="submenu-accordion"
+          :class="{ 'is-open': settingsSubmenuOpen }"
         >
+          <div class="submenu-accordion-inner pl-6 pr-1 space-y-1 py-1">
           <!-- Sub-menu Item: General -->
           <button
             type="button"
@@ -499,6 +773,7 @@
               {{ adminUsers?.length || 0 }} Users
             </span>
           </button>
+          </div>
         </div>
 
         <button
@@ -6608,6 +6883,1586 @@
       </div>
 
       <!-- ==========================================
+           TAB: THEME GUARANTEE STATS (TRUST BADGES)
+           (USER REQUIREMENT: Editable under banner)
+           ========================================== -->
+      <div v-else-if="activeSection === 'guarantee-stats'" class="space-y-6">
+        <!-- Section Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-neutral-100">
+          <div>
+            <nav class="flex items-center gap-1.5 text-xs text-neutral-400 mb-1" aria-label="Breadcrumb">
+              <span>Theme</span>
+              <span>&gt;</span>
+              <span class="text-neutral-900 font-medium">Guarantee Stats</span>
+            </nav>
+            <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">
+              Guarantee Stats &amp; Trust Badges
+            </h2>
+            <p class="text-xs sm:text-sm text-neutral-500 max-w-xl mt-1">
+              Customise the 4 trust &amp; guarantee badges displayed directly beneath the home banner (e.g. Free shipping, Secure payments, Easy Returns, 24/7 Support).
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              @click="handleResetGuaranteeStats"
+              class="px-3.5 py-2 rounded-xl border border-neutral-200 hover:bg-neutral-50 text-neutral-600 hover:text-neutral-900 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+              title="Reset to default 4 guarantee badges"
+            >
+              <FlowbiteIcon name="refresh" size="14" />
+              <span>Reset Defaults</span>
+            </button>
+
+            <button
+              type="button"
+              @click="openCreateGuaranteeStatModal"
+              class="btn-primary text-xs !py-2.5 !px-4 inline-flex items-center gap-2 shadow-sm"
+            >
+              <FlowbiteIcon name="plus" size="14" stroke-width="2" />
+              <span>Add Guarantee Stat</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Guarantee Stats Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div
+            v-for="stat in guaranteeStats"
+            :key="stat.id"
+            class="bg-white p-5 rounded-2xl border border-neutral-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between gap-4 relative group"
+            :class="{ 'opacity-60 bg-neutral-50/50': stat.enabled === false }"
+          >
+            <!-- Card Content Header -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="w-12 h-12 rounded-xl bg-[#FAF7BA]/60 text-neutral-900 flex items-center justify-center shrink-0 border border-[#F4EB6A]/40 overflow-hidden">
+                  <img
+                    v-if="stat.icon && (stat.icon.includes('/') || stat.icon.startsWith('data:'))"
+                    :src="useAsset(stat.icon)"
+                    :alt="stat.title"
+                    class="w-6 h-6 object-contain"
+                  />
+                  <FlowbiteIcon
+                    v-else
+                    :name="stat.icon || 'shield-check'"
+                    size="22"
+                    class="text-neutral-900"
+                  />
+                </div>
+
+                <div class="flex items-center gap-1">
+                  <span
+                    class="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    :class="stat.enabled !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-500'"
+                  >
+                    {{ stat.enabled !== false ? 'Active' : 'Hidden' }}
+                  </span>
+                  <span class="text-[10px] text-neutral-400 font-mono px-1.5 py-0.5 bg-neutral-100 rounded">
+                    #{{ stat.order || 1 }}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <h3 class="text-sm font-bold text-neutral-900 line-clamp-1">{{ stat.title }}</h3>
+                <p class="text-xs text-neutral-500 mt-0.5 line-clamp-2 leading-relaxed">
+                  {{ stat.description }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Card Actions -->
+            <div class="pt-3 border-t border-neutral-100 flex items-center justify-between gap-1">
+              <button
+                type="button"
+                @click="handleToggleGuaranteeStat(stat)"
+                class="text-xs font-semibold px-2 py-1 rounded-lg transition-colors cursor-pointer"
+                :class="stat.enabled !== false ? 'text-neutral-500 hover:text-neutral-900' : 'text-emerald-700 font-bold'"
+                :title="stat.enabled !== false ? 'Hide from storefront' : 'Show on storefront'"
+              >
+                <FlowbiteIcon :name="stat.enabled !== false ? 'eye-off' : 'eye'" size="14" />
+              </button>
+
+              <div class="flex items-center gap-1">
+                <button
+                  type="button"
+                  @click="openEditGuaranteeStatModal(stat)"
+                  class="p-1.5 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+                  title="Edit Guarantee Stat"
+                >
+                  <FlowbiteIcon name="edit" size="14" />
+                </button>
+                <button
+                  type="button"
+                  @click="handleDeleteGuaranteeStat(stat)"
+                  class="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                  title="Delete Guarantee Stat"
+                >
+                  <FlowbiteIcon name="trash" size="14" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           TAB: THEME BADGES & PILLS
+           (USER REQUIREMENT: Option to remove / turn off pills across website)
+           ========================================== -->
+      <div v-else-if="activeSection === 'theme-badges'" class="space-y-6">
+        <!-- Header Banner -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-neutral-200/80 shadow-xs">
+          <div class="space-y-1">
+            <nav class="flex items-center gap-2 text-xs text-neutral-400">
+              <FlowbiteIcon name="palette" size="14" class="text-neutral-500" />
+              <span>Theme</span>
+              <span>&gt;</span>
+              <span class="text-neutral-900 font-medium">Badges &amp; Pills</span>
+              <span class="text-neutral-300">•</span>
+              <span class="text-xs text-neutral-400 font-medium">Storefront Display Controls</span>
+            </nav>
+            <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">
+              Website Badge Pills &amp; Styling
+            </h2>
+            <p class="text-xs sm:text-sm text-neutral-500 max-w-xl">
+              Control the visibility of pill badges across the website. Easily turn them off completely or customize them per section.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button
+              type="button"
+              @click="handleSaveThemeBadges"
+              :disabled="savingThemeBadges"
+              class="btn-primary text-xs !py-2.5 !px-5 inline-flex items-center gap-2 shadow-sm disabled:opacity-50"
+            >
+              <FlowbiteIcon v-if="!savingThemeBadges" name="check" size="14" stroke-width="2" />
+              <span v-else class="w-3.5 h-3.5 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin"></span>
+              <span>{{ savingThemeBadges ? 'Saving...' : 'Save Theme Settings' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Master Switch Card -->
+        <div class="bg-white p-6 sm:p-8 rounded-3xl border border-neutral-200/80 shadow-xs space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-neutral-100">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2.5">
+                <span class="w-2.5 h-2.5 rounded-full" :class="themeBadgeForm.showBadgePills ? 'bg-emerald-500' : 'bg-neutral-300'"></span>
+                <h3 class="text-base sm:text-lg font-bold text-neutral-900">
+                  Global Badge Pills Switch
+                </h3>
+                <span
+                  class="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider"
+                  :class="themeBadgeForm.showBadgePills ? 'bg-emerald-100 text-emerald-800' : 'bg-neutral-100 text-neutral-600'"
+                >
+                  {{ themeBadgeForm.showBadgePills ? 'Currently Visible' : 'Currently Hidden / Turned Off' }}
+                </span>
+              </div>
+              <p class="text-xs sm:text-sm text-neutral-500 max-w-xl">
+                When turned off, all pill-shaped badges across the website (hero banner "welcome" badge, category section badges, category card tags, and product badges) are completely removed from the storefront.
+              </p>
+            </div>
+
+            <!-- Master Toggle Button -->
+            <button
+              type="button"
+              @click="toggleGlobalPills"
+              :class="[
+                'relative inline-flex h-8 w-16 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
+                themeBadgeForm.showBadgePills ? 'bg-neutral-900' : 'bg-neutral-300'
+              ]"
+              role="switch"
+              :aria-checked="themeBadgeForm.showBadgePills"
+            >
+              <span
+                :class="[
+                  'pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center text-[10px] font-bold',
+                  themeBadgeForm.showBadgePills ? 'translate-x-8 text-neutral-900' : 'translate-x-0 text-neutral-400'
+                ]"
+              >
+                {{ themeBadgeForm.showBadgePills ? 'ON' : 'OFF' }}
+              </span>
+            </button>
+          </div>
+
+          <!-- Section Controls Grid -->
+          <div class="space-y-4">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              Granular Section Display Options
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <!-- Hero Banner Slide Badge -->
+              <div class="p-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 flex items-start justify-between gap-3">
+                <div class="space-y-0.5">
+                  <div class="flex items-center gap-2">
+                    <FlowbiteIcon name="sparkles" size="14" class="text-neutral-600" />
+                    <span class="text-xs font-bold text-neutral-900">Hero Banner Badges</span>
+                  </div>
+                  <p class="text-[11px] text-neutral-500">e.g. "welcome", "New Arrival" above main banner headline</p>
+                </div>
+                <input
+                  type="checkbox"
+                  v-model="themeBadgeForm.showHeroBannerBadge"
+                  :disabled="!themeBadgeForm.showBadgePills"
+                  class="rounded accent-neutral-900 cursor-pointer mt-1"
+                />
+              </div>
+
+              <!-- Category Row Header Badge -->
+              <div class="p-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 flex items-start justify-between gap-3">
+                <div class="space-y-0.5">
+                  <div class="flex items-center gap-2">
+                    <FlowbiteIcon name="grid" size="14" class="text-neutral-600" />
+                    <span class="text-xs font-bold text-neutral-900">Category Section Badge</span>
+                  </div>
+                  <p class="text-[11px] text-neutral-500">e.g. "• Explore Collections" above Latest Categories</p>
+                </div>
+                <input
+                  type="checkbox"
+                  v-model="themeBadgeForm.showCategoryHeadingBadge"
+                  :disabled="!themeBadgeForm.showBadgePills"
+                  class="rounded accent-neutral-900 cursor-pointer mt-1"
+                />
+              </div>
+
+              <!-- Category Card Badges -->
+              <div class="p-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 flex items-start justify-between gap-3">
+                <div class="space-y-0.5">
+                  <div class="flex items-center gap-2">
+                    <FlowbiteIcon name="tag" size="14" class="text-neutral-600" />
+                    <span class="text-xs font-bold text-neutral-900">Category Card Badges</span>
+                  </div>
+                  <p class="text-[11px] text-neutral-500">e.g. "Montessori", "Bestseller" on category cards</p>
+                </div>
+                <input
+                  type="checkbox"
+                  v-model="themeBadgeForm.showCategoryCardBadges"
+                  :disabled="!themeBadgeForm.showBadgePills"
+                  class="rounded accent-neutral-900 cursor-pointer mt-1"
+                />
+              </div>
+
+              <!-- Product Card Badges -->
+              <div class="p-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 flex items-start justify-between gap-3">
+                <div class="space-y-0.5">
+                  <div class="flex items-center gap-2">
+                    <FlowbiteIcon name="tag" size="14" class="text-neutral-600" />
+                    <span class="text-xs font-bold text-neutral-900">Product Card Badges</span>
+                  </div>
+                  <p class="text-[11px] text-neutral-500">e.g. "New Arrival", "Bestseller", sale discount tags</p>
+                </div>
+                <input
+                  type="checkbox"
+                  v-model="themeBadgeForm.showProductBadges"
+                  :disabled="!themeBadgeForm.showBadgePills"
+                  class="rounded accent-neutral-900 cursor-pointer mt-1"
+                />
+              </div>
+
+              <!-- Category & Collection Banner Badges -->
+              <div class="p-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 flex items-start justify-between gap-3">
+                <div class="space-y-0.5">
+                  <div class="flex items-center gap-2">
+                    <FlowbiteIcon name="sparkles" size="14" class="text-neutral-600" />
+                    <span class="text-xs font-bold text-neutral-900">Category Page Banners</span>
+                  </div>
+                  <p class="text-[11px] text-neutral-500">e.g. "Curated Catalog", "Montessori &amp; STEM" on category heroes</p>
+                </div>
+                <input
+                  type="checkbox"
+                  v-model="themeBadgeForm.showCategoryBannerBadges"
+                  :disabled="!themeBadgeForm.showBadgePills"
+                  class="rounded accent-neutral-900 cursor-pointer mt-1"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           TAB: THEME HEADING SLIDES (ROTATING ITALIC WORDS)
+           (USER REQUIREMENT: rotate between up to 5 words, fade in from bottom)
+           ========================================== -->
+      <div v-else-if="activeSection === 'heading-slides'" class="space-y-6">
+        <!-- Header Banner -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-neutral-200/80 shadow-xs">
+          <div class="space-y-1">
+            <nav class="flex items-center gap-2 text-xs text-neutral-400">
+              <FlowbiteIcon name="palette" size="14" class="text-neutral-500" />
+              <span>Theme</span>
+              <span>&gt;</span>
+              <span class="text-neutral-900 font-medium">Heading Slides</span>
+              <span class="text-neutral-300">•</span>
+              <span class="text-xs text-neutral-400 font-medium">Rotating Italic Words</span>
+            </nav>
+            <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">
+              Heading Slides &amp; Italic Word Rotation
+            </h2>
+            <p class="text-xs sm:text-sm text-neutral-500 max-w-xl">
+              Rotate the italicized highlight wording between up to 5 custom words for category and collection headings. Smooth fade-in animation from the bottom.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              @click="handleResetHeadingSlides"
+              class="px-3.5 py-2 rounded-xl border border-neutral-200 hover:bg-neutral-50 text-neutral-600 hover:text-neutral-900 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+              title="Reset to default words"
+            >
+              <FlowbiteIcon name="refresh" size="14" />
+              <span>Reset Defaults</span>
+            </button>
+
+            <button
+              type="button"
+              @click="handleSaveHeadingSlides"
+              :disabled="savingHeadingSlides"
+              class="btn-primary text-xs !py-2.5 !px-5 inline-flex items-center gap-2 shadow-sm disabled:opacity-50"
+            >
+              <FlowbiteIcon v-if="!savingHeadingSlides" name="check" size="14" stroke-width="2" />
+              <span v-else class="w-3.5 h-3.5 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin"></span>
+              <span>{{ savingHeadingSlides ? 'Saving...' : 'Save Heading Slides' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Animation Preview Sandbox (Matching User Reference) -->
+        <div class="bg-gradient-to-br from-neutral-900 to-neutral-950 p-6 sm:p-8 rounded-3xl border border-neutral-800 text-white shadow-md relative overflow-hidden">
+          <div class="flex items-center justify-between mb-4">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-[#F4EB6A] text-xs font-semibold tracking-wide backdrop-blur-sm">
+              <span class="w-2 h-2 rounded-full bg-[#F4EB6A] animate-pulse"></span>
+              <span>Live Interactive Preview &bull; Fading in from bottom</span>
+            </span>
+            <span class="text-xs text-neutral-400 font-mono">
+              Interval: {{ headingSlidesForm.intervalSeconds }}s
+            </span>
+          </div>
+
+          <!-- Preview Stage -->
+          <div class="bg-white/5 border border-white/10 p-6 sm:p-8 rounded-2xl backdrop-blur-md">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF7BA]/60 text-neutral-900 text-xs font-semibold mb-3 shadow-2xs">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#F4EB6A]"></span>
+              <span>Our Boxes</span>
+            </div>
+
+            <h3 class="text-2xl sm:text-4xl font-bold text-white tracking-tight leading-tight flex items-baseline flex-wrap">
+              <span>The Perfect Gift Box for</span>
+              <span class="inline-block relative overflow-hidden align-baseline ml-2 min-h-[1.25em]">
+                <transition name="preview-slide" mode="out-in">
+                  <span
+                    :key="previewCategoryWord"
+                    class="inline-block italic font-light text-[#F4EB6A] font-serif"
+                  >
+                    {{ previewCategoryWord }}
+                  </span>
+                </transition>
+              </span>
+            </h3>
+
+            <p class="text-xs sm:text-sm text-neutral-400 mt-1 font-light">
+              There's Always Something to Unwrap
+            </p>
+          </div>
+        </div>
+
+        <!-- Master Enable & Timing Controls -->
+        <div class="bg-white p-6 sm:p-7 rounded-3xl border border-neutral-200/80 shadow-xs space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-100">
+            <div>
+              <h3 class="text-sm font-bold text-neutral-900">Italic Word Rotation Controls</h3>
+              <p class="text-xs text-neutral-500">Toggle whether headings rotate words automatically on the live storefront.</p>
+            </div>
+
+            <div class="flex items-center gap-4">
+              <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-neutral-800">
+                <input
+                  type="checkbox"
+                  v-model="headingSlidesForm.enabled"
+                  class="rounded accent-neutral-900 w-4 h-4 cursor-pointer"
+                />
+                <span>Enable Heading Rotation</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div>
+              <label class="block text-xs font-semibold text-neutral-700 mb-1">
+                Slide Transition Interval (Seconds)
+              </label>
+              <div class="flex items-center gap-3">
+                <select
+                  v-model.number="headingSlidesForm.intervalSeconds"
+                  class="flex-1 px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-white text-xs font-medium text-neutral-900 focus:outline-none focus:border-[#F4EB6A] cursor-pointer"
+                >
+                  <option :value="2.0">2.0 seconds (Fast)</option>
+                  <option :value="2.5">2.5 seconds</option>
+                  <option :value="3.0">3.0 seconds (Recommended)</option>
+                  <option :value="3.5">3.5 seconds (Default)</option>
+                  <option :value="4.0">4.0 seconds</option>
+                  <option :value="5.0">5.0 seconds (Gentle)</option>
+                </select>
+                <span class="text-xs text-neutral-500 font-mono shrink-0">
+                  {{ headingSlidesForm.intervalSeconds }}s
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-neutral-700 mb-1">
+                Animation Style
+              </label>
+              <div class="px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-neutral-50 text-xs font-medium text-neutral-700 flex items-center justify-between">
+                <span>Vertical Slide &bull; Fade In From Bottom</span>
+                <span class="text-emerald-700 font-bold text-[10px] uppercase">Active</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category Headings Words (Up to 5) -->
+        <div class="bg-white p-6 sm:p-7 rounded-3xl border border-neutral-200/80 shadow-xs space-y-4">
+          <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <FlowbiteIcon name="grid" size="16" class="text-neutral-700" />
+                <h3 class="text-sm font-bold text-neutral-900">Category Heading Rotating Words (Up to 5)</h3>
+              </div>
+              <p class="text-xs text-neutral-500 mt-0.5">
+                These words rotate in italic style for category showcase headings (e.g. "The Perfect Gift Box for <em>Readers</em>").
+              </p>
+            </div>
+            <span class="text-xs font-bold text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-full">
+              {{ headingSlidesForm.categoryWords.filter(w => w && w.trim()).length }} of 5 Active
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            <div v-for="(word, idx) in headingSlidesForm.categoryWords" :key="idx" class="space-y-1">
+              <label class="block text-[11px] font-semibold text-neutral-600">
+                Word {{ idx + 1 }} {{ idx === 0 ? '(Default)' : '' }}
+              </label>
+              <div class="relative">
+                <input
+                  v-model="headingSlidesForm.categoryWords[idx]"
+                  type="text"
+                  :placeholder="'e.g. Word ' + (idx + 1)"
+                  class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs text-neutral-900 italic font-medium focus:outline-none focus:border-[#F4EB6A]"
+                />
+                <button
+                  v-if="headingSlidesForm.categoryWords[idx]"
+                  type="button"
+                  @click="headingSlidesForm.categoryWords[idx] = ''"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-red-500 text-xs p-1"
+                  title="Clear word"
+                >
+                  &times;
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Collection Headings Words (Up to 5) -->
+        <div class="bg-white p-6 sm:p-7 rounded-3xl border border-neutral-200/80 shadow-xs space-y-4">
+          <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <FlowbiteIcon name="tag" size="16" class="text-neutral-700" />
+                <h3 class="text-sm font-bold text-neutral-900">Collection Heading Rotating Words (Up to 5)</h3>
+              </div>
+              <p class="text-xs text-neutral-500 mt-0.5">
+                These words rotate in italic style for collections and featured showcase headings (e.g. "Feature <em>Collections</em>").
+              </p>
+            </div>
+            <span class="text-xs font-bold text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-full">
+              {{ headingSlidesForm.collectionWords.filter(w => w && w.trim()).length }} of 5 Active
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            <div v-for="(word, idx) in headingSlidesForm.collectionWords" :key="idx" class="space-y-1">
+              <label class="block text-[11px] font-semibold text-neutral-600">
+                Word {{ idx + 1 }} {{ idx === 0 ? '(Default)' : '' }}
+              </label>
+              <div class="relative">
+                <input
+                  v-model="headingSlidesForm.collectionWords[idx]"
+                  type="text"
+                  :placeholder="'e.g. Word ' + (idx + 1)"
+                  class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs text-neutral-900 italic font-medium focus:outline-none focus:border-[#F4EB6A]"
+                />
+                <button
+                  v-if="headingSlidesForm.collectionWords[idx]"
+                  type="button"
+                  @click="headingSlidesForm.collectionWords[idx] = ''"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-red-500 text-xs p-1"
+                  title="Clear word"
+                >
+                  &times;
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           THEME -> CUSTOMER REVIEWS & GOOGLE REVIEWS API PREP
+           ========================================== -->
+      <div v-else-if="activeSection === 'theme-reviews'" class="space-y-6">
+        <!-- Header Banner -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-neutral-200/80 shadow-xs">
+          <div class="space-y-1">
+            <nav class="flex items-center gap-2 text-xs text-neutral-400">
+              <FlowbiteIcon name="palette" size="14" class="text-neutral-500" />
+              <span>Theme</span>
+              <span>&gt;</span>
+              <span class="text-neutral-900 font-medium">Customer Reviews</span>
+              <span class="text-neutral-300">•</span>
+              <span class="text-xs text-neutral-400 font-medium">Manual + Google Places API Ready</span>
+            </nav>
+            <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">
+              Storefront Customer Reviews
+            </h2>
+            <p class="text-xs sm:text-sm text-neutral-500 max-w-xl">
+              Manually add and curate homepage customer testimonials, or connect your Google Places API key &amp; Place ID to sync Google Business reviews automatically.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              @click="handleResetStoreReviews"
+              class="px-3.5 py-2 rounded-xl border border-neutral-200 hover:bg-neutral-50 text-neutral-600 hover:text-neutral-900 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <FlowbiteIcon name="refresh" size="14" />
+              <span>Reset Defaults</span>
+            </button>
+            <button
+              type="button"
+              @click="openStoreReviewModal()"
+              class="btn-primary text-xs !py-2.5 !px-4 inline-flex items-center gap-2 shadow-sm"
+            >
+              <FlowbiteIcon name="plus" size="14" stroke-width="2" />
+              <span>Add Manual Review</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Google Reviews API Integration Prep Card -->
+        <div class="bg-white p-6 sm:p-8 rounded-3xl border border-neutral-200/80 shadow-xs space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-neutral-100">
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-base font-bold text-neutral-900">Google Reviews API Configuration</h3>
+                <span class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                  API Ready
+                </span>
+              </div>
+              <p class="text-xs text-neutral-500 mt-0.5">
+                Choose whether to display manual reviews, Google Reviews, or both combined on the storefront.
+              </p>
+            </div>
+            <div v-if="googleReviewsForm.lastSyncedAt" class="text-[11px] text-neutral-400">
+              Last synced: {{ new Date(googleReviewsForm.lastSyncedAt).toLocaleString() }}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-neutral-700 mb-1.5">Display Source Mode</label>
+              <select
+                v-model="googleReviewsForm.source"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-white text-xs text-neutral-900 focus:outline-none focus:border-[#F4EB6A]"
+              >
+                <option value="manual">Manual Reviews Only</option>
+                <option value="google">Google Reviews API Only</option>
+                <option value="hybrid">Combined (Manual + Google)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-neutral-700 mb-1.5">Google Place ID</label>
+              <input
+                v-model="googleReviewsForm.googlePlaceId"
+                type="text"
+                placeholder="e.g. ChIJN1t_tDeuEmsRUsoyG83frY4"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs font-mono text-neutral-900 focus:outline-none focus:border-[#F4EB6A]"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-neutral-700 mb-1.5">Google Places API Key</label>
+              <input
+                v-model="googleReviewsForm.googleApiKey"
+                type="password"
+                autocomplete="off"
+                placeholder="AIzaSy..."
+                class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs font-mono text-neutral-900 focus:outline-none focus:border-[#F4EB6A]"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-xs font-bold text-neutral-700 mb-1.5">Min Rating</label>
+                <select
+                  v-model.number="googleReviewsForm.minRating"
+                  class="w-full px-3 py-2.5 rounded-xl border border-neutral-200 bg-white text-xs text-neutral-900 focus:outline-none focus:border-[#F4EB6A]"
+                >
+                  <option :value="5">5 Stars</option>
+                  <option :value="4">4+ Stars</option>
+                  <option :value="3">3+ Stars</option>
+                  <option :value="1">All (1+)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-neutral-700 mb-1.5">Max Shown</label>
+                <input
+                  v-model.number="googleReviewsForm.maxReviews"
+                  type="number"
+                  min="1"
+                  max="20"
+                  class="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-xs text-neutral-900 focus:outline-none focus:border-[#F4EB6A]"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+            <p class="text-[11px] text-neutral-400">
+              Uses Google Places API (New v1) <code class="bg-neutral-100 px-1.5 py-0.5 rounded text-neutral-700">places.googleapis.com/v1/places/{placeId}</code>. Cached reviews: {{ googleReviewsForm.cachedGoogleReviews?.length || 0 }}.
+            </p>
+            <div class="flex items-center gap-2.5">
+              <button
+                type="button"
+                :disabled="googleReviewsSyncing"
+                @click="handleSyncGoogleReviews"
+                class="px-4 py-2 rounded-xl border border-neutral-200 hover:border-neutral-900 text-xs font-semibold text-neutral-800 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {{ googleReviewsSyncing ? 'Syncing Google...' : 'Sync Google Reviews' }}
+              </button>
+              <button
+                type="button"
+                :disabled="googleReviewsSaving"
+                @click="handleSaveGoogleReviewsConfig"
+                class="btn-primary text-xs !py-2 !px-4"
+              >
+                {{ googleReviewsSaving ? 'Saving...' : 'Save API Settings' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Inline Add / Edit Manual Store Review Form -->
+        <div v-if="showStoreReviewModal" class="bg-white p-6 rounded-3xl border border-[#F4EB6A] shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-neutral-900">
+              {{ editingStoreReview ? 'Edit Customer Review' : 'Add Manual Customer Review' }}
+            </h3>
+            <button type="button" @click="showStoreReviewModal = false" class="text-xs text-neutral-400 hover:text-neutral-900 cursor-pointer">
+              Close &times;
+            </button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-[11px] font-bold text-neutral-600 mb-1">Customer Name *</label>
+              <input v-model="storeReviewForm.name" type="text" placeholder="e.g. Sarah Mkhize" class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-neutral-600 mb-1">Star Rating</label>
+              <select v-model.number="storeReviewForm.rating" class="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs">
+                <option :value="5">5 Stars</option>
+                <option :value="4">4 Stars</option>
+                <option :value="3">3 Stars</option>
+                <option :value="2">2 Stars</option>
+                <option :value="1">1 Star</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-neutral-600 mb-1">Badge Label</label>
+              <input v-model="storeReviewForm.badge" type="text" placeholder="Verified Buyer" class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-neutral-600 mb-1">Display Order</label>
+              <input v-model.number="storeReviewForm.order" type="number" min="1" class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-neutral-600 mb-1">Review Quote *</label>
+            <textarea v-model="storeReviewForm.quote" rows="3" placeholder="Customer testimonial text..." class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs"></textarea>
+          </div>
+          <div class="flex items-center justify-between pt-1">
+            <label class="inline-flex items-center gap-2 text-xs text-neutral-700 cursor-pointer">
+              <input v-model="storeReviewForm.enabled" type="checkbox" class="rounded border-neutral-300" />
+              <span>Visible on Storefront</span>
+            </label>
+            <div class="flex items-center gap-2">
+              <button type="button" @click="showStoreReviewModal = false" class="px-4 py-2 rounded-xl border border-neutral-200 text-xs font-semibold text-neutral-600 cursor-pointer">Cancel</button>
+              <button type="button" :disabled="storeReviewSaving" @click="handleSaveStoreReview" class="btn-primary text-xs !py-2 !px-4">
+                {{ storeReviewSaving ? 'Saving...' : 'Save Review' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Manual Store Reviews Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div
+            v-for="rev in storeReviews"
+            :key="rev.id"
+            class="bg-white p-5 rounded-2xl border border-neutral-200/80 shadow-xs flex flex-col justify-between gap-4"
+            :class="{ 'opacity-60': rev.enabled === false }"
+          >
+            <div class="space-y-2.5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-0.5 text-[#DEC02A]">
+                  <FlowbiteIcon
+                    v-for="s in 5"
+                    :key="s"
+                    name="star"
+                    size="14"
+                    :fill="s <= (Number(rev.rating) || 5)"
+                    :class="s <= (Number(rev.rating) || 5) ? 'text-[#DEC02A]' : 'text-neutral-200'"
+                  />
+                </div>
+                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full" :class="rev.enabled !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-500'">
+                  {{ rev.enabled !== false ? 'Active' : 'Hidden' }}
+                </span>
+              </div>
+              <p class="text-xs text-neutral-600 italic leading-relaxed line-clamp-4">"{{ rev.quote }}"</p>
+            </div>
+            <div class="flex items-center justify-between pt-3 border-t border-neutral-100">
+              <div class="min-w-0">
+                <div class="text-xs font-bold text-neutral-900 truncate">{{ rev.name }}</div>
+                <div class="text-[11px] text-neutral-400 truncate">{{ rev.badge || 'Verified Buyer' }}</div>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" @click="openStoreReviewModal(rev)" class="px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-[11px] font-semibold text-neutral-800 cursor-pointer">Edit</button>
+                <button type="button" @click="handleDeleteStoreReview(rev)" class="p-1.5 rounded-lg text-red-500 hover:bg-red-50 cursor-pointer" title="Delete review">
+                  <FlowbiteIcon name="trash" size="13" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           PRODUCTS -> CUSTOMER REVIEWS (PRODUCT DETAIL REVIEWS)
+           ========================================== -->
+      <div v-else-if="activeSection === 'product-reviews'" class="space-y-6">
+        <!-- Header Banner -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-neutral-200/80 shadow-xs">
+          <div class="space-y-1">
+            <nav class="flex items-center gap-2 text-xs text-neutral-400">
+              <FlowbiteIcon name="tag" size="14" class="text-neutral-500" />
+              <span>Products</span>
+              <span>&gt;</span>
+              <span class="text-neutral-900 font-medium">Customer Reviews</span>
+              <span class="text-neutral-300">•</span>
+              <span class="text-xs text-neutral-400 font-medium">Real-time Product Detail Sync</span>
+            </nav>
+            <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">
+              Product Customer Reviews
+            </h2>
+            <p class="text-xs sm:text-sm text-neutral-500 max-w-xl">
+              Manage reviews left by customers on product detail pages, add verified reviews, reply as Ystore, or moderate visibility.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            @click="openProductReviewModal()"
+            class="btn-primary text-xs !py-2.5 !px-4 inline-flex items-center gap-2 shadow-sm shrink-0"
+          >
+            <FlowbiteIcon name="plus" size="14" stroke-width="2" />
+            <span>Add Product Review</span>
+          </button>
+        </div>
+
+        <!-- Filters Bar -->
+        <div class="bg-white p-4 rounded-2xl border border-neutral-200/80 flex flex-wrap items-center gap-3">
+          <select
+            v-model="productReviewFilterProduct"
+            class="px-3.5 py-2 rounded-xl border border-neutral-200 bg-white text-xs text-neutral-900 focus:outline-none focus:border-[#F4EB6A]"
+          >
+            <option value="all">All Products ({{ productReviews.length }})</option>
+            <option v-for="p in products" :key="p.id || p.name" :value="p.id || p.name">
+              {{ p.name }}
+            </option>
+          </select>
+
+          <select
+            v-model="productReviewFilterStatus"
+            class="px-3.5 py-2 rounded-xl border border-neutral-200 bg-white text-xs text-neutral-900 focus:outline-none focus:border-[#F4EB6A]"
+          >
+            <option value="all">All Statuses</option>
+            <option value="approved">Approved (Live)</option>
+            <option value="pending">Pending</option>
+            <option value="hidden">Hidden</option>
+          </select>
+        </div>
+
+        <!-- Inline Add / Edit Product Review Form -->
+        <div v-if="showProductReviewModal" class="bg-white p-6 rounded-3xl border border-[#F4EB6A] shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-neutral-900">
+              {{ editingProductReview ? 'Edit / Reply to Product Review' : 'Add Product Customer Review' }}
+            </h3>
+            <button type="button" @click="showProductReviewModal = false" class="text-xs text-neutral-400 hover:text-neutral-900 cursor-pointer">
+              Close &times;
+            </button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-[11px] font-bold text-neutral-600 mb-1">Product *</label>
+              <select v-model="productReviewForm.productId" @change="syncProductReviewProductName" class="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs">
+                <option value="" disabled>Select product...</option>
+                <option v-for="p in products" :key="p.id || p.name" :value="p.id || p.name">{{ p.name }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-neutral-600 mb-1">Customer Name *</label>
+              <input v-model="productReviewForm.author" type="text" placeholder="e.g. Thabo Molefe" class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-neutral-600 mb-1">Star Rating</label>
+              <select v-model.number="productReviewForm.rating" class="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs">
+                <option :value="5">5 Stars</option>
+                <option :value="4">4 Stars</option>
+                <option :value="3">3 Stars</option>
+                <option :value="2">2 Stars</option>
+                <option :value="1">1 Star</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-neutral-600 mb-1">Moderation Status</label>
+              <select v-model="productReviewForm.status" class="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs">
+                <option value="approved">Approved (Visible)</option>
+                <option value="pending">Pending</option>
+                <option value="hidden">Hidden</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-bold text-neutral-600 mb-1">Review Title</label>
+              <input v-model="productReviewForm.title" type="text" placeholder="e.g. Kids love it!" class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-neutral-600 mb-1">Badge</label>
+              <input v-model="productReviewForm.badge" type="text" placeholder="Verified Customer" class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-neutral-600 mb-1">Review Comment *</label>
+            <textarea v-model="productReviewForm.comment" rows="3" placeholder="Customer feedback..." class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs"></textarea>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-neutral-600 mb-1">Store Admin Reply (Optional)</label>
+            <textarea v-model="productReviewForm.adminReply" rows="2" placeholder="Thank you for your review..." class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs"></textarea>
+          </div>
+          <div class="flex justify-end gap-2">
+            <button type="button" @click="showProductReviewModal = false" class="px-4 py-2 rounded-xl border border-neutral-200 text-xs font-semibold text-neutral-600 cursor-pointer">Cancel</button>
+            <button type="button" :disabled="productReviewSaving" @click="handleSaveProductReviewAdmin" class="btn-primary text-xs !py-2 !px-4">
+              {{ productReviewSaving ? 'Saving...' : 'Save Product Review' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Product Reviews List -->
+        <div v-if="filteredProductReviews.length === 0" class="bg-white p-10 rounded-3xl border border-neutral-200/80 text-center text-sm text-neutral-500">
+          No product customer reviews yet. Customers can submit reviews directly on any product detail page, or you can add one above.
+        </div>
+
+        <div v-else class="space-y-3">
+          <div
+            v-for="rev in filteredProductReviews"
+            :key="rev.id"
+            class="bg-white p-5 rounded-2xl border border-neutral-200/80 shadow-xs flex flex-col sm:flex-row sm:items-start justify-between gap-4"
+          >
+            <div class="space-y-1.5 min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-800">
+                  {{ rev.productName || 'Product' }}
+                </span>
+                <div class="flex items-center gap-0.5 text-[#DEC02A]">
+                  <FlowbiteIcon
+                    v-for="s in 5"
+                    :key="s"
+                    name="star"
+                    size="13"
+                    :fill="s <= (Number(rev.rating) || 5)"
+                    :class="s <= (Number(rev.rating) || 5) ? 'text-[#DEC02A]' : 'text-neutral-200'"
+                  />
+                </div>
+                <span
+                  class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"
+                  :class="rev.status === 'approved' ? 'bg-emerald-50 text-emerald-700' : (rev.status === 'hidden' ? 'bg-neutral-100 text-neutral-500' : 'bg-amber-50 text-amber-700')"
+                >
+                  {{ rev.status || 'approved' }}
+                </span>
+              </div>
+              <h4 v-if="rev.title" class="text-sm font-bold text-neutral-900">{{ rev.title }}</h4>
+              <p class="text-xs text-neutral-600 leading-relaxed">{{ rev.comment }}</p>
+              <div class="text-[11px] text-neutral-400">
+                By <span class="font-semibold text-neutral-700">{{ rev.author }}</span> ({{ rev.badge || 'Verified Customer' }})
+              </div>
+              <div v-if="rev.adminReply" class="mt-2 pl-3 border-l-2 border-[#F4EB6A] text-xs text-neutral-600 bg-neutral-50 py-1.5 px-2.5 rounded-r-lg">
+                <span class="font-semibold text-neutral-900">Ystore Reply:</span> {{ rev.adminReply }}
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                @click="toggleProductReviewStatus(rev)"
+                class="px-2.5 py-1.5 rounded-lg border border-neutral-200 hover:bg-neutral-50 text-[11px] font-semibold text-neutral-700 cursor-pointer"
+              >
+                {{ rev.status === 'approved' ? 'Hide' : 'Approve' }}
+              </button>
+              <button
+                type="button"
+                @click="openProductReviewModal(rev)"
+                class="px-2.5 py-1.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-[11px] font-semibold text-neutral-800 cursor-pointer"
+              >
+                Edit / Reply
+              </button>
+              <button
+                type="button"
+                @click="handleDeleteProductReviewAdmin(rev)"
+                class="p-1.5 rounded-lg text-red-500 hover:bg-red-50 cursor-pointer"
+                title="Delete review"
+              >
+                <FlowbiteIcon name="trash" size="14" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           STORIES ABOVE BANNER (MEDIA SUBMENU)
+           ========================================== -->
+      <div v-else-if="activeSection === 'story-categories'" class="space-y-6">
+        <!-- Header Banner -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-neutral-200/80 shadow-xs">
+          <div class="space-y-1">
+            <nav class="flex items-center gap-2 text-xs text-neutral-400">
+              <FlowbiteIcon name="sparkles" size="14" class="text-neutral-500" />
+              <span>Media files</span>
+              <span>&gt;</span>
+              <span class="text-neutral-900 font-medium">Circular Story Track</span>
+              <span class="text-neutral-300">•</span>
+              <span class="text-xs text-neutral-400 font-medium">Real-time Firestore Sync</span>
+            </nav>
+            <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">
+              Product Stories Above Hero Banner
+            </h2>
+            <p class="text-xs sm:text-sm text-neutral-500 max-w-xl">
+              Manage the interactive circular story rings placed above the homepage hero banner. Each circle opens an interactive lightbox with gallery slides and custom CTA buttons.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              @click="handleResetStories"
+              class="px-3.5 py-2 rounded-xl border border-neutral-200 hover:bg-neutral-50 text-neutral-600 hover:text-neutral-900 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+              title="Reset to default story circles"
+            >
+              <FlowbiteIcon name="refresh" size="14" />
+              <span>Reset Defaults</span>
+            </button>
+
+            <button
+              type="button"
+              @click="openCreateStoryModal"
+              class="btn-primary text-xs !py-2.5 !px-4 inline-flex items-center gap-2 shadow-sm"
+            >
+              <FlowbiteIcon name="plus" size="14" stroke-width="2" />
+              <span>Add Story Circle</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Story Circles Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div
+            v-for="story in productStories"
+            :key="story.id"
+            class="bg-white p-5 rounded-2xl border border-neutral-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between gap-4 group"
+            :class="{ 'opacity-60 bg-neutral-50/50': story.enabled === false }"
+          >
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <!-- Ring & Circle Icon Preview -->
+                <div class="relative w-16 h-16 rounded-full p-0.5 bg-gradient-to-tr from-[#F4EB6A] via-yellow-400 to-amber-500 flex items-center justify-center shrink-0 shadow-xs">
+                  <div class="w-full h-full rounded-full overflow-hidden bg-neutral-900 flex items-center justify-center border-2 border-white">
+                    <img
+                      v-if="story.icon || (story.slides && story.slides[0]?.image)"
+                      :src="useAsset(story.icon || story.slides[0]?.image)"
+                      :alt="story.title"
+                      class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    <FlowbiteIcon v-else name="camera" size="20" class="text-[#F4EB6A]" />
+                  </div>
+                </div>
+
+                <div class="flex flex-col items-end gap-1">
+                  <span
+                    class="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    :class="story.enabled !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-500'"
+                  >
+                    {{ story.enabled !== false ? 'Active' : 'Hidden' }}
+                  </span>
+                  <span class="text-[10px] text-neutral-400 font-mono px-1.5 py-0.5 bg-neutral-100 rounded">
+                    #{{ story.order || 1 }}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <h3 class="text-sm font-bold text-neutral-900 line-clamp-1">{{ story.title }}</h3>
+                <p class="text-xs text-neutral-500 mt-0.5 line-clamp-1">
+                  {{ story.subtitle || 'Lightbox gallery collection' }}
+                </p>
+                <div class="mt-2 flex items-center gap-1.5 text-[11px] text-neutral-600 font-medium">
+                  <FlowbiteIcon name="image" size="13" class="text-neutral-400" />
+                  <span>{{ (story.slides && story.slides.length) || 0 }} slides in lightbox</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bottom Actions -->
+            <div class="pt-3 border-t border-neutral-100 flex items-center justify-between gap-1">
+              <button
+                type="button"
+                @click="handleToggleStory(story)"
+                class="text-xs font-semibold px-2 py-1 rounded-lg transition-colors cursor-pointer"
+                :class="story.enabled !== false ? 'text-neutral-500 hover:text-neutral-900' : 'text-emerald-700 font-bold'"
+                :title="story.enabled !== false ? 'Hide story circle' : 'Show story circle'"
+              >
+                <FlowbiteIcon :name="story.enabled !== false ? 'eye-off' : 'eye'" size="14" />
+              </button>
+
+              <div class="flex items-center gap-1">
+                <button
+                  type="button"
+                  @click="openEditStoryModal(story)"
+                  class="p-1.5 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+                  title="Edit Story Gallery"
+                >
+                  <FlowbiteIcon name="edit" size="14" />
+                </button>
+                <button
+                  type="button"
+                  @click="handleDeleteStory(story)"
+                  class="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                  title="Delete Story Circle"
+                >
+                  <FlowbiteIcon name="trash" size="14" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           BANNER CATEGORIES (PRODUCTS SUBMENU)
+           ========================================== -->
+      <div v-else-if="activeSection === 'banner-categories'" class="space-y-6">
+        <!-- Header Banner -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-neutral-200/80 shadow-xs">
+          <div class="space-y-1">
+            <nav class="flex items-center gap-2 text-xs text-neutral-400">
+              <FlowbiteIcon name="grid" size="14" class="text-neutral-500" />
+              <span>Products</span>
+              <span>&gt;</span>
+              <span class="text-neutral-900 font-medium">Category Row Under Banner</span>
+              <span class="text-neutral-300">•</span>
+              <span class="text-xs text-neutral-400 font-medium">Real-time Firestore Sync</span>
+            </nav>
+            <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">
+              Banner Categories Row (Latest Categories)
+            </h2>
+            <p class="text-xs sm:text-sm text-neutral-500 max-w-xl">
+              Customise the horizontal category showcase displayed directly below the hero banner. Up to 7 curated cards on desktop and touch-swipeable on mobile.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              @click="handleResetBannerCategories"
+              class="px-3.5 py-2 rounded-xl border border-neutral-200 hover:bg-neutral-50 text-neutral-600 hover:text-neutral-900 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+              title="Reset to 7 curated category cards"
+            >
+              <FlowbiteIcon name="refresh" size="14" />
+              <span>Reset Defaults</span>
+            </button>
+
+            <button
+              type="button"
+              @click="openCreateBannerCategoryModal"
+              class="btn-primary text-xs !py-2.5 !px-4 inline-flex items-center gap-2 shadow-sm"
+            >
+              <FlowbiteIcon name="plus" size="14" stroke-width="2" />
+              <span>Add Category Card</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Section Heading & Subtitle Configuration Card -->
+        <div class="bg-white p-6 sm:p-7 rounded-3xl border border-neutral-200/80 shadow-xs space-y-4">
+          <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
+            <div>
+              <h3 class="text-sm font-bold text-neutral-900">Section Header Customisation</h3>
+              <p class="text-xs text-neutral-500">Edit the title, italic highlight, and subtitle displayed above the category cards.</p>
+            </div>
+            <button
+              type="button"
+              @click="handleSaveBannerCategoriesHeader"
+              :disabled="savingBannerCategoriesHeader"
+              class="btn-primary text-xs !py-2 !px-4 inline-flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+            >
+              <FlowbiteIcon v-if="!savingBannerCategoriesHeader" name="check" size="13" stroke-width="2" />
+              <span v-else class="w-3 h-3 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin"></span>
+              <span>{{ savingBannerCategoriesHeader ? 'Saving...' : 'Save Section Heading' }}</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-neutral-700 mb-1">Badge Text</label>
+              <input
+                v-model="bannerCategoriesHeaderForm.badge"
+                type="text"
+                placeholder="e.g. Explore Collections"
+                class="w-full px-3 py-2 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-neutral-700 mb-1">Main Heading</label>
+              <input
+                v-model="bannerCategoriesHeaderForm.title"
+                type="text"
+                placeholder="e.g. Latest"
+                class="w-full px-3 py-2 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 font-bold"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-neutral-700 mb-1">Italic Highlight Word</label>
+              <input
+                v-model="bannerCategoriesHeaderForm.highlight"
+                type="text"
+                placeholder="e.g. Categories"
+                class="w-full px-3 py-2 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 italic font-serif"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold text-neutral-700 mb-1">Subtitle / Descriptive Text</label>
+              <input
+                v-model="bannerCategoriesHeaderForm.subtitle"
+                type="text"
+                placeholder="Handpicked worlds of developmental toys, learning sets, and everyday joys."
+                class="w-full px-3 py-2 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-neutral-700 mb-1">View All Button Label</label>
+              <input
+                v-model="bannerCategoriesHeaderForm.viewAllText"
+                type="text"
+                placeholder="View all categories"
+                class="w-full px-3 py-2 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- 7 Category Cards Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div
+            v-for="cat in bannerCategories"
+            :key="cat.id"
+            class="bg-white p-3 rounded-2xl border border-neutral-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between gap-3 group relative"
+            :class="{ 'opacity-60 bg-neutral-50/50': cat.enabled === false }"
+          >
+            <!-- Card Image Preview -->
+            <div class="space-y-2">
+              <div class="relative w-full aspect-square rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200/70">
+                <img
+                  :src="useAsset(cat.image)"
+                  :alt="cat.name"
+                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+
+                <span
+                  class="absolute top-2 left-2 bg-neutral-950/80 backdrop-blur-xs text-white text-[9px] font-bold px-2 py-0.5 rounded-full"
+                >
+                  #{{ cat.order || 1 }}
+                </span>
+
+                <span
+                  v-if="cat.badge"
+                  class="absolute top-2 right-2 bg-[#F4EB6A] text-neutral-950 text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-2xs"
+                >
+                  {{ cat.badge }}
+                </span>
+
+                <div class="absolute bottom-2 left-2 right-2 text-white">
+                  <h4 class="text-xs font-bold truncate">{{ cat.name }}</h4>
+                  <span class="text-[10px] text-neutral-300 block truncate">{{ cat.itemCount || 0 }} items</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bottom Actions -->
+            <div class="pt-2 border-t border-neutral-100 flex items-center justify-between gap-1">
+              <button
+                type="button"
+                @click="handleToggleBannerCategory(cat)"
+                class="text-[11px] font-semibold px-2 py-1 rounded-md transition-colors cursor-pointer"
+                :class="cat.enabled !== false ? 'text-neutral-500 hover:text-neutral-900' : 'text-emerald-700 font-bold'"
+                :title="cat.enabled !== false ? 'Hide from storefront' : 'Show on storefront'"
+              >
+                <FlowbiteIcon :name="cat.enabled !== false ? 'eye-off' : 'eye'" size="13" />
+              </button>
+
+              <div class="flex items-center gap-1">
+                <button
+                  type="button"
+                  @click="openEditBannerCategoryModal(cat)"
+                  class="p-1.5 rounded-md text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+                  title="Edit Category Card"
+                >
+                  <FlowbiteIcon name="edit" size="13" />
+                </button>
+                <button
+                  type="button"
+                  @click="handleDeleteBannerCategory(cat)"
+                  class="p-1.5 rounded-md text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                  title="Delete Category Card"
+                >
+                  <FlowbiteIcon name="trash" size="13" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           TAB: CATEGORY BANNERS (MEDIA SUBMENU)
+           ========================================== -->
+      <div v-else-if="activeSection === 'category-banners'" class="space-y-6">
+        <!-- Header Banner -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-neutral-200/80 shadow-xs">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF7BA]/60 text-neutral-900 text-xs font-semibold">
+                <FlowbiteIcon name="sparkles" size="14" class="text-neutral-900" />
+                <span>Media files • Category Pages</span>
+              </span>
+              <span class="text-xs text-neutral-400 font-medium">Real-time Firestore Sync</span>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">
+              Category Hero Banners
+            </h2>
+            <p class="text-xs sm:text-sm text-neutral-500 max-w-xl">
+              Customise hero banners, background visuals, headline copy, and category badges displayed at the top of category pages.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              @click="handleResetCategoryBanners"
+              class="px-3.5 py-2 rounded-xl border border-neutral-200 hover:bg-neutral-50 text-neutral-600 hover:text-neutral-900 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+              title="Reset to default category banners"
+            >
+              <FlowbiteIcon name="refresh" size="14" />
+              <span>Reset Defaults</span>
+            </button>
+
+            <button
+              type="button"
+              @click="openCreateCategoryBannerModal"
+              class="btn-primary text-xs !py-2.5 !px-4 inline-flex items-center gap-2 shadow-sm"
+            >
+              <FlowbiteIcon name="plus" size="14" stroke-width="2" />
+              <span>Add Category Banner</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Category Banners Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div
+            v-for="b in categoryBanners"
+            :key="b.id"
+            class="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col group"
+            :class="{ 'opacity-60': b.enabled === false }"
+          >
+            <!-- Card Visual Preview (Mimics Storefront Hero Banner) -->
+            <div class="relative h-44 bg-neutral-900 overflow-hidden">
+              <img
+                v-if="b.image"
+                :src="useAsset(b.image)"
+                :alt="b.title || b.categoryName"
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div
+                v-else
+                class="w-full h-full bg-gradient-to-br from-neutral-800 to-neutral-950 flex items-center justify-center text-neutral-500 text-xs"
+              >
+                No Banner Image Set
+              </div>
+
+              <!-- Configured Dark Overlay -->
+              <div
+                class="absolute inset-0"
+                :style="{ backgroundColor: `rgba(0, 0, 0, ${((b.overlayOpacity ?? 70) / 100)})` }"
+              ></div>
+
+              <!-- Header Badges -->
+              <div class="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 z-10">
+                <span class="inline-flex items-center gap-1 bg-neutral-950/80 backdrop-blur-xs text-[#F4EB6A] text-[10px] font-bold px-2 py-0.5 rounded-full border border-neutral-700/50">
+                  <span>{{ b.categoryName || b.category }}</span>
+                  <span v-if="b.isDefault" class="text-neutral-400 font-normal">• default</span>
+                </span>
+                <span
+                  v-if="b.badge"
+                  class="bg-[#F4EB6A] text-neutral-950 text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs"
+                >
+                  {{ b.badge }}
+                </span>
+              </div>
+
+              <!-- Card Content Overlay -->
+              <div class="absolute bottom-3 left-3 right-3 text-white z-10">
+                <h3 class="text-sm font-bold line-clamp-1 mb-0.5">{{ b.title }}</h3>
+                <p class="text-[11px] text-neutral-300 line-clamp-2 font-light leading-snug">
+                  {{ b.subtitle }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Card Metadata & Controls -->
+            <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+              <div class="flex items-center justify-between text-[11px] text-neutral-500">
+                <div class="flex items-center gap-2">
+                  <span class="font-mono font-semibold text-neutral-700">Order: #{{ b.order || 1 }}</span>
+                  <span class="text-neutral-300">•</span>
+                  <span>Overlay: {{ b.overlayOpacity ?? 70 }}%</span>
+                </div>
+                <span
+                  class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                  :class="b.enabled !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-500'"
+                >
+                  {{ b.enabled !== false ? 'Active' : 'Disabled' }}
+                </span>
+              </div>
+
+              <!-- Actions Row -->
+              <div class="pt-2 border-t border-neutral-100 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  @click="handleToggleCategoryBanner(b)"
+                  class="text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1"
+                  :class="b.enabled !== false ? 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100' : 'text-emerald-700 hover:bg-emerald-50 font-bold'"
+                  :title="b.enabled !== false ? 'Hide banner' : 'Activate banner'"
+                >
+                  <FlowbiteIcon :name="b.enabled !== false ? 'eye-off' : 'eye'" size="14" />
+                  <span>{{ b.enabled !== false ? 'Hide' : 'Show' }}</span>
+                </button>
+
+                <div class="flex items-center gap-1">
+                  <button
+                    type="button"
+                    @click="openEditCategoryBannerModal(b)"
+                    class="p-2 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+                    title="Edit Category Banner"
+                  >
+                    <FlowbiteIcon name="edit" size="14" />
+                  </button>
+                  <button
+                    type="button"
+                    @click="handleDeleteCategoryBanner(b)"
+                    class="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                    title="Delete Category Banner"
+                  >
+                    <FlowbiteIcon name="trash" size="14" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           TAB: COLLECTIONS BANNERS (MEDIA SUBMENU)
+           ========================================== -->
+      <div v-else-if="activeSection === 'collections-banners'" class="space-y-6">
+        <!-- Header Banner -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-neutral-200/80 shadow-xs">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF7BA]/60 text-neutral-900 text-xs font-semibold">
+                <FlowbiteIcon name="sparkles" size="14" class="text-neutral-900" />
+                <span>Media files • Collection Pages</span>
+              </span>
+              <span class="text-xs text-neutral-400 font-medium">Real-time Firestore Sync</span>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">
+              Collections Hero Banners
+            </h2>
+            <p class="text-xs sm:text-sm text-neutral-500 max-w-xl">
+              Customise hero banners, background visuals, headline copy, and curated badges displayed for featured collections.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              @click="handleResetCollectionBanners"
+              class="px-3.5 py-2 rounded-xl border border-neutral-200 hover:bg-neutral-50 text-neutral-600 hover:text-neutral-900 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+              title="Reset to default collection banners"
+            >
+              <FlowbiteIcon name="refresh" size="14" />
+              <span>Reset Defaults</span>
+            </button>
+
+            <button
+              type="button"
+              @click="openCreateCollectionBannerModal"
+              class="btn-primary text-xs !py-2.5 !px-4 inline-flex items-center gap-2 shadow-sm"
+            >
+              <FlowbiteIcon name="plus" size="14" stroke-width="2" />
+              <span>Add Collections Banner</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Collections Banners Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div
+            v-for="b in collectionBanners"
+            :key="b.id"
+            class="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col group"
+            :class="{ 'opacity-60': b.enabled === false }"
+          >
+            <!-- Card Visual Preview (Mimics Storefront Hero Banner) -->
+            <div class="relative h-44 bg-neutral-900 overflow-hidden">
+              <img
+                v-if="b.image"
+                :src="useAsset(b.image)"
+                :alt="b.title || b.collectionName"
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div
+                v-else
+                class="w-full h-full bg-gradient-to-br from-neutral-800 to-neutral-950 flex items-center justify-center text-neutral-500 text-xs"
+              >
+                No Banner Image Set
+              </div>
+
+              <!-- Configured Dark Overlay -->
+              <div
+                class="absolute inset-0"
+                :style="{ backgroundColor: `rgba(0, 0, 0, ${((b.overlayOpacity ?? 70) / 100)})` }"
+              ></div>
+
+              <!-- Header Badges -->
+              <div class="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 z-10">
+                <span class="inline-flex items-center gap-1 bg-neutral-950/80 backdrop-blur-xs text-[#F4EB6A] text-[10px] font-bold px-2 py-0.5 rounded-full border border-neutral-700/50">
+                  <span>{{ b.collectionName || b.collection }}</span>
+                  <span v-if="b.isDefault" class="text-neutral-400 font-normal">• default</span>
+                </span>
+                <span
+                  v-if="b.badge"
+                  class="bg-[#F4EB6A] text-neutral-950 text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs"
+                >
+                  {{ b.badge }}
+                </span>
+              </div>
+
+              <!-- Card Content Overlay -->
+              <div class="absolute bottom-3 left-3 right-3 text-white z-10">
+                <h3 class="text-sm font-bold line-clamp-1 mb-0.5">{{ b.title }}</h3>
+                <p class="text-[11px] text-neutral-300 line-clamp-2 font-light leading-snug">
+                  {{ b.subtitle }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Card Metadata & Controls -->
+            <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+              <div class="flex items-center justify-between text-[11px] text-neutral-500">
+                <div class="flex items-center gap-2">
+                  <span class="font-mono font-semibold text-neutral-700">Order: #{{ b.order || 1 }}</span>
+                  <span class="text-neutral-300">•</span>
+                  <span>Overlay: {{ b.overlayOpacity ?? 70 }}%</span>
+                </div>
+                <span
+                  class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                  :class="b.enabled !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-500'"
+                >
+                  {{ b.enabled !== false ? 'Active' : 'Disabled' }}
+                </span>
+              </div>
+
+              <!-- Actions Row -->
+              <div class="pt-2 border-t border-neutral-100 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  @click="handleToggleCollectionBanner(b)"
+                  class="text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1"
+                  :class="b.enabled !== false ? 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100' : 'text-emerald-700 hover:bg-emerald-50 font-bold'"
+                  :title="b.enabled !== false ? 'Hide banner' : 'Activate banner'"
+                >
+                  <FlowbiteIcon :name="b.enabled !== false ? 'eye-off' : 'eye'" size="14" />
+                  <span>{{ b.enabled !== false ? 'Hide' : 'Show' }}</span>
+                </button>
+
+                <div class="flex items-center gap-1">
+                  <button
+                    type="button"
+                    @click="openEditCollectionBannerModal(b)"
+                    class="p-2 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+                    title="Edit Collection Banner"
+                  >
+                    <FlowbiteIcon name="edit" size="14" />
+                  </button>
+                  <button
+                    type="button"
+                    @click="handleDeleteCollectionBanner(b)"
+                    class="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                    title="Delete Collection Banner"
+                  >
+                    <FlowbiteIcon name="trash" size="14" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
            STAFF INVITATION & ACCESS DISPATCH MODAL
            ========================================== -->
       <transition name="fade">
@@ -6747,6 +8602,1147 @@
         </div>
       </transition>
 
+      <!-- ==========================================
+           THEME GUARANTEE STAT MODAL
+           ========================================== -->
+      <transition name="fade">
+        <div
+          v-if="showGuaranteeStatModal"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs font-poppins"
+          @click.self="showGuaranteeStatModal = false"
+        >
+          <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-neutral-200 space-y-6 animate-scale-up max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="flex items-start justify-between pb-4 border-b border-neutral-100">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-neutral-900 text-[#F4EB6A] flex items-center justify-center shadow-md">
+                  <FlowbiteIcon name="shield-check" size="22" />
+                </div>
+                <div>
+                  <h3 class="text-base font-bold text-neutral-900">
+                    {{ editingGuaranteeStat ? 'Edit Guarantee Stat' : 'New Guarantee Stat Badge' }}
+                  </h3>
+                  <p class="text-xs text-neutral-500">
+                    Displayed directly under the landing page hero banner.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                @click="showGuaranteeStatModal = false"
+                class="w-8 h-8 rounded-xl border border-neutral-200 hover:bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-neutral-900 cursor-pointer transition-colors"
+                aria-label="Close"
+              >
+                <FlowbiteIcon name="close" size="14" />
+              </button>
+            </div>
+
+            <!-- Form -->
+            <form @submit.prevent="handleSaveGuaranteeStat" class="space-y-4">
+              <!-- Title Input -->
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                  Badge Title *
+                </label>
+                <input
+                  v-model="guaranteeStatForm.title"
+                  type="text"
+                  required
+                  placeholder="e.g. Free shipping, Secure payments, Easy Returns"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900"
+                />
+              </div>
+
+              <!-- Description Input -->
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                  Subtext / Guarantee Description *
+                </label>
+                <input
+                  v-model="guaranteeStatForm.description"
+                  type="text"
+                  required
+                  placeholder="e.g. Free delivery on orders over R500"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900"
+                />
+              </div>
+
+              <!-- Icon Selector / Upload -->
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                  Badge Icon (Flowbite icon name or uploaded image)
+                </label>
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 rounded-xl bg-[#FAF7BA]/60 border border-[#F4EB6A]/50 flex items-center justify-center shrink-0 overflow-hidden">
+                    <img
+                      v-if="guaranteeStatForm.icon && (guaranteeStatForm.icon.includes('/') || guaranteeStatForm.icon.startsWith('data:'))"
+                      :src="useAsset(guaranteeStatForm.icon)"
+                      :alt="guaranteeStatForm.title"
+                      class="w-6 h-6 object-contain"
+                    />
+                    <FlowbiteIcon
+                      v-else
+                      :name="guaranteeStatForm.icon || 'shield-check'"
+                      size="22"
+                      class="text-neutral-900"
+                    />
+                  </div>
+
+                  <div class="flex-1 space-y-1.5">
+                    <div class="flex items-center gap-2">
+                      <input
+                        v-model="guaranteeStatForm.icon"
+                        type="text"
+                        placeholder="truck, lock, refresh, user-headset"
+                        class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 font-mono"
+                      />
+                      <label class="px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-xs font-semibold text-neutral-700 shrink-0 cursor-pointer transition-colors flex items-center gap-1.5">
+                        <FlowbiteIcon name="upload" size="13" />
+                        <span>Upload</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          @change="handleGuaranteeStatIconUpload"
+                          class="hidden"
+                        />
+                      </label>
+                    </div>
+                    <span class="text-[10px] text-neutral-400 block">
+                      Common icons: <code class="text-neutral-700">truck</code>, <code class="text-neutral-700">lock</code>, <code class="text-neutral-700">refresh</code>, <code class="text-neutral-700">user-headset</code>, <code class="text-neutral-700">sparkles</code>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Order / Sequence -->
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Display Sequence (1 to 4)
+                  </label>
+                  <input
+                    v-model.number="guaranteeStatForm.order"
+                    type="number"
+                    min="1"
+                    max="10"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 font-mono"
+                  />
+                </div>
+
+                <div class="flex items-center pt-6">
+                  <label class="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      v-model="guaranteeStatForm.enabled"
+                      type="checkbox"
+                      class="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-[#F4EB6A]"
+                    />
+                    <span class="text-xs font-semibold text-neutral-800">Publish on storefront</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Modal Actions -->
+              <div class="pt-4 flex items-center justify-end gap-2.5 border-t border-neutral-100">
+                <button
+                  type="button"
+                  @click="showGuaranteeStatModal = false"
+                  class="px-4 py-2.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-xs font-semibold transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  :disabled="guaranteeStatSaving"
+                  class="btn-primary text-xs !py-2.5 !px-5 inline-flex items-center gap-2 shadow-sm disabled:opacity-50"
+                >
+                  <FlowbiteIcon v-if="!guaranteeStatSaving" name="check" size="14" stroke-width="2" />
+                  <span v-else class="w-3.5 h-3.5 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin"></span>
+                  <span>{{ guaranteeStatSaving ? 'Saving...' : 'Save Guarantee Stat' }}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </transition>
+
+      <!-- ==========================================
+           STORY MODAL (HIGHLIGHTS LIGHTBOX BUILDER)
+           ========================================== -->
+      <transition name="fade">
+        <div
+          v-if="showStoryModal"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs font-poppins"
+          @click.self="showStoryModal = false"
+        >
+          <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-neutral-200 space-y-6 animate-scale-up max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="flex items-start justify-between pb-4 border-b border-neutral-100">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-neutral-900 text-[#F4EB6A] flex items-center justify-center shadow-md">
+                  <FlowbiteIcon name="sparkles" size="22" />
+                </div>
+                <div>
+                  <h3 class="text-base font-bold text-neutral-900">
+                    {{ editingStory ? 'Edit Story Highlight' : 'New Story Highlight' }}
+                  </h3>
+                  <p class="text-xs text-neutral-500">
+                    Circular story track above hero banner + swipeable lightbox gallery.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                @click="showStoryModal = false"
+                class="w-8 h-8 rounded-xl border border-neutral-200 hover:bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-neutral-900 cursor-pointer transition-colors"
+                aria-label="Close"
+              >
+                <FlowbiteIcon name="close" size="14" />
+              </button>
+            </div>
+
+            <!-- Form -->
+            <form @submit.prevent="handleSaveStory" class="space-y-5">
+              <!-- Basic Info -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Story Circle Title *
+                  </label>
+                  <input
+                    v-model="storyForm.title"
+                    type="text"
+                    required
+                    placeholder="e.g. Deals, What We Offer, Categories, About Us"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Display Sequence (1, 2, 3...)
+                  </label>
+                  <input
+                    v-model.number="storyForm.order"
+                    type="number"
+                    min="1"
+                    max="20"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 font-mono"
+                  />
+                </div>
+              </div>
+
+              <!-- Circle Thumbnail Image -->
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                  Circle Ring Thumbnail (Icon / Cover)
+                </label>
+                <div class="flex items-center gap-3">
+                  <div class="w-14 h-14 rounded-full overflow-hidden bg-neutral-900 border-2 border-[#F4EB6A] flex items-center justify-center shrink-0">
+                    <img
+                      v-if="storyForm.icon"
+                      :src="useAsset(storyForm.icon)"
+                      class="w-full h-full object-cover"
+                    />
+                    <FlowbiteIcon v-else name="camera" size="20" class="text-[#F4EB6A]" />
+                  </div>
+
+                  <div class="flex-1 space-y-1.5">
+                    <div class="flex items-center gap-2">
+                      <input
+                        v-model="storyForm.icon"
+                        type="text"
+                        placeholder="Image URL or upload..."
+                        class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 font-mono"
+                      />
+                      <label
+                        class="px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-xs font-semibold text-neutral-700 shrink-0 cursor-pointer transition-colors flex items-center gap-1.5"
+                        :class="{ 'opacity-60 pointer-events-none': storyUploading }"
+                      >
+                        <FlowbiteIcon name="upload" size="13" />
+                        <span>{{ storyUploading ? 'Uploading...' : 'Upload' }}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          :disabled="storyUploading"
+                          @change="handleStoryIconUpload"
+                          class="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Lightbox Slides Management -->
+              <div class="space-y-3 pt-2 border-t border-neutral-100">
+                <div class="flex items-center justify-between">
+                  <h4 class="text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                    Lightbox Gallery Slides ({{ storyForm.slides.length }})
+                  </h4>
+                  <span class="text-[11px] text-neutral-400">Max 1080px width on desktop</span>
+                </div>
+
+                <!-- Existing Slides List -->
+                <div v-if="storyForm.slides.length > 0" class="space-y-2">
+                  <div
+                    v-for="(slide, sIdx) in storyForm.slides"
+                    :key="sIdx"
+                    class="p-3 rounded-xl border border-neutral-200 bg-neutral-50 flex items-center justify-between gap-3 text-xs"
+                  >
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="w-12 h-12 rounded-lg overflow-hidden bg-neutral-200 shrink-0">
+                        <img :src="useAsset(slide.image)" class="w-full h-full object-cover" />
+                      </div>
+                      <div class="min-w-0">
+                        <div class="font-bold text-neutral-900 truncate">{{ slide.caption || 'Slide #' + (sIdx + 1) }}</div>
+                        <div class="text-[11px] text-neutral-500 truncate">
+                          CTA: <span class="font-semibold text-neutral-800">{{ slide.ctaText || 'Shop Now' }}</span> &rarr; {{ slide.ctaLink || 'All' }}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        @click="moveSlide(sIdx, -1)"
+                        :disabled="sIdx === 0"
+                        class="p-1.5 rounded text-neutral-500 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
+                        title="Move Up"
+                      >
+                        &uarr;
+                      </button>
+                      <button
+                        type="button"
+                        @click="moveSlide(sIdx, 1)"
+                        :disabled="sIdx === storyForm.slides.length - 1"
+                        class="p-1.5 rounded text-neutral-500 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
+                        title="Move Down"
+                      >
+                        &darr;
+                      </button>
+                      <button
+                        type="button"
+                        @click="removeSlideFromStory(sIdx)"
+                        class="p-1.5 rounded text-red-500 hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                        title="Remove Slide"
+                      >
+                        <FlowbiteIcon name="trash" size="13" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Add New Slide Mini-Form -->
+                <div class="p-3.5 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/70 space-y-3">
+                  <span class="text-xs font-bold text-neutral-800 block">+ Add Slide to this Gallery</span>
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Slide Image *</label>
+                      <div class="flex items-center gap-2">
+                        <input
+                          v-model="newSlideForm.image"
+                          type="text"
+                          placeholder="Image URL or upload..."
+                          class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 text-xs font-mono"
+                        />
+                        <label
+                          class="px-2.5 py-1.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-100 text-xs font-semibold text-neutral-700 shrink-0 cursor-pointer transition-colors flex items-center gap-1"
+                          :class="{ 'opacity-60 pointer-events-none': storyUploading }"
+                        >
+                          <FlowbiteIcon name="upload" size="12" />
+                          <span>{{ storyUploading ? 'Uploading...' : 'Upload' }}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            :disabled="storyUploading"
+                            @change="handleSlideImageUpload"
+                            class="hidden"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Slide Caption / Headline</label>
+                      <input
+                        v-model="newSlideForm.caption"
+                        type="text"
+                        placeholder="e.g. Handmade wooden blocks collection"
+                        class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                      <label class="block text-[11px] font-semibold text-neutral-600 mb-1">CTA Button Text</label>
+                      <input
+                        v-model="newSlideForm.ctaText"
+                        type="text"
+                        placeholder="Shop Now"
+                        class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 text-xs font-semibold"
+                      />
+                    </div>
+
+                    <div class="sm:col-span-2">
+                      <label class="block text-[11px] font-semibold text-neutral-600 mb-1">CTA Destination (Category or View)</label>
+                      <div class="flex items-center gap-2">
+                        <input
+                          v-model="newSlideForm.ctaLink"
+                          type="text"
+                          placeholder="Building Blocks, specials, about, contact..."
+                          class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 text-xs"
+                        />
+                        <button
+                          type="button"
+                          @click="addSlideToStory"
+                          class="px-4 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-[#F4EB6A] text-xs font-bold shrink-0 cursor-pointer transition-colors"
+                        >
+                          Add Slide
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Publish Toggle -->
+              <div class="pt-2">
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    v-model="storyForm.enabled"
+                    type="checkbox"
+                    class="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-[#F4EB6A]"
+                  />
+                  <span class="text-xs font-semibold text-neutral-800">Publish & visible in circular story track</span>
+                </label>
+              </div>
+
+              <!-- Modal Actions -->
+              <div class="pt-4 flex items-center justify-end gap-2.5 border-t border-neutral-100">
+                <button
+                  type="button"
+                  @click="showStoryModal = false"
+                  class="px-4 py-2.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-xs font-semibold transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  :disabled="storySaving"
+                  class="btn-primary text-xs !py-2.5 !px-5 inline-flex items-center gap-2 shadow-sm disabled:opacity-50"
+                >
+                  <FlowbiteIcon v-if="!storySaving" name="check" size="14" stroke-width="2" />
+                  <span v-else class="w-3.5 h-3.5 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin"></span>
+                  <span>{{ storySaving ? 'Saving...' : 'Save Story Highlight' }}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </transition>
+
+      <!-- ==========================================
+           BANNER CATEGORY MODAL (BELOW HERO BANNER)
+           ========================================== -->
+      <transition name="fade">
+        <div
+          v-if="showBannerCategoryModal"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs font-poppins"
+          @click.self="showBannerCategoryModal = false"
+        >
+          <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-neutral-200 space-y-6 animate-scale-up max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="flex items-start justify-between pb-4 border-b border-neutral-100">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-neutral-900 text-[#F4EB6A] flex items-center justify-center shadow-md">
+                  <FlowbiteIcon name="grid" size="22" />
+                </div>
+                <div>
+                  <h3 class="text-base font-bold text-neutral-900">
+                    {{ editingBannerCategory ? 'Edit Category Card' : 'New Banner Category Card' }}
+                  </h3>
+                  <p class="text-xs text-neutral-500">
+                    Displayed in the horizontal latest categories row under the banner.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                @click="showBannerCategoryModal = false"
+                class="w-8 h-8 rounded-xl border border-neutral-200 hover:bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-neutral-900 cursor-pointer transition-colors"
+                aria-label="Close"
+              >
+                <FlowbiteIcon name="close" size="14" />
+              </button>
+            </div>
+
+            <!-- Form -->
+            <form @submit.prevent="handleSaveBannerCategory" class="space-y-4">
+              <!-- Name Input -->
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                  Category Name *
+                </label>
+                <input
+                  v-model="bannerCategoryForm.name"
+                  type="text"
+                  required
+                  placeholder="e.g. Building Blocks, Plush Toys, Action Figures"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900"
+                />
+              </div>
+
+              <!-- Image & Upload -->
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                  Card Cover Image *
+                </label>
+                <div class="flex items-center gap-3">
+                  <div class="w-14 h-14 rounded-2xl overflow-hidden bg-neutral-100 border border-neutral-200 shrink-0">
+                    <img
+                      v-if="bannerCategoryForm.image"
+                      :src="useAsset(bannerCategoryForm.image)"
+                      class="w-full h-full object-cover"
+                    />
+                    <div v-else class="w-full h-full flex items-center justify-center text-neutral-400 text-xs">
+                      No img
+                    </div>
+                  </div>
+
+                  <div class="flex-1 space-y-1.5">
+                    <div class="flex items-center gap-2">
+                      <input
+                        v-model="bannerCategoryForm.image"
+                        type="text"
+                        placeholder="Image URL or upload..."
+                        class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 font-mono"
+                      />
+                      <label class="px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-xs font-semibold text-neutral-700 shrink-0 cursor-pointer transition-colors flex items-center gap-1.5">
+                        <FlowbiteIcon name="upload" size="13" />
+                        <span>Upload</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          @change="handleBannerCatImageUpload"
+                          class="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Badge & Item Count Row -->
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Badge Text (Optional)
+                  </label>
+                  <input
+                    v-model="bannerCategoryForm.badge"
+                    type="text"
+                    placeholder="e.g. Popular, New"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Item Count
+                  </label>
+                  <input
+                    v-model.number="bannerCategoryForm.itemCount"
+                    type="number"
+                    min="0"
+                    placeholder="12"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 font-mono"
+                  />
+                </div>
+              </div>
+
+              <!-- Sequence Order & Link Filter Row -->
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Sequence Order (1 to 7)
+                  </label>
+                  <input
+                    v-model.number="bannerCategoryForm.order"
+                    type="number"
+                    min="1"
+                    max="10"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Filter Name / Target
+                  </label>
+                  <input
+                    v-model="bannerCategoryForm.link"
+                    type="text"
+                    placeholder="Defaults to Category Name"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <!-- Publish Checkbox -->
+              <div class="pt-2">
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    v-model="bannerCategoryForm.enabled"
+                    type="checkbox"
+                    class="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-[#F4EB6A]"
+                  />
+                  <span class="text-xs font-semibold text-neutral-800">Publish & visible below hero banner</span>
+                </label>
+              </div>
+
+              <!-- Modal Actions -->
+              <div class="pt-4 flex items-center justify-end gap-2.5 border-t border-neutral-100">
+                <button
+                  type="button"
+                  @click="showBannerCategoryModal = false"
+                  class="px-4 py-2.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-xs font-semibold transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  :disabled="bannerCategorySaving"
+                  class="btn-primary text-xs !py-2.5 !px-5 inline-flex items-center gap-2 shadow-sm disabled:opacity-50"
+                >
+                  <FlowbiteIcon v-if="!bannerCategorySaving" name="check" size="14" stroke-width="2" />
+                  <span v-else class="w-3.5 h-3.5 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin"></span>
+                  <span>{{ bannerCategorySaving ? 'Saving...' : 'Save Category Card' }}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </transition>
+
+      <!-- ==========================================
+           CATEGORY BANNER MODAL (HERO FOR CATEGORIES)
+           ========================================== -->
+      <transition name="fade">
+        <div
+          v-if="showCategoryBannerModal"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs font-poppins"
+          @click.self="showCategoryBannerModal = false"
+        >
+          <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-neutral-200 space-y-6 animate-scale-up max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="flex items-start justify-between pb-4 border-b border-neutral-100">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-neutral-900 text-[#F4EB6A] flex items-center justify-center shadow-md">
+                  <FlowbiteIcon name="image" size="22" />
+                </div>
+                <div>
+                  <h3 class="text-base font-bold text-neutral-900">
+                    {{ editingCategoryBanner ? 'Edit Category Hero Banner' : 'New Category Hero Banner' }}
+                  </h3>
+                  <p class="text-xs text-neutral-500">
+                    Displayed at the top of category pages.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                @click="showCategoryBannerModal = false"
+                class="w-8 h-8 rounded-xl border border-neutral-200 hover:bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-neutral-900 cursor-pointer transition-colors"
+                aria-label="Close"
+              >
+                <FlowbiteIcon name="close" size="14" />
+              </button>
+            </div>
+
+            <!-- Form -->
+            <form @submit.prevent="handleSaveCategoryBanner" class="space-y-4">
+              <!-- Category Selector / Association -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Target Category *
+                  </label>
+                  <input
+                    v-model="categoryBannerForm.category"
+                    type="text"
+                    required
+                    placeholder="All, Building Blocks, Plush Toys..."
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900"
+                  />
+                  <div class="mt-1 flex flex-wrap gap-1">
+                    <span
+                      v-for="c in ['All', ...categories.map(cat => cat.name)]"
+                      :key="c"
+                      @click="categoryBannerForm.category = c; categoryBannerForm.categoryName = (c === 'All' ? 'All Categories' : c)"
+                      class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 hover:bg-[#F4EB6A]/40 text-neutral-700 cursor-pointer"
+                    >
+                      {{ c }}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Display Label / Name
+                  </label>
+                  <input
+                    v-model="categoryBannerForm.categoryName"
+                    type="text"
+                    placeholder="e.g. Building Blocks"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <!-- Banner Title & Badge -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="sm:col-span-2">
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Banner Heading (Title) *
+                  </label>
+                  <input
+                    v-model="categoryBannerForm.title"
+                    type="text"
+                    required
+                    placeholder="e.g. Architectural &amp; Montessori Blocks"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Badge Pill
+                  </label>
+                  <input
+                    v-model="categoryBannerForm.badge"
+                    type="text"
+                    placeholder="e.g. Montessori &amp; STEM"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <!-- Subtitle / Description -->
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                  Subtitle / Description
+                </label>
+                <textarea
+                  v-model="categoryBannerForm.subtitle"
+                  rows="2"
+                  placeholder="Develop spatial reasoning, fine motor skills, and creative imagination with eco-friendly block sets."
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 leading-relaxed"
+                ></textarea>
+              </div>
+
+              <!-- Desktop Image & Upload -->
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                  Desktop Hero Banner Background Image
+                </label>
+                <div class="flex items-center gap-3">
+                  <div class="w-16 h-12 rounded-xl overflow-hidden bg-neutral-900 border border-neutral-200 shrink-0">
+                    <img
+                      v-if="categoryBannerForm.image"
+                      :src="useAsset(categoryBannerForm.image)"
+                      class="w-full h-full object-cover"
+                    />
+                    <div v-else class="w-full h-full flex items-center justify-center text-neutral-500 text-[10px]">
+                      No Image
+                    </div>
+                  </div>
+
+                  <div class="flex-1 space-y-1.5">
+                    <div class="flex items-center gap-2">
+                      <input
+                        v-model="categoryBannerForm.image"
+                        type="text"
+                        placeholder="Image URL or upload..."
+                        class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 font-mono"
+                      />
+                      <label class="px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-xs font-semibold text-neutral-700 shrink-0 cursor-pointer transition-colors flex items-center gap-1.5">
+                        <FlowbiteIcon name="upload" size="13" />
+                        <span>Upload</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          @change="(e) => handleCategoryBannerImageUpload(e, false)"
+                          class="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mobile Image (Optional) & Upload -->
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                  Mobile Image (Optional - falls back to desktop image)
+                </label>
+                <div class="flex items-center gap-2">
+                  <input
+                    v-model="categoryBannerForm.mobileImage"
+                    type="text"
+                    placeholder="Optional mobile crop URL or upload..."
+                    class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 font-mono"
+                  />
+                  <label class="px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-xs font-semibold text-neutral-700 shrink-0 cursor-pointer transition-colors flex items-center gap-1.5">
+                    <FlowbiteIcon name="upload" size="13" />
+                    <span>Upload</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      @change="(e) => handleCategoryBannerImageUpload(e, true)"
+                      class="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <!-- Overlay Opacity & Sequence Order -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <div class="flex items-center justify-between mb-1.5">
+                    <label class="text-xs font-semibold text-neutral-700">Dark Overlay Opacity</label>
+                    <span class="text-xs font-mono font-bold text-neutral-900">{{ categoryBannerForm.overlayOpacity }}%</span>
+                  </div>
+                  <input
+                    v-model.number="categoryBannerForm.overlayOpacity"
+                    type="range"
+                    min="10"
+                    max="95"
+                    step="5"
+                    class="w-full accent-neutral-900"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Display Order
+                  </label>
+                  <input
+                    v-model.number="categoryBannerForm.order"
+                    type="number"
+                    min="1"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 font-mono"
+                  />
+                </div>
+              </div>
+
+              <!-- Publish Checkbox -->
+              <div class="pt-2 flex items-center justify-between">
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    v-model="categoryBannerForm.enabled"
+                    type="checkbox"
+                    class="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-[#F4EB6A]"
+                  />
+                  <span class="text-xs font-semibold text-neutral-800">Publish &amp; activate on category page</span>
+                </label>
+
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    v-model="categoryBannerForm.isDefault"
+                    type="checkbox"
+                    class="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-[#F4EB6A]"
+                  />
+                  <span class="text-xs text-neutral-600">Default fallback</span>
+                </label>
+              </div>
+
+              <!-- Modal Actions -->
+              <div class="pt-4 flex items-center justify-end gap-2.5 border-t border-neutral-100">
+                <button
+                  type="button"
+                  @click="showCategoryBannerModal = false"
+                  class="px-4 py-2.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-xs font-semibold transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  :disabled="categoryBannerSaving"
+                  class="btn-primary text-xs !py-2.5 !px-5 inline-flex items-center gap-2 shadow-sm disabled:opacity-50"
+                >
+                  <FlowbiteIcon v-if="!categoryBannerSaving" name="check" size="14" stroke-width="2" />
+                  <span v-else class="w-3.5 h-3.5 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin"></span>
+                  <span>{{ categoryBannerSaving ? 'Saving...' : 'Save Category Banner' }}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </transition>
+
+      <!-- ==========================================
+           COLLECTION BANNER MODAL (HERO FOR COLLECTIONS)
+           ========================================== -->
+      <transition name="fade">
+        <div
+          v-if="showCollectionBannerModal"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs font-poppins"
+          @click.self="showCollectionBannerModal = false"
+        >
+          <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-neutral-200 space-y-6 animate-scale-up max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="flex items-start justify-between pb-4 border-b border-neutral-100">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-neutral-900 text-[#F4EB6A] flex items-center justify-center shadow-md">
+                  <FlowbiteIcon name="image" size="22" />
+                </div>
+                <div>
+                  <h3 class="text-base font-bold text-neutral-900">
+                    {{ editingCollectionBanner ? 'Edit Collection Hero Banner' : 'New Collection Hero Banner' }}
+                  </h3>
+                  <p class="text-xs text-neutral-500">
+                    Displayed at the top of curated collection pages.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                @click="showCollectionBannerModal = false"
+                class="w-8 h-8 rounded-xl border border-neutral-200 hover:bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-neutral-900 cursor-pointer transition-colors"
+                aria-label="Close"
+              >
+                <FlowbiteIcon name="close" size="14" />
+              </button>
+            </div>
+
+            <!-- Form -->
+            <form @submit.prevent="handleSaveCollectionBanner" class="space-y-4">
+              <!-- Collection Selector / Association -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Target Collection *
+                  </label>
+                  <input
+                    v-model="collectionBannerForm.collection"
+                    type="text"
+                    required
+                    placeholder="All Collections, Wooden Classics..."
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900"
+                  />
+                  <div class="mt-1 flex flex-wrap gap-1">
+                    <span
+                      v-for="c in ['All Collections', ...collections.map(col => col.name)]"
+                      :key="c"
+                      @click="collectionBannerForm.collection = c; collectionBannerForm.collectionName = c"
+                      class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 hover:bg-[#F4EB6A]/40 text-neutral-700 cursor-pointer"
+                    >
+                      {{ c }}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Display Label / Name
+                  </label>
+                  <input
+                    v-model="collectionBannerForm.collectionName"
+                    type="text"
+                    placeholder="e.g. Wooden Classics"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <!-- Banner Title & Badge -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="sm:col-span-2">
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Banner Heading (Title) *
+                  </label>
+                  <input
+                    v-model="collectionBannerForm.title"
+                    type="text"
+                    required
+                    placeholder="e.g. Handcrafted Wooden Toys"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Badge Pill
+                  </label>
+                  <input
+                    v-model="collectionBannerForm.badge"
+                    type="text"
+                    placeholder="e.g. Heirloom Series"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <!-- Subtitle / Description -->
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                  Subtitle / Description
+                </label>
+                <textarea
+                  v-model="collectionBannerForm.subtitle"
+                  rows="2"
+                  placeholder="Sustainably sourced beechwood, non-toxic water-based finishes, and heirloom durability built to last."
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 leading-relaxed"
+                ></textarea>
+              </div>
+
+              <!-- Desktop Image & Upload -->
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                  Desktop Hero Banner Background Image
+                </label>
+                <div class="flex items-center gap-3">
+                  <div class="w-16 h-12 rounded-xl overflow-hidden bg-neutral-900 border border-neutral-200 shrink-0">
+                    <img
+                      v-if="collectionBannerForm.image"
+                      :src="useAsset(collectionBannerForm.image)"
+                      class="w-full h-full object-cover"
+                    />
+                    <div v-else class="w-full h-full flex items-center justify-center text-neutral-500 text-[10px]">
+                      No Image
+                    </div>
+                  </div>
+
+                  <div class="flex-1 space-y-1.5">
+                    <div class="flex items-center gap-2">
+                      <input
+                        v-model="collectionBannerForm.image"
+                        type="text"
+                        placeholder="Image URL or upload..."
+                        class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 font-mono"
+                      />
+                      <label class="px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-xs font-semibold text-neutral-700 shrink-0 cursor-pointer transition-colors flex items-center gap-1.5">
+                        <FlowbiteIcon name="upload" size="13" />
+                        <span>Upload</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          @change="(e) => handleCollectionBannerImageUpload(e, false)"
+                          class="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mobile Image (Optional) & Upload -->
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                  Mobile Image (Optional - falls back to desktop image)
+                </label>
+                <div class="flex items-center gap-2">
+                  <input
+                    v-model="collectionBannerForm.mobileImage"
+                    type="text"
+                    placeholder="Optional mobile crop URL or upload..."
+                    class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 font-mono"
+                  />
+                  <label class="px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-xs font-semibold text-neutral-700 shrink-0 cursor-pointer transition-colors flex items-center gap-1.5">
+                    <FlowbiteIcon name="upload" size="13" />
+                    <span>Upload</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      @change="(e) => handleCollectionBannerImageUpload(e, true)"
+                      class="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <!-- Overlay Opacity & Sequence Order -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <div class="flex items-center justify-between mb-1.5">
+                    <label class="text-xs font-semibold text-neutral-700">Dark Overlay Opacity</label>
+                    <span class="text-xs font-mono font-bold text-neutral-900">{{ collectionBannerForm.overlayOpacity }}%</span>
+                  </div>
+                  <input
+                    v-model.number="collectionBannerForm.overlayOpacity"
+                    type="range"
+                    min="10"
+                    max="95"
+                    step="5"
+                    class="w-full accent-neutral-900"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1.5">
+                    Display Order
+                  </label>
+                  <input
+                    v-model.number="collectionBannerForm.order"
+                    type="number"
+                    min="1"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 focus:outline-none focus:border-[#F4EB6A] text-xs text-neutral-900 font-mono"
+                  />
+                </div>
+              </div>
+
+              <!-- Publish Checkbox -->
+              <div class="pt-2 flex items-center justify-between">
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    v-model="collectionBannerForm.enabled"
+                    type="checkbox"
+                    class="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-[#F4EB6A]"
+                  />
+                  <span class="text-xs font-semibold text-neutral-800">Publish &amp; activate on collection page</span>
+                </label>
+
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    v-model="collectionBannerForm.isDefault"
+                    type="checkbox"
+                    class="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-[#F4EB6A]"
+                  />
+                  <span class="text-xs text-neutral-600">Default fallback</span>
+                </label>
+              </div>
+
+              <!-- Modal Actions -->
+              <div class="pt-4 flex items-center justify-end gap-2.5 border-t border-neutral-100">
+                <button
+                  type="button"
+                  @click="showCollectionBannerModal = false"
+                  class="px-4 py-2.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-xs font-semibold transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  :disabled="collectionBannerSaving"
+                  class="btn-primary text-xs !py-2.5 !px-5 inline-flex items-center gap-2 shadow-sm disabled:opacity-50"
+                >
+                  <FlowbiteIcon v-if="!collectionBannerSaving" name="check" size="14" stroke-width="2" />
+                  <span v-else class="w-3.5 h-3.5 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin"></span>
+                  <span>{{ collectionBannerSaving ? 'Saving...' : 'Save Collection Banner' }}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </transition>
+
     </main>
   </div>
 </template>
@@ -6803,11 +9799,56 @@ const {
   deleteOrder,
   saveBanner,
   deleteBanner,
+  guaranteeStats,
+  saveGuaranteeStat,
+  deleteGuaranteeStat,
+  resetGuaranteeStatsToDefaults,
+  defaultInitialGuaranteeStats,
   saveCustomerSegment,
   deleteCustomerSegment,
   savePurchaseOrder,
   deletePurchaseOrder,
   receivePurchaseOrder,
+  productStories,
+  saveStory,
+  deleteStory,
+  resetStoriesToDefaults,
+  defaultInitialStories,
+  bannerCategories,
+  saveBannerCategory,
+  deleteBannerCategory,
+  resetBannerCategoriesToDefaults,
+  defaultInitialBannerCategories,
+  bannerCategoriesHeader,
+  saveBannerCategoriesHeader,
+  defaultBannerCategoriesHeader,
+  categoryBanners,
+  saveCategoryBanner,
+  deleteCategoryBanner,
+  resetCategoryBannersToDefaults,
+  defaultInitialCategoryBanners,
+  collectionBanners,
+  saveCollectionBanner,
+  deleteCollectionBanner,
+  resetCollectionBannersToDefaults,
+  defaultInitialCollectionBanners,
+  themeConfig,
+  saveThemeConfig,
+  defaultThemeConfig,
+  headingSlides,
+  saveHeadingSlides,
+  defaultHeadingSlides,
+  storeReviews,
+  googleReviewsConfig,
+  saveStoreReview,
+  deleteStoreReview,
+  resetStoreReviewsToDefaults,
+  saveGoogleReviewsConfig,
+  syncGoogleReviews,
+  productReviews,
+  saveProductReview,
+  deleteProductReview,
+  showBadgePills,
   isVideoFile
 } = storeContent
 
@@ -6820,8 +9861,859 @@ if (!adminUsers.value) {
   adminUsers.value = []
 }
 
+// ==========================================
+// THEME: GUARANTEE STATS (TRUST BADGES) METHODS
+// ==========================================
+const showGuaranteeStatModal = ref(false)
+const editingGuaranteeStat = ref(null)
+const guaranteeStatSaving = ref(false)
+const guaranteeStatUploading = ref(false)
+
+const guaranteeStatForm = ref({
+  id: '',
+  title: '',
+  description: '',
+  icon: '',
+  order: 1,
+  enabled: true
+})
+
+const openCreateGuaranteeStatModal = () => {
+  editingGuaranteeStat.value = null
+  guaranteeStatForm.value = {
+    id: '',
+    title: '',
+    description: '',
+    icon: '',
+    order: (guaranteeStats.value?.length || 0) + 1,
+    enabled: true
+  }
+  showGuaranteeStatModal.value = true
+}
+
+const openEditGuaranteeStatModal = (stat) => {
+  editingGuaranteeStat.value = stat
+  guaranteeStatForm.value = {
+    id: stat.id,
+    title: stat.title || '',
+    description: stat.description || '',
+    icon: stat.icon || '',
+    order: stat.order || 1,
+    enabled: stat.enabled !== false
+  }
+  showGuaranteeStatModal.value = true
+}
+
+const handleGuaranteeStatIconUpload = async (e) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  guaranteeStatUploading.value = true
+  try {
+    const res = await uploadFile(file, 'theme-stats')
+    const downloadUrl = (typeof res === 'object' && res?.url) ? res.url : res
+    if (downloadUrl) {
+      guaranteeStatForm.value.icon = downloadUrl
+      notify('Trust badge icon uploaded successfully!')
+    }
+  } catch (err) {
+    notify(err?.message || 'Failed to upload icon', 'error')
+  } finally {
+    guaranteeStatUploading.value = false
+    if (e.target) e.target.value = ''
+  }
+}
+
+const handleSaveGuaranteeStat = async () => {
+  if (!guaranteeStatForm.value.title?.trim()) {
+    notify('Please enter a badge title', 'error')
+    return
+  }
+  guaranteeStatSaving.value = true
+  try {
+    await saveGuaranteeStat(guaranteeStatForm.value, editingGuaranteeStat.value?.id)
+    notify('Guarantee stat saved & synced to live storefront!')
+    showGuaranteeStatModal.value = false
+  } catch (err) {
+    notify(err?.message || 'Failed to save guarantee stat', 'error')
+  } finally {
+    guaranteeStatSaving.value = false
+  }
+}
+
+const handleDeleteGuaranteeStat = async (stat) => {
+  if (confirm(`Delete guarantee stat "${stat.title}"?`)) {
+    try {
+      await deleteGuaranteeStat(stat.id)
+      notify('Guarantee stat removed.', 'info')
+    } catch (err) {
+      notify(err?.message || 'Failed to delete stat', 'error')
+    }
+  }
+}
+
+const handleToggleGuaranteeStat = async (stat) => {
+  try {
+    const updated = { ...stat, enabled: !stat.enabled }
+    await saveGuaranteeStat(updated, stat.id)
+    notify(`"${stat.title}" is now ${updated.enabled ? 'visible' : 'hidden'} on storefront.`)
+  } catch (err) {
+    notify(err?.message || 'Failed to update guarantee stat', 'error')
+  }
+}
+
+const handleResetGuaranteeStats = async () => {
+  if (confirm('Reset all guarantee stats back to the original 4 Yellow Berry Store trust badges?')) {
+    try {
+      await resetGuaranteeStatsToDefaults()
+      notify('Guarantee stats reset to original defaults!')
+    } catch (err) {
+      notify(err?.message || 'Failed to reset stats', 'error')
+    }
+  }
+}
+
+// ==========================================
+// THEME: WEBSITE BADGES & PILLS
+// ==========================================
+const savingThemeBadges = ref(false)
+const themeBadgeForm = ref({
+  showBadgePills: false,
+  showHeroBannerBadge: false,
+  showCategoryHeadingBadge: false,
+  showCategoryCardBadges: false,
+  showProductBadges: false,
+  showCategoryBannerBadges: false
+})
+
+watch(
+  () => themeConfig?.value,
+  (val) => {
+    if (val) {
+      themeBadgeForm.value = {
+        showBadgePills: Boolean(val.showBadgePills),
+        showHeroBannerBadge: val.showHeroBannerBadge !== undefined ? Boolean(val.showHeroBannerBadge) : Boolean(val.showBadgePills),
+        showCategoryHeadingBadge: val.showCategoryHeadingBadge !== undefined ? Boolean(val.showCategoryHeadingBadge) : Boolean(val.showBadgePills),
+        showCategoryCardBadges: val.showCategoryCardBadges !== undefined ? Boolean(val.showCategoryCardBadges) : Boolean(val.showBadgePills),
+        showProductBadges: val.showProductBadges !== undefined ? Boolean(val.showProductBadges) : Boolean(val.showBadgePills),
+        showCategoryBannerBadges: val.showCategoryBannerBadges !== undefined ? Boolean(val.showCategoryBannerBadges) : Boolean(val.showBadgePills)
+      }
+    }
+  },
+  { immediate: true, deep: true }
+)
+
+const toggleGlobalPills = () => {
+  themeBadgeForm.value.showBadgePills = !themeBadgeForm.value.showBadgePills
+  if (themeBadgeForm.value.showBadgePills) {
+    themeBadgeForm.value.showHeroBannerBadge = true
+    themeBadgeForm.value.showCategoryHeadingBadge = true
+    themeBadgeForm.value.showCategoryCardBadges = true
+    themeBadgeForm.value.showProductBadges = true
+    themeBadgeForm.value.showCategoryBannerBadges = true
+  }
+}
+
+const handleSaveThemeBadges = async () => {
+  savingThemeBadges.value = true
+  try {
+    await saveThemeConfig(themeBadgeForm.value)
+    notify(
+      themeBadgeForm.value.showBadgePills
+        ? 'Website badge pills enabled and saved live!'
+        : 'All badge pills removed and turned off across the website!'
+    )
+  } catch (err) {
+    notify(err?.message || 'Failed to save theme settings', 'error')
+  } finally {
+    savingThemeBadges.value = false
+  }
+}
+
+// ==========================================
+// THEME: HEADING SLIDES (ROTATING ITALIC WORDS)
+// ==========================================
+const savingHeadingSlides = ref(false)
+const headingSlidesForm = ref({
+  enabled: true,
+  intervalSeconds: 3.5,
+  categoryWords: ['Readers', 'Categories', 'Builders', 'Creators', 'Explorers'],
+  collectionWords: ['Collections', 'Gift Boxes', 'Treasures', 'Bundles', 'Editions']
+})
+
+watch(
+  () => headingSlides?.value,
+  (val) => {
+    if (val) {
+      const catWords = [...(val.categoryWords || defaultHeadingSlides?.categoryWords || ['Readers', 'Categories'])]
+      while (catWords.length < 5) catWords.push('')
+      const colWords = [...(val.collectionWords || defaultHeadingSlides?.collectionWords || ['Collections', 'Gift Boxes'])]
+      while (colWords.length < 5) colWords.push('')
+
+      headingSlidesForm.value = {
+        enabled: val.enabled !== false,
+        intervalSeconds: Number(val.intervalSeconds) || 3.5,
+        categoryWords: catWords.slice(0, 5),
+        collectionWords: colWords.slice(0, 5)
+      }
+    }
+  },
+  { immediate: true, deep: true }
+)
+
+// Live Admin Preview Rotation Animation
+const previewWordIndex = ref(0)
+let previewWordTimer = null
+
+const activePreviewCategoryWords = computed(() => {
+  const words = headingSlidesForm.value.categoryWords.map(w => (w || '').trim()).filter(Boolean)
+  return words.length > 0 ? words : ['Readers', 'Categories']
+})
+
+const previewCategoryWord = computed(() => {
+  const words = activePreviewCategoryWords.value
+  return words[previewWordIndex.value % words.length]
+})
+
+const startPreviewWordRotation = () => {
+  if (previewWordTimer) clearInterval(previewWordTimer)
+  const interval = (Number(headingSlidesForm.value.intervalSeconds) || 3.5) * 1000
+  previewWordTimer = setInterval(() => {
+    const words = activePreviewCategoryWords.value
+    if (words.length > 1) {
+      previewWordIndex.value = (previewWordIndex.value + 1) % words.length
+    }
+  }, interval)
+}
+
+watch(
+  () => [headingSlidesForm.value.intervalSeconds, headingSlidesForm.value.categoryWords],
+  () => {
+    previewWordIndex.value = 0
+    startPreviewWordRotation()
+  },
+  { deep: true }
+)
+
+onMounted(() => {
+  startPreviewWordRotation()
+})
+
+const handleSaveHeadingSlides = async () => {
+  savingHeadingSlides.value = true
+  try {
+    await saveHeadingSlides(headingSlidesForm.value)
+    notify('Heading slides saved & synced to live storefront!')
+  } catch (err) {
+    notify(err?.message || 'Failed to save heading slides', 'error')
+  } finally {
+    savingHeadingSlides.value = false
+  }
+}
+
+const handleResetHeadingSlides = () => {
+  if (confirm('Reset heading slides to original rotating words?')) {
+    headingSlidesForm.value = {
+      enabled: true,
+      intervalSeconds: 3.5,
+      categoryWords: ['Readers', 'Categories', 'Builders', 'Creators', 'Explorers'],
+      collectionWords: ['Collections', 'Gift Boxes', 'Treasures', 'Bundles', 'Editions']
+    }
+    notify('Reset to default words. Click "Save Heading Slides" to apply live.')
+  }
+}
+
+
+
+// ==========================================
+// STORIES ABOVE BANNER (CIRCULAR STORY TRACK)
+// ==========================================
+const showStoryModal = ref(false)
+const editingStory = ref(null)
+const storySaving = ref(false)
+const storyUploading = ref(false)
+const newSlideForm = ref({
+  image: '',
+  caption: '',
+  ctaText: 'Shop Now',
+  ctaLink: 'All'
+})
+const storyForm = ref({
+  title: '',
+  subtitle: '',
+  icon: '',
+  coverImage: '',
+  order: 1,
+  enabled: true,
+  slides: []
+})
+
+const openCreateStoryModal = () => {
+  editingStory.value = null
+  storyForm.value = {
+    title: '',
+    subtitle: '',
+    icon: '',
+    coverImage: '',
+    order: (productStories.value?.length || 0) + 1,
+    enabled: true,
+    slides: [
+      {
+        image: '',
+        caption: '',
+        ctaText: 'Shop Now',
+        ctaLink: 'All'
+      }
+    ]
+  }
+  newSlideForm.value = { image: '', caption: '', ctaText: 'Shop Now', ctaLink: 'All' }
+  showStoryModal.value = true
+}
+
+const openEditStoryModal = (story) => {
+  editingStory.value = story
+  storyForm.value = {
+    id: story.id,
+    title: story.title || '',
+    subtitle: story.subtitle || '',
+    icon: story.icon || '',
+    coverImage: story.coverImage || '',
+    order: story.order || 1,
+    enabled: story.enabled !== false,
+    slides: Array.isArray(story.slides) ? JSON.parse(JSON.stringify(story.slides)) : []
+  }
+  newSlideForm.value = { image: '', caption: '', ctaText: 'Shop Now', ctaLink: 'All' }
+  showStoryModal.value = true
+}
+
+const handleStoryIconUpload = async (e) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  storyUploading.value = true
+  try {
+    const res = await uploadFile(file, 'story-thumbnails')
+    const downloadUrl = (typeof res === 'object' && res?.url) ? res.url : res
+    if (downloadUrl) {
+      storyForm.value.icon = downloadUrl
+      notify('Story thumbnail uploaded!')
+    }
+  } catch (err) {
+    console.error('Failed to upload story thumbnail:', err)
+    notify(err?.message || 'Failed to upload image', 'error')
+  } finally {
+    storyUploading.value = false
+    if (e.target) e.target.value = ''
+  }
+}
+
+const handleSlideImageUpload = async (e) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  storyUploading.value = true
+  try {
+    const res = await uploadFile(file, 'story-slides')
+    const downloadUrl = (typeof res === 'object' && res?.url) ? res.url : res
+    if (downloadUrl) {
+      newSlideForm.value.image = downloadUrl
+      notify('Slide image uploaded!')
+    }
+  } catch (err) {
+    console.error('Failed to upload slide image:', err)
+    notify(err?.message || 'Failed to upload slide image', 'error')
+  } finally {
+    storyUploading.value = false
+    if (e.target) e.target.value = ''
+  }
+}
+
+const addSlideToStory = () => {
+  if (!newSlideForm.value.image?.trim()) {
+    notify('Please provide or upload a slide image first.', 'warning')
+    return
+  }
+  storyForm.value.slides.push({ ...newSlideForm.value })
+  newSlideForm.value = { image: '', caption: '', ctaText: 'Shop Now', ctaLink: 'All' }
+  notify('Slide added to story gallery!')
+}
+
+const removeSlideFromStory = (index) => {
+  storyForm.value.slides.splice(index, 1)
+}
+
+const moveSlide = (index, direction) => {
+  const targetIndex = index + direction
+  if (targetIndex < 0 || targetIndex >= storyForm.value.slides.length) return
+  const temp = storyForm.value.slides[index]
+  storyForm.value.slides[index] = storyForm.value.slides[targetIndex]
+  storyForm.value.slides[targetIndex] = temp
+}
+
+const handleSaveStory = async () => {
+  if (!storyForm.value.title?.trim()) {
+    notify('Please enter a story title', 'error')
+    return
+  }
+  if (!storyForm.value.slides || storyForm.value.slides.length === 0) {
+    notify('Please add at least one slide to this story gallery', 'warning')
+    return
+  }
+  storySaving.value = true
+  try {
+    await saveStory(storyForm.value, editingStory.value?.id)
+    notify('Story highlight saved & synced to live storefront!')
+    showStoryModal.value = false
+  } catch (err) {
+    notify(err?.message || 'Failed to save story', 'error')
+  } finally {
+    storySaving.value = false
+  }
+}
+
+const handleDeleteStory = async (story) => {
+  if (confirm(`Delete story "${story.title}"?`)) {
+    try {
+      await deleteStory(story.id)
+      notify('Story removed.', 'info')
+    } catch (err) {
+      notify(err?.message || 'Failed to delete story', 'error')
+    }
+  }
+}
+
+const handleToggleStory = async (story) => {
+  try {
+    const updated = { ...story, enabled: !story.enabled }
+    await saveStory(updated, story.id)
+    notify(`Story "${story.title}" is now ${updated.enabled ? 'visible' : 'hidden'} on storefront.`)
+  } catch (err) {
+    notify(err?.message || 'Failed to update story status', 'error')
+  }
+}
+
+const handleResetStories = async () => {
+  if (confirm('Reset stories to original defaults (Deals, What We Offer, Categories, About Us)?')) {
+    try {
+      await resetStoriesToDefaults()
+      notify('Story highlights reset to defaults!')
+    } catch (err) {
+      notify(err?.message || 'Failed to reset stories', 'error')
+    }
+  }
+}
+
+// ==========================================
+// BANNER CATEGORIES (BELOW HERO BANNER)
+// ==========================================
+const showBannerCategoryModal = ref(false)
+const editingBannerCategory = ref(null)
+const bannerCategorySaving = ref(false)
+const bannerCategoryUploading = ref(false)
+const bannerCategoryForm = ref({
+  name: '',
+  image: '',
+  badge: '',
+  itemCount: 0,
+  order: 1,
+  enabled: true,
+  link: ''
+})
+
+const openCreateBannerCategoryModal = () => {
+  editingBannerCategory.value = null
+  bannerCategoryForm.value = {
+    name: '',
+    image: '',
+    badge: 'Popular',
+    itemCount: 12,
+    order: (bannerCategories.value?.length || 0) + 1,
+    enabled: true,
+    link: ''
+  }
+  showBannerCategoryModal.value = true
+}
+
+const openEditBannerCategoryModal = (cat) => {
+  editingBannerCategory.value = cat
+  bannerCategoryForm.value = {
+    id: cat.id,
+    name: cat.name || '',
+    image: cat.image || '',
+    badge: cat.badge || '',
+    itemCount: cat.itemCount || 0,
+    order: cat.order || 1,
+    enabled: cat.enabled !== false,
+    link: cat.link || ''
+  }
+  showBannerCategoryModal.value = true
+}
+
+const handleBannerCatImageUpload = async (e) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  bannerCategoryUploading.value = true
+  try {
+    const res = await uploadFile(file, 'banner-categories')
+    const downloadUrl = (typeof res === 'object' && res?.url) ? res.url : res
+    if (downloadUrl) {
+      bannerCategoryForm.value.image = downloadUrl
+      notify('Category card image uploaded!')
+    }
+  } catch (err) {
+    notify(err?.message || 'Failed to upload image', 'error')
+  } finally {
+    bannerCategoryUploading.value = false
+    if (e.target) e.target.value = ''
+  }
+}
+
+const handleSaveBannerCategory = async () => {
+  if (!bannerCategoryForm.value.name?.trim()) {
+    notify('Please enter a category title', 'error')
+    return
+  }
+  bannerCategorySaving.value = true
+  try {
+    await saveBannerCategory(bannerCategoryForm.value, editingBannerCategory.value?.id)
+    notify('Banner category saved & synced to live storefront!')
+    showBannerCategoryModal.value = false
+  } catch (err) {
+    notify(err?.message || 'Failed to save category card', 'error')
+  } finally {
+    bannerCategorySaving.value = false
+  }
+}
+
+const handleDeleteBannerCategory = async (cat) => {
+  if (confirm(`Delete banner category card "${cat.name}"?`)) {
+    try {
+      await deleteBannerCategory(cat.id)
+      notify('Category card removed.', 'info')
+    } catch (err) {
+      notify(err?.message || 'Failed to delete category card', 'error')
+    }
+  }
+}
+
+const handleToggleBannerCategory = async (cat) => {
+  try {
+    const updated = { ...cat, enabled: !cat.enabled }
+    await saveBannerCategory(updated, cat.id)
+    notify(`"${cat.name}" is now ${updated.enabled ? 'visible' : 'hidden'} on storefront.`)
+  } catch (err) {
+    notify(err?.message || 'Failed to update category card', 'error')
+  }
+}
+
+const handleResetBannerCategories = async () => {
+  if (confirm('Reset banner categories back to 7 curated collections?')) {
+    try {
+      await resetBannerCategoriesToDefaults()
+      notify('Banner categories reset to defaults!')
+    } catch (err) {
+      notify(err?.message || 'Failed to reset categories', 'error')
+    }
+  }
+}
+
+// Banner Categories Section Heading State
+const bannerCategoriesHeaderForm = ref({
+  badge: bannerCategoriesHeader?.value?.badge || defaultBannerCategoriesHeader?.badge || 'Explore Collections',
+  title: bannerCategoriesHeader?.value?.title || defaultBannerCategoriesHeader?.title || 'Latest',
+  highlight: bannerCategoriesHeader?.value?.highlight || defaultBannerCategoriesHeader?.highlight || 'Categories',
+  subtitle: bannerCategoriesHeader?.value?.subtitle || defaultBannerCategoriesHeader?.subtitle || 'Handpicked worlds of developmental toys, learning sets, and everyday joys.',
+  viewAllText: bannerCategoriesHeader?.value?.viewAllText || defaultBannerCategoriesHeader?.viewAllText || 'View all categories'
+})
+const savingBannerCategoriesHeader = ref(false)
+
+watch(bannerCategoriesHeader, (newVal) => {
+  if (newVal) {
+    bannerCategoriesHeaderForm.value = {
+      badge: newVal.badge || 'Explore Collections',
+      title: newVal.title || 'Latest',
+      highlight: newVal.highlight || 'Categories',
+      subtitle: newVal.subtitle || '',
+      viewAllText: newVal.viewAllText || 'View all categories'
+    }
+  }
+}, { immediate: true })
+
+const handleSaveBannerCategoriesHeader = async () => {
+  savingBannerCategoriesHeader.value = true
+  try {
+    await saveBannerCategoriesHeader(bannerCategoriesHeaderForm.value)
+    notify('Section heading saved & synced to live storefront!')
+  } catch (err) {
+    notify(err?.message || 'Failed to save section heading', 'error')
+  } finally {
+    savingBannerCategoriesHeader.value = false
+  }
+}
+
+// ==========================================
+// CATEGORY BANNERS STATE & HANDLERS
+// ==========================================
+const showCategoryBannerModal = ref(false)
+const editingCategoryBanner = ref(null)
+const categoryBannerSaving = ref(false)
+const categoryBannerUploading = ref(false)
+const categoryBannerMobileUploading = ref(false)
+
+const categoryBannerForm = ref({
+  id: '',
+  category: 'All',
+  categoryName: 'All Categories',
+  title: '',
+  subtitle: '',
+  badge: '',
+  image: '',
+  mobileImage: '',
+  overlayOpacity: 70,
+  order: 1,
+  enabled: true,
+  isDefault: false
+})
+
+const openCreateCategoryBannerModal = () => {
+  editingCategoryBanner.value = null
+  categoryBannerForm.value = {
+    id: '',
+    category: 'All',
+    categoryName: 'All Categories',
+    title: '',
+    subtitle: '',
+    badge: 'Curated Catalog',
+    image: '',
+    mobileImage: '',
+    overlayOpacity: 70,
+    order: (categoryBanners.value?.length || 0) + 1,
+    enabled: true,
+    isDefault: false
+  }
+  showCategoryBannerModal.value = true
+}
+
+const openEditCategoryBannerModal = (b) => {
+  editingCategoryBanner.value = b
+  categoryBannerForm.value = {
+    id: b.id,
+    category: b.category || 'All',
+    categoryName: b.categoryName || b.category || 'All Categories',
+    title: b.title || '',
+    subtitle: b.subtitle || b.description || '',
+    badge: b.badge || '',
+    image: b.image || '',
+    mobileImage: b.mobileImage || '',
+    overlayOpacity: Number(b.overlayOpacity ?? 70),
+    order: Number(b.order ?? 1),
+    enabled: b.enabled !== false,
+    isDefault: Boolean(b.isDefault)
+  }
+  showCategoryBannerModal.value = true
+}
+
+const handleCategoryBannerImageUpload = async (e, isMobile = false) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  if (isMobile) categoryBannerMobileUploading.value = true
+  else categoryBannerUploading.value = true
+  try {
+    const res = await uploadFile(file, 'category-banners')
+    const downloadUrl = (typeof res === 'object' && res?.url) ? res.url : res
+    if (downloadUrl) {
+      if (isMobile) categoryBannerForm.value.mobileImage = downloadUrl
+      else categoryBannerForm.value.image = downloadUrl
+      notify(isMobile ? 'Mobile category banner image uploaded!' : 'Category banner desktop image uploaded!')
+    }
+  } catch (err) {
+    notify(err?.message || 'Failed to upload image', 'error')
+  } finally {
+    if (isMobile) categoryBannerMobileUploading.value = false
+    else categoryBannerUploading.value = false
+    if (e.target) e.target.value = ''
+  }
+}
+
+const handleSaveCategoryBanner = async () => {
+  if (!categoryBannerForm.value.title?.trim()) {
+    notify('Please enter a banner title/heading', 'error')
+    return
+  }
+  categoryBannerSaving.value = true
+  try {
+    await saveCategoryBanner(categoryBannerForm.value, editingCategoryBanner.value?.id)
+    notify('Category banner saved & synced to live storefront!')
+    showCategoryBannerModal.value = false
+  } catch (err) {
+    notify(err?.message || 'Failed to save category banner', 'error')
+  } finally {
+    categoryBannerSaving.value = false
+  }
+}
+
+const handleDeleteCategoryBanner = async (b) => {
+  if (confirm(`Delete category banner for "${b.categoryName || b.category}"?`)) {
+    try {
+      await deleteCategoryBanner(b.id)
+      notify('Category banner removed.', 'info')
+    } catch (err) {
+      notify(err?.message || 'Failed to delete category banner', 'error')
+    }
+  }
+}
+
+const handleToggleCategoryBanner = async (b) => {
+  try {
+    await saveCategoryBanner({ ...b, enabled: b.enabled === false }, b.id)
+    notify(b.enabled === false ? 'Category banner enabled' : 'Category banner hidden')
+  } catch (err) {
+    notify(err?.message || 'Failed to update category banner', 'error')
+  }
+}
+
+const handleResetCategoryBanners = async () => {
+  if (confirm('Reset category hero banners back to default templates?')) {
+    try {
+      await resetCategoryBannersToDefaults()
+      notify('Category banners reset to defaults!')
+    } catch (err) {
+      notify(err?.message || 'Failed to reset category banners', 'error')
+    }
+  }
+}
+
+// ==========================================
+// COLLECTIONS BANNERS STATE & HANDLERS
+// ==========================================
+const showCollectionBannerModal = ref(false)
+const editingCollectionBanner = ref(null)
+const collectionBannerSaving = ref(false)
+const collectionBannerUploading = ref(false)
+const collectionBannerMobileUploading = ref(false)
+
+const collectionBannerForm = ref({
+  id: '',
+  collection: 'All Collections',
+  collectionName: 'All Collections',
+  title: '',
+  subtitle: '',
+  badge: '',
+  image: '',
+  mobileImage: '',
+  overlayOpacity: 70,
+  order: 1,
+  enabled: true,
+  isDefault: false
+})
+
+const openCreateCollectionBannerModal = () => {
+  editingCollectionBanner.value = null
+  collectionBannerForm.value = {
+    id: '',
+    collection: 'All Collections',
+    collectionName: 'All Collections',
+    title: '',
+    subtitle: '',
+    badge: 'Curated Collection',
+    image: '',
+    mobileImage: '',
+    overlayOpacity: 70,
+    order: (collectionBanners.value?.length || 0) + 1,
+    enabled: true,
+    isDefault: false
+  }
+  showCollectionBannerModal.value = true
+}
+
+const openEditCollectionBannerModal = (b) => {
+  editingCollectionBanner.value = b
+  collectionBannerForm.value = {
+    id: b.id,
+    collection: b.collection || 'All Collections',
+    collectionName: b.collectionName || b.collection || 'All Collections',
+    title: b.title || '',
+    subtitle: b.subtitle || b.description || '',
+    badge: b.badge || '',
+    image: b.image || '',
+    mobileImage: b.mobileImage || '',
+    overlayOpacity: Number(b.overlayOpacity ?? 70),
+    order: Number(b.order ?? 1),
+    enabled: b.enabled !== false,
+    isDefault: Boolean(b.isDefault)
+  }
+  showCollectionBannerModal.value = true
+}
+
+const handleCollectionBannerImageUpload = async (e, isMobile = false) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  if (isMobile) collectionBannerMobileUploading.value = true
+  else collectionBannerUploading.value = true
+  try {
+    const res = await uploadFile(file, 'collections-banners')
+    const downloadUrl = (typeof res === 'object' && res?.url) ? res.url : res
+    if (downloadUrl) {
+      if (isMobile) collectionBannerForm.value.mobileImage = downloadUrl
+      else collectionBannerForm.value.image = downloadUrl
+      notify(isMobile ? 'Mobile collection banner image uploaded!' : 'Collection banner desktop image uploaded!')
+    }
+  } catch (err) {
+    notify(err?.message || 'Failed to upload image', 'error')
+  } finally {
+    if (isMobile) collectionBannerMobileUploading.value = false
+    else collectionBannerUploading.value = false
+    if (e.target) e.target.value = ''
+  }
+}
+
+const handleSaveCollectionBanner = async () => {
+  if (!collectionBannerForm.value.title?.trim()) {
+    notify('Please enter a banner title/heading', 'error')
+    return
+  }
+  collectionBannerSaving.value = true
+  try {
+    await saveCollectionBanner(collectionBannerForm.value, editingCollectionBanner.value?.id)
+    notify('Collection banner saved & synced to live storefront!')
+    showCollectionBannerModal.value = false
+  } catch (err) {
+    notify(err?.message || 'Failed to save collection banner', 'error')
+  } finally {
+    collectionBannerSaving.value = false
+  }
+}
+
+const handleDeleteCollectionBanner = async (b) => {
+  if (confirm(`Delete collection banner for "${b.collectionName || b.collection}"?`)) {
+    try {
+      await deleteCollectionBanner(b.id)
+      notify('Collection banner removed.', 'info')
+    } catch (err) {
+      notify(err?.message || 'Failed to delete collection banner', 'error')
+    }
+  }
+}
+
+const handleToggleCollectionBanner = async (b) => {
+  try {
+    await saveCollectionBanner({ ...b, enabled: b.enabled === false }, b.id)
+    notify(b.enabled === false ? 'Collection banner enabled' : 'Collection banner hidden')
+  } catch (err) {
+    notify(err?.message || 'Failed to update collection banner', 'error')
+  }
+}
+
+const handleResetCollectionBanners = async () => {
+  if (confirm('Reset collection hero banners back to default templates?')) {
+    try {
+      await resetCollectionBannersToDefaults()
+      notify('Collection banners reset to defaults!')
+    } catch (err) {
+      notify(err?.message || 'Failed to reset collection banners', 'error')
+    }
+  }
+}
+
 // Payments & Gateways State
-const settingsSubmenuOpen = ref(true)
+const settingsSubmenuOpen = ref(false)
 const localPaymentSettings = ref(JSON.parse(JSON.stringify(paymentSettings.value || defaultPaymentSettings)))
 const savingPayments = ref(false)
 const showBankAccount = ref(false)
@@ -6866,11 +10758,11 @@ watch(
 )
 
 const handleSettingsNavClick = () => {
-  if (activeSection.value !== 'settings' && activeSection.value !== 'settings-payments' && activeSection.value !== 'settings-users') {
+  const wasOpen = settingsSubmenuOpen.value
+  closeAllSubmenus()
+  settingsSubmenuOpen.value = !wasOpen
+  if (settingsSubmenuOpen.value && activeSection.value !== 'settings' && activeSection.value !== 'settings-payments' && activeSection.value !== 'settings-users') {
     activeSection.value = 'settings'
-    settingsSubmenuOpen.value = true
-  } else {
-    settingsSubmenuOpen.value = !settingsSubmenuOpen.value
   }
 }
 
@@ -6895,39 +10787,56 @@ const handleResetPaymentDefaults = () => {
 
 const isSidebarCollapsed = ref(false)
 const activeSection = ref('dashboard')
-const productsSubmenuOpen = ref(true)
-const mediaSubmenuOpen = ref(true)
-const customersSubmenuOpen = ref(true)
+const productsSubmenuOpen = ref(false)
+const mediaSubmenuOpen = ref(false)
+const customersSubmenuOpen = ref(false)
+const themeSubmenuOpen = ref(false)
 const globalSearch = ref('')
 const profileDropdownOpen = ref(false)
 const showDashboardWidgets = ref(true)
 const liveVisitorsCount = ref(12)
 
+const closeAllSubmenus = () => {
+  productsSubmenuOpen.value = false
+  mediaSubmenuOpen.value = false
+  customersSubmenuOpen.value = false
+  themeSubmenuOpen.value = false
+  settingsSubmenuOpen.value = false
+}
+
 const handleNavClick = (id) => {
   if (id === 'products') {
-    if (activeSection.value !== 'products' && activeSection.value !== 'categories' && activeSection.value !== 'collections' && activeSection.value !== 'purchase-orders') {
+    const wasOpen = productsSubmenuOpen.value
+    closeAllSubmenus()
+    productsSubmenuOpen.value = !wasOpen
+    if (productsSubmenuOpen.value && activeSection.value !== 'products' && activeSection.value !== 'categories' && activeSection.value !== 'collections' && activeSection.value !== 'purchase-orders' && activeSection.value !== 'banner-categories' && activeSection.value !== 'product-reviews') {
       activeSection.value = 'products'
-      productsSubmenuOpen.value = true
-    } else {
-      productsSubmenuOpen.value = !productsSubmenuOpen.value
     }
   } else if (id === 'media') {
-    if (activeSection.value !== 'media' && activeSection.value !== 'banners') {
+    const wasOpen = mediaSubmenuOpen.value
+    closeAllSubmenus()
+    mediaSubmenuOpen.value = !wasOpen
+    if (mediaSubmenuOpen.value && activeSection.value !== 'media' && activeSection.value !== 'banners' && activeSection.value !== 'story-categories' && activeSection.value !== 'category-banners' && activeSection.value !== 'collections-banners') {
       activeSection.value = 'banners'
-      mediaSubmenuOpen.value = true
-    } else {
-      mediaSubmenuOpen.value = !mediaSubmenuOpen.value
     }
   } else if (id === 'customers') {
-    if (activeSection.value !== 'customers' && activeSection.value !== 'customer-segments') {
+    const wasOpen = customersSubmenuOpen.value
+    closeAllSubmenus()
+    customersSubmenuOpen.value = !wasOpen
+    if (customersSubmenuOpen.value && activeSection.value !== 'customers' && activeSection.value !== 'customer-segments') {
       activeSection.value = 'customers'
-      customersSubmenuOpen.value = true
-    } else {
-      customersSubmenuOpen.value = !customersSubmenuOpen.value
+    }
+  } else if (id === 'theme') {
+    const wasOpen = themeSubmenuOpen.value
+    closeAllSubmenus()
+    themeSubmenuOpen.value = !wasOpen
+    if (themeSubmenuOpen.value && activeSection.value !== 'guarantee-stats' && activeSection.value !== 'theme-badges' && activeSection.value !== 'heading-slides' && activeSection.value !== 'theme-reviews') {
+      activeSection.value = 'heading-slides'
     }
   } else if (id === 'settings') {
     handleSettingsNavClick()
   } else {
+    closeAllSubmenus()
     activeSection.value = id
   }
 }
@@ -6940,6 +10849,261 @@ const notify = (message, type = 'success') => {
       statusBanner.value.message = ''
     }
   }, 4000)
+}
+
+// ==========================================
+// THEME -> CUSTOMER REVIEWS & GOOGLE REVIEWS API PREP
+// ==========================================
+const googleReviewsForm = ref({
+  source: googleReviewsConfig.value?.source || 'manual',
+  googlePlaceId: googleReviewsConfig.value?.googlePlaceId || '',
+  googleApiKey: googleReviewsConfig.value?.googleApiKey || '',
+  minRating: googleReviewsConfig.value?.minRating || 4,
+  maxReviews: googleReviewsConfig.value?.maxReviews || 6,
+  lastSyncedAt: googleReviewsConfig.value?.lastSyncedAt || null,
+  cachedGoogleReviews: googleReviewsConfig.value?.cachedGoogleReviews || []
+})
+watch(
+  googleReviewsConfig,
+  (val) => {
+    if (val) {
+      googleReviewsForm.value = {
+        source: val.source || 'manual',
+        googlePlaceId: val.googlePlaceId || '',
+        googleApiKey: val.googleApiKey || '',
+        minRating: val.minRating || 4,
+        maxReviews: val.maxReviews || 6,
+        lastSyncedAt: val.lastSyncedAt || null,
+        cachedGoogleReviews: Array.isArray(val.cachedGoogleReviews) ? val.cachedGoogleReviews : []
+      }
+    }
+  },
+  { deep: true }
+)
+
+const googleReviewsSaving = ref(false)
+const googleReviewsSyncing = ref(false)
+
+const handleSaveGoogleReviewsConfig = async () => {
+  googleReviewsSaving.value = true
+  try {
+    await saveGoogleReviewsConfig(googleReviewsForm.value)
+    notify('Google Reviews API settings saved!')
+  } catch (err) {
+    notify(err?.message || 'Failed to save Google Reviews settings', 'error')
+  } finally {
+    googleReviewsSaving.value = false
+  }
+}
+
+const handleSyncGoogleReviews = async () => {
+  googleReviewsSyncing.value = true
+  try {
+    const synced = await syncGoogleReviews(
+      googleReviewsForm.value.googlePlaceId,
+      googleReviewsForm.value.googleApiKey
+    )
+    notify(`Synced ${synced.length} Google review(s)!`)
+  } catch (err) {
+    notify(err?.message || 'Google Reviews sync failed', 'error')
+  } finally {
+    googleReviewsSyncing.value = false
+  }
+}
+
+const showStoreReviewModal = ref(false)
+const editingStoreReview = ref(null)
+const storeReviewSaving = ref(false)
+const storeReviewForm = ref({
+  name: '',
+  rating: 5,
+  badge: 'Verified Buyer',
+  quote: '',
+  order: 1,
+  enabled: true
+})
+
+const openStoreReviewModal = (review = null) => {
+  if (review) {
+    editingStoreReview.value = review
+    storeReviewForm.value = {
+      name: review.name || '',
+      rating: Number(review.rating) || 5,
+      badge: review.badge || 'Verified Buyer',
+      quote: review.quote || '',
+      order: Number(review.order) || 1,
+      enabled: review.enabled !== false
+    }
+  } else {
+    editingStoreReview.value = null
+    storeReviewForm.value = {
+      name: '',
+      rating: 5,
+      badge: 'Verified Buyer',
+      quote: '',
+      order: (storeReviews.value?.length || 0) + 1,
+      enabled: true
+    }
+  }
+  showStoreReviewModal.value = true
+}
+
+const handleSaveStoreReview = async () => {
+  if (!storeReviewForm.value.name?.trim() || !storeReviewForm.value.quote?.trim()) {
+    notify('Please enter both customer name and review quote.', 'error')
+    return
+  }
+  storeReviewSaving.value = true
+  try {
+    await saveStoreReview(storeReviewForm.value, editingStoreReview.value?.id)
+    notify('Customer review saved!')
+    showStoreReviewModal.value = false
+  } catch (err) {
+    notify(err?.message || 'Failed to save customer review', 'error')
+  } finally {
+    storeReviewSaving.value = false
+  }
+}
+
+const handleDeleteStoreReview = async (review) => {
+  if (confirm(`Delete review from "${review.name}"?`)) {
+    try {
+      await deleteStoreReview(review.id)
+      notify('Review removed.', 'info')
+    } catch (err) {
+      notify(err?.message || 'Failed to delete review', 'error')
+    }
+  }
+}
+
+const handleResetStoreReviews = async () => {
+  if (confirm('Reset storefront customer reviews to defaults?')) {
+    try {
+      await resetStoreReviewsToDefaults()
+      notify('Storefront reviews reset to defaults.')
+    } catch (err) {
+      notify(err?.message || 'Failed to reset reviews', 'error')
+    }
+  }
+}
+
+// ==========================================
+// PRODUCTS -> CUSTOMER REVIEWS MANAGEMENT
+// ==========================================
+const productReviewFilterProduct = ref('all')
+const productReviewFilterStatus = ref('all')
+const showProductReviewModal = ref(false)
+const editingProductReview = ref(null)
+const productReviewSaving = ref(false)
+const productReviewForm = ref({
+  productId: '',
+  productName: '',
+  author: '',
+  rating: 5,
+  title: '',
+  comment: '',
+  badge: 'Verified Customer',
+  status: 'approved',
+  adminReply: ''
+})
+
+const filteredProductReviews = computed(() => {
+  return (productReviews.value || []).filter((rev) => {
+    if (productReviewFilterProduct.value !== 'all') {
+      const target = String(productReviewFilterProduct.value).toLowerCase()
+      const pid = String(rev.productId || '').toLowerCase()
+      const pname = String(rev.productName || '').toLowerCase()
+      if (pid !== target && pname !== target) return false
+    }
+    if (productReviewFilterStatus.value !== 'all') {
+      if ((rev.status || 'approved') !== productReviewFilterStatus.value) return false
+    }
+    return true
+  })
+})
+
+const syncProductReviewProductName = () => {
+  const match = (products.value || []).find(
+    (p) => String(p.id || p.name) === String(productReviewForm.value.productId)
+  )
+  if (match) {
+    productReviewForm.value.productName = match.name || 'Product'
+  }
+}
+
+const openProductReviewModal = (rev = null) => {
+  if (rev) {
+    editingProductReview.value = rev
+    productReviewForm.value = {
+      productId: rev.productId || '',
+      productName: rev.productName || '',
+      author: rev.author || '',
+      rating: Number(rev.rating) || 5,
+      title: rev.title || '',
+      comment: rev.comment || '',
+      badge: rev.badge || 'Verified Customer',
+      status: rev.status || 'approved',
+      adminReply: rev.adminReply || ''
+    }
+  } else {
+    const firstProd = products.value?.[0]
+    editingProductReview.value = null
+    productReviewForm.value = {
+      productId: firstProd ? (firstProd.id || firstProd.name) : '',
+      productName: firstProd ? firstProd.name : '',
+      author: '',
+      rating: 5,
+      title: '',
+      comment: '',
+      badge: 'Verified Customer',
+      status: 'approved',
+      adminReply: ''
+    }
+  }
+  showProductReviewModal.value = true
+}
+
+const handleSaveProductReviewAdmin = async () => {
+  if (!productReviewForm.value.productId) {
+    notify('Please select a product.', 'error')
+    return
+  }
+  if (!productReviewForm.value.author?.trim() || !productReviewForm.value.comment?.trim()) {
+    notify('Please enter customer name and review comment.', 'error')
+    return
+  }
+  syncProductReviewProductName()
+  productReviewSaving.value = true
+  try {
+    await saveProductReview(productReviewForm.value, editingProductReview.value?.id)
+    notify('Product review saved!')
+    showProductReviewModal.value = false
+  } catch (err) {
+    notify(err?.message || 'Failed to save product review', 'error')
+  } finally {
+    productReviewSaving.value = false
+  }
+}
+
+const toggleProductReviewStatus = async (rev) => {
+  try {
+    const nextStatus = rev.status === 'approved' ? 'hidden' : 'approved'
+    await saveProductReview({ ...rev, status: nextStatus }, rev.id)
+    notify(`Review ${nextStatus === 'approved' ? 'approved & visible' : 'hidden'}.`)
+  } catch (err) {
+    notify(err?.message || 'Failed to update review status', 'error')
+  }
+}
+
+const handleDeleteProductReviewAdmin = async (rev) => {
+  if (confirm(`Delete review by "${rev.author}" for "${rev.productName}"?`)) {
+    try {
+      await deleteProductReview(rev.id)
+      notify('Product review deleted.', 'info')
+    } catch (err) {
+      notify(err?.message || 'Failed to delete product review', 'error')
+    }
+  }
 }
 
 const adminFirstName = computed(() => {
@@ -6958,7 +11122,8 @@ const navItems = computed(() => [
   { id: 'customers', label: 'Customers', icon: '/images/customer-icon.svg', count: customers.value.length },
   { id: 'discounts', label: 'Discounts', icon: '/images/discount-icon.svg', count: discounts.value.length },
   { id: 'media', label: 'Media files', icon: '/images/media-files-icon.svg' },
-  { id: 'blogs', label: 'Blogs', icon: '/images/blogs-icon-1.svg', count: blogs.value.length }
+  { id: 'blogs', label: 'Blogs', icon: '/images/blogs-icon-1.svg', count: blogs.value.length },
+  { id: 'theme', label: 'Theme', icon: 'palette' }
 ])
 
 const overviewStats = computed(() => [
@@ -8812,3 +12977,38 @@ onMounted(() => {
   initAdminListeners()
 })
 </script>
+
+<style scoped>
+.submenu-accordion {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 320ms cubic-bezier(0.4, 0, 0.2, 1), opacity 260ms ease-in-out;
+}
+
+.submenu-accordion.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.submenu-accordion-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.preview-slide-enter-active {
+  transition: transform 450ms cubic-bezier(0.16, 1, 0.3, 1), opacity 350ms ease-out;
+}
+.preview-slide-leave-active {
+  transition: transform 300ms cubic-bezier(0.7, 0, 0.84, 0), opacity 240ms ease-in;
+}
+.preview-slide-enter-from {
+  opacity: 0;
+  transform: translateY(22px);
+}
+.preview-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-16px);
+}
+
+</style>

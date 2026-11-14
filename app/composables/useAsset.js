@@ -5,33 +5,35 @@
  * or on a repository subpath ('/staging-yberry.store/').
  */
 export const useAsset = (path) => {
-  if (!path || typeof path !== 'string') return path || ''
+  if (!path) return ''
+  const str = typeof path === 'object' && path?.url ? String(path.url) : (typeof path === 'string' ? path : '')
+  if (!str) return ''
   
   // Return external URLs and data URIs untouched
   if (
-    path.startsWith('http://') ||
-    path.startsWith('https://') ||
-    path.startsWith('data:') ||
-    path.startsWith('blob:') ||
-    path.startsWith('//')
+    str.startsWith('http://') ||
+    str.startsWith('https://') ||
+    str.startsWith('data:') ||
+    str.startsWith('blob:') ||
+    str.startsWith('//')
   ) {
-    return path
+    return str
   }
 
   try {
     const config = useRuntimeConfig()
     const base = config.app?.baseURL || '/'
     const cleanBase = base.endsWith('/') ? base : `${base}/`
-    const cleanPath = path.startsWith('/') ? path.slice(1) : path
+    const cleanPath = str.startsWith('/') ? str.slice(1) : str
 
     // If path already starts with the base path, don't duplicate it
-    if (base !== '/' && path.startsWith(base)) {
-      return path
+    if (base !== '/' && str.startsWith(base)) {
+      return str
     }
 
     return `${cleanBase}${cleanPath}`
   } catch {
-    return path
+    return str
   }
 }
 

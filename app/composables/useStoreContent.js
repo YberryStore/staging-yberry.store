@@ -121,7 +121,234 @@ export const sanitizePublicPaymentSettings = (s = {}) => {
   const gateways = s.gateways || defaultPaymentSettings.gateways
   const payouts = s.payouts || defaultPaymentSettings.payouts
 
+  // ==========================================
+  // STORE / THEME CUSTOMER REVIEWS & GOOGLE REVIEWS API PREP
+  // ==========================================
+  const computeInitials = (name = '') => {
+    const parts = String(name).trim().split(/\s+/).filter(Boolean)
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    return (parts[0] || 'YB').slice(0, 2).toUpperCase()
+  }
+
+  const saveStoreReview = async (reviewData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || reviewData.id || `store-rev-${Date.now()}`
+    const name = (reviewData.name || 'Happy Customer').trim()
+    const payload = {
+      name,
+      initials: (reviewData.initials || computeInitials(name)).trim().toUpperCase().slice(0, 3),
+      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
+      quote: (reviewData.quote || '').trim(),
+      badge: (reviewData.badge || 'Verified Buyer').trim(),
+      source: reviewData.source || 'manual',
+      order: Number(reviewData.order) || (storeReviews.value.length + 1),
+      enabled: reviewData.enabled !== false,
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'store_reviews', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveStoreReview warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = storeReviews.value.findIndex((r) => r.id === finalId)
+    if (idx !== -1) {
+      storeReviews.value[idx] = updated
+    } else {
+      storeReviews.value.push(updated)
+    }
+    storeReviews.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+    saveToCache('ystore_store_reviews_cache', storeReviews.value)
+    return finalId
+  }
+
+  const deleteStoreReview = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'store_reviews', id))
+      } catch (err) {
+        console.warn('Firestore deleteStoreReview warning:', err)
+      }
+    }
+    storeReviews.value = storeReviews.value.filter((r) => r.id !== id)
+    saveToCache('ystore_store_reviews_cache', storeReviews.value)
+  }
+
+  const resetStoreReviewsToDefaults = async () => {
+    const db = getDb()
+    const defaults = JSON.parse(JSON.stringify(defaultInitialStoreReviews))
+    if (db) {
+      try {
+        for (const item of defaults) {
+          const { id, ...data } = item
+          await setDoc(doc(db, 'store_reviews', id), {
+            ...data,
+            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+          }, { merge: true })
+        }
+      } catch (err) {
+        console.warn('Firestore resetStoreReviewsToDefaults warning:', err)
+      }
+    }
+    storeReviews.value = defaults
+    saveToCache('ystore_store_reviews_cache', defaults)
+    return defaults
+  }
+
+  const saveGoogleReviewsConfig = async (cfgData) => {
+    const db = getDb()
+    const payload = {
+      source: cfgData.source || 'manual',
+      googlePlaceId: (cfgData.googlePlaceId || '').trim(),
+      googleApiKey: (cfgData.googleApiKey || '').trim(),
+      minRating: Math.min(5, Math.max(1, Number(cfgData.minRating) || 4)),
+      maxReviews: Math.min(20, Math.max(1, Number(cfgData.maxReviews) || 6)),
+      lastSyncedAt: cfgData.lastSyncedAt ?? googleReviewsConfig.value.lastSyncedAt ?? null,
+      cachedGoogleReviews: Array.isArray(cfgData.cachedGoogleReviews)
+        ? cfgData.cachedGoogleReviews
+        : (googleReviewsConfig.value.cachedGoogleReviews || []),
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'config', 'google_reviews'), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveGoogleReviewsConfig warning:', err)
+      }
+    }
+    googleReviewsConfig.value = { ...defaultGoogleReviewsConfig, ...payload, updatedAt: new Date().toISOString() }
+    saveToCache('ystore_google_reviews_config_cache', googleReviewsConfig.value)
+    return googleReviewsConfig.value
+  }
+
+  /**
+   * Google Places API (New v1) integration helper.
+   * Prepped for live Google Business Profile / Place ID syncing once API key & Place ID are supplied.
+   */
+  const syncGoogleReviews = async (placeIdOverride = null, apiKeyOverride = null) => {
+    const placeId = (placeIdOverride ?? googleReviewsConfig.value.googlePlaceId ?? '').trim()
+    const apiKey = (apiKeyOverride ?? googleReviewsConfig.value.googleApiKey ?? '').trim()
+    if (!placeId || !apiKey) {
+      throw new Error('Please enter both a Google Place ID and a Google Places API Key first.')
+    }
+
+    const endpoint = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?fields=displayName,rating,userRatingCount,reviews&key=${encodeURIComponent(apiKey)}`
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      let errMsg = `Google Places API returned HTTP ${response.status}`
+      try {
+        const errJson = await response.json()
+        if (errJson?.error?.message) errMsg = errJson.error.message
+      } catch {}
+      throw new Error(errMsg)
+    }
+
+    const data = await response.json()
+    const rawReviews = Array.isArray(data.reviews) ? data.reviews : []
+    const normalized = rawReviews
+      .map((rev, idx) => {
+        const authorName = rev.authorAttribution?.displayName || 'Google Customer'
+        const quoteText = rev.text?.text || rev.originalText?.text || ''
+        return {
+          id: `google-rev-${idx}-${Date.now()}`,
+          name: authorName,
+          initials: computeInitials(authorName),
+          rating: Number(rev.rating) || 5,
+          quote: quoteText,
+          badge: rev.relativePublishTimeDescription
+            ? `Google Review • ${rev.relativePublishTimeDescription}`
+            : 'Google Review',
+          source: 'google',
+          enabled: true
+        }
+      })
+      .filter((r) => Boolean(r.quote))
+
+    await saveGoogleReviewsConfig({
+      ...googleReviewsConfig.value,
+      googlePlaceId: placeId,
+      googleApiKey: apiKey,
+      lastSyncedAt: new Date().toISOString(),
+      cachedGoogleReviews: normalized
+    })
+
+    return normalized
+  }
+
+  // ==========================================
+  // PRODUCT-SPECIFIC CUSTOMER REVIEWS CRUD
+  // ==========================================
+  const saveProductReview = async (reviewData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || reviewData.id || `prod-rev-${Date.now()}`
+    const createdIso = reviewData.createdAt || new Date().toISOString()
+    const payload = {
+      productId: String(reviewData.productId || '').trim(),
+      productName: String(reviewData.productName || 'Product').trim(),
+      author: String(reviewData.author || 'Anonymous').trim(),
+      email: String(reviewData.email || '').trim(),
+      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
+      title: String(reviewData.title || '').trim(),
+      comment: String(reviewData.comment || '').trim(),
+      badge: String(reviewData.badge || 'Verified Customer').trim(),
+      status: reviewData.status || 'approved', // 'approved' | 'pending' | 'hidden'
+      adminReply: String(reviewData.adminReply || '').trim(),
+      createdAt: createdIso,
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'product_reviews', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveProductReview warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = productReviews.value.findIndex((r) => r.id === finalId)
+    if (idx !== -1) {
+      productReviews.value[idx] = updated
+    } else {
+      productReviews.value.unshift(updated)
+    }
+    saveToCache('ystore_product_reviews_cache', productReviews.value)
+    return finalId
+  }
+
+  const deleteProductReview = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'product_reviews', id))
+      } catch (err) {
+        console.warn('Firestore deleteProductReview warning:', err)
+      }
+    }
+    productReviews.value = productReviews.value.filter((r) => r.id !== id)
+    saveToCache('ystore_product_reviews_cache', productReviews.value)
+  }
+
+  const getReviewsForProduct = (productId, productName = '') => {
+    return (productReviews.value || []).filter((r) => {
+      if (r.status === 'hidden' || r.status === 'pending') return false
+      if (productId && r.productId && String(r.productId) === String(productId)) return true
+      if (productName && r.productName && r.productName.toLowerCase() === String(productName).toLowerCase()) return true
+      return false
+    })
+  }
+
   return {
+
     general: {
       currency: general.currency || 'ZAR',
       currencySymbol: general.currencySymbol || 'R',
@@ -285,6 +512,365 @@ export const defaultInitialBanners = [
     status: 'published',
     active: true,
     order: 1
+  }
+]
+
+export const defaultInitialGuaranteeStats = [
+  {
+    id: 'stat-free-shipping',
+    title: 'Free shipping',
+    subtitle: 'Free delivery on orders over R500',
+    icon: '/images/free-shipping-icon.svg',
+    order: 1,
+    enabled: true,
+    link: ''
+  },
+  {
+    id: 'stat-secure-payments',
+    title: 'Secure payments',
+    subtitle: '100% secure checkout',
+    icon: '/images/secure-payments-icon.svg',
+    order: 2,
+    enabled: true,
+    link: ''
+  },
+  {
+    id: 'stat-easy-returns',
+    title: 'Easy Returns',
+    subtitle: '30 days hassle-free returns',
+    icon: '/images/easy-returns-icon.svg',
+    order: 3,
+    enabled: true,
+    link: ''
+  },
+  {
+    id: 'stat-support',
+    title: '24/7 Support',
+    subtitle: 'Dedicated friendly team',
+    icon: '/images/24-7-customer-support.svg',
+    order: 4,
+    enabled: true,
+    link: ''
+  }
+]
+
+export const defaultInitialStories = [
+  {
+    id: 'story-deals',
+    title: 'Deals',
+    subtitle: 'Flash specials & savings',
+    icon: '/images/discount-icon.svg',
+    coverImage: '/images/prod-robot.jpg',
+    order: 1,
+    enabled: true,
+    slides: [
+      {
+        image: '/images/prod-robot.jpg',
+        badge: 'LIMITED TIME 25% OFF',
+        title: 'Smart Interactive AI Robot',
+        description: 'Our top-rated companion bot equipped with multi-gesture sensing and voice reactions.',
+        ctaText: 'Shop AI Robot',
+        ctaLink: 'view=specials'
+      },
+      {
+        image: '/images/prod-rc-car.jpg',
+        badge: 'FLASH SPECIAL',
+        title: 'Turbo RC Drift Racer',
+        description: '2.4GHz proportional drift vehicle with rechargeable power pack and independent suspension.',
+        ctaText: 'Shop RC Car',
+        ctaLink: 'view=specials'
+      }
+    ]
+  },
+  {
+    id: 'story-promise',
+    title: 'What We Offer',
+    subtitle: 'Our promise to families',
+    icon: '/images/category-blocks.jpg',
+    coverImage: '/images/category-blocks.jpg',
+    order: 2,
+    enabled: true,
+    slides: [
+      {
+        image: '/images/category-blocks.jpg',
+        badge: 'SAFETY & NATURE',
+        title: 'Sustainably Crafted Toys',
+        description: 'Natural solid beechwood, non-toxic waterborne lacquers, and sensory Montessori finishes.',
+        ctaText: 'Explore Wooden Toys',
+        ctaLink: 'cat=Building Blocks'
+      },
+      {
+        image: '/images/prod-plushie.jpg',
+        badge: 'HYPOALLERGENIC',
+        title: 'Organic Cotton Plushies',
+        description: 'GOTS-certified super soft cuddle friends designed for sensitive newborn and toddler skin.',
+        ctaText: 'View Plushies',
+        ctaLink: 'cat=Plush Toys'
+      }
+    ]
+  },
+  {
+    id: 'story-categories',
+    title: 'Categories',
+    subtitle: 'Curated worlds of play',
+    icon: '/images/category-puzzles.jpg',
+    coverImage: '/images/category-puzzles.jpg',
+    order: 3,
+    enabled: true,
+    slides: [
+      {
+        image: '/images/category-puzzles.jpg',
+        badge: 'DEVELOPMENTAL',
+        title: 'Cognitive Puzzles & Games',
+        description: 'Handcrafted Montessori shape sorters, matching kits, and spatial discovery toys.',
+        ctaText: 'Browse Puzzles',
+        ctaLink: 'cat=Puzzles & Games'
+      },
+      {
+        image: '/images/category-figures.jpg',
+        badge: 'ACTION & HEROES',
+        title: 'Action Figures & Playsets',
+        description: 'Tactile prehistoric dinosaurs, imaginative hero kits, and robotic wonder.',
+        ctaText: 'Browse Action Figures',
+        ctaLink: 'cat=Action Figures'
+      }
+    ]
+  },
+  {
+    id: 'story-about',
+    title: 'About Us',
+    subtitle: 'Our story in Cape Town',
+    icon: '/images/promo-banner.jpg',
+    coverImage: '/images/promo-banner.jpg',
+    order: 4,
+    enabled: true,
+    slides: [
+      {
+        image: '/images/promo-banner.jpg',
+        badge: 'CAPE TOWN WORKSHOP',
+        title: 'Handpicked Everyday Joys',
+        description: 'Yellow Berry Store brings together South African parents, educators, and makers for joyful playtime.',
+        ctaText: 'Our Story',
+        ctaLink: 'view=about'
+      }
+    ]
+  }
+]
+
+export const defaultInitialBannerCategories = [
+  {
+    id: 'bcat-blocks',
+    name: 'Building Blocks',
+    image: '/images/category-blocks.jpg',
+    badge: 'Montessori',
+    targetCategory: 'Building Blocks',
+    order: 1,
+    enabled: true
+  },
+  {
+    id: 'bcat-figures',
+    name: 'Action Figures',
+    image: '/images/category-figures.jpg',
+    badge: 'Bestseller',
+    targetCategory: 'Action Figures',
+    order: 2,
+    enabled: true
+  },
+  {
+    id: 'bcat-plush',
+    name: 'Plush Toys',
+    image: '/images/category-plush.jpg',
+    badge: 'Organic',
+    targetCategory: 'Plush Toys',
+    order: 3,
+    enabled: true
+  },
+  {
+    id: 'bcat-puzzles',
+    name: 'Puzzles & Games',
+    image: '/images/category-puzzles.jpg',
+    badge: 'Mind Games',
+    targetCategory: 'Puzzles & Games',
+    order: 4,
+    enabled: true
+  },
+  {
+    id: 'bcat-rc',
+    name: 'RC Vehicles',
+    image: '/images/prod-rc-car.jpg',
+    badge: 'High Speed',
+    targetCategory: 'Action Figures',
+    order: 5,
+    enabled: true
+  },
+  {
+    id: 'bcat-dino',
+    name: 'Dino World',
+    image: '/images/prod-dino.jpg',
+    badge: 'Prehistoric',
+    targetCategory: 'Action Figures',
+    order: 6,
+    enabled: true
+  },
+  {
+    id: 'bcat-stem',
+    name: 'STEM Robotics',
+    image: '/images/prod-robot.jpg',
+    badge: 'Interactive',
+    targetCategory: 'Action Figures',
+    order: 7,
+    enabled: true
+  }
+]
+
+export const defaultThemeConfig = {
+  showBadgePills: false, // Default: pills removed/hidden across storefront
+  showHeroBannerBadge: false,
+  showCategoryHeadingBadge: false,
+  showCategoryCardBadges: false,
+  showProductBadges: false,
+  showCategoryBannerBadges: false,
+  updatedAt: null
+}
+
+export const defaultHeadingSlides = {
+  enabled: true,
+  intervalSeconds: 3.5,
+  categoryWords: ['Readers', 'Categories', 'Builders', 'Creators', 'Explorers'],
+  collectionWords: ['Collections', 'Gift Boxes', 'Treasures', 'Bundles', 'Editions'],
+  updatedAt: null
+}
+
+export const defaultBannerCategoriesHeader = {
+  badge: 'Explore Collections',
+  title: 'Latest',
+  highlight: 'Categories',
+  subtitle: 'Handpicked worlds of developmental toys, learning sets, and everyday joys.',
+  viewAllText: 'View all categories'
+}
+
+export const defaultInitialCategoryBanners = [
+  {
+    id: 'cbanner-default',
+    category: 'All',
+    categoryName: 'All Categories',
+    title: 'Explore All Toys & Games',
+    subtitle: 'Discover our complete range of educational, wooden, robotic, and creative toys crafted for joyful childhoods.',
+    badge: 'Curated Catalog',
+    image: '/images/promo-banner.jpg',
+    mobileImage: '',
+    overlayOpacity: 75,
+    order: 1,
+    enabled: true,
+    isDefault: true
+  },
+  {
+    id: 'cbanner-blocks',
+    category: 'Building Blocks',
+    categoryName: 'Building Blocks',
+    title: 'Architectural & Montessori Blocks',
+    subtitle: 'Develop spatial reasoning, fine motor skills, and creative imagination with eco-friendly block sets.',
+    badge: 'Montessori & STEM',
+    image: '/images/category-blocks.jpg',
+    mobileImage: '',
+    overlayOpacity: 70,
+    order: 2,
+    enabled: true
+  },
+  {
+    id: 'cbanner-figures',
+    category: 'Action Figures',
+    categoryName: 'Action Figures',
+    title: 'Heroes, Dinos & Interactive Robotics',
+    subtitle: 'Imaginative play meets modern engineering with durable figures and tactile companion characters.',
+    badge: 'Adventure & Play',
+    image: '/images/category-figures.jpg',
+    mobileImage: '',
+    overlayOpacity: 70,
+    order: 3,
+    enabled: true
+  },
+  {
+    id: 'cbanner-plush',
+    category: 'Plush Toys',
+    categoryName: 'Plush Toys',
+    title: 'Ultra-Soft Organic Plush Characters',
+    subtitle: 'Huggable companions designed for gentle snuggles, peaceful bedtime routines, and comforting sensory warmth.',
+    badge: '100% Organic Cotton',
+    image: '/images/category-plush.jpg',
+    mobileImage: '',
+    overlayOpacity: 70,
+    order: 4,
+    enabled: true
+  },
+  {
+    id: 'cbanner-puzzles',
+    category: 'Puzzles & Games',
+    categoryName: 'Puzzles & Games',
+    title: 'Mind Games & Brain Teasers',
+    subtitle: 'Challenging shape sorters, wooden jigsaws, and logic-building puzzles for inquisitive young thinkers.',
+    badge: 'Brain Power',
+    image: '/images/category-puzzles.jpg',
+    mobileImage: '',
+    overlayOpacity: 70,
+    order: 5,
+    enabled: true
+  }
+]
+
+export const defaultInitialCollectionBanners = [
+  {
+    id: 'colbanner-default',
+    collection: 'All Collections',
+    collectionName: 'All Collections',
+    title: 'Curated Toy Collections',
+    subtitle: 'Specially handpicked themes engineered for developmental milestones, creative workshops, and heirloom gifting.',
+    badge: 'Heirloom Series',
+    image: '/images/banner-toys.jpg',
+    mobileImage: '',
+    overlayOpacity: 75,
+    order: 1,
+    enabled: true,
+    isDefault: true
+  },
+  {
+    id: 'colbanner-wooden',
+    collection: 'Wooden Classics',
+    collectionName: 'Wooden Classics',
+    title: 'Handcrafted Wooden Toys',
+    subtitle: 'Sustainably sourced beechwood, non-toxic water-based finishes, and heirloom durability built to last.',
+    badge: 'Handmade in Cape Town',
+    image: '/images/category-blocks.jpg',
+    mobileImage: '',
+    overlayOpacity: 70,
+    order: 2,
+    enabled: true
+  },
+  {
+    id: 'colbanner-stem',
+    collection: 'STEM & Tech Wonders',
+    collectionName: 'STEM & Tech Wonders',
+    title: 'Smart Robotics & Coding Kits',
+    subtitle: 'Inspire tomorrow\'s engineers with interactive robots, electronic circuits, and tactile programmable mechanics.',
+    badge: 'Future Innovators',
+    image: '/images/prod-robot.jpg',
+    mobileImage: '',
+    overlayOpacity: 70,
+    order: 3,
+    enabled: true
+  },
+  {
+    id: 'colbanner-sensory',
+    collection: 'Sensory & Toddler',
+    collectionName: 'Sensory & Toddler',
+    title: 'Soft Textures & Developmental Play',
+    subtitle: 'Early sensory stimulation designed in consultation with occupational therapists and child educators.',
+    badge: 'Ages 0 - 3',
+    image: '/images/category-plush.jpg',
+    mobileImage: '',
+    overlayOpacity: 70,
+    order: 4,
+    enabled: true
   }
 ]
 
@@ -633,6 +1219,1188 @@ const getInitialBlogs = () => {
   return [...defaultInitialBlogs]
 }
 
+const getInitialGuaranteeStats = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_guarantee_stats_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+  }
+  return [...defaultInitialGuaranteeStats]
+}
+
+const getInitialStories = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_stories_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+  }
+  return [...defaultInitialStories]
+}
+
+const getInitialBannerCategories = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_banner_categories_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+  }
+  return [...defaultInitialBannerCategories]
+}
+
+const getInitialThemeConfig = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_theme_config_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (parsed && typeof parsed === 'object') return { ...defaultThemeConfig, ...parsed }
+      }
+    } catch {}
+  }
+  // ==========================================
+  // STORE / THEME CUSTOMER REVIEWS & GOOGLE REVIEWS API PREP
+  // ==========================================
+  const computeInitials = (name = '') => {
+    const parts = String(name).trim().split(/\s+/).filter(Boolean)
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    return (parts[0] || 'YB').slice(0, 2).toUpperCase()
+  }
+
+  const saveStoreReview = async (reviewData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || reviewData.id || `store-rev-${Date.now()}`
+    const name = (reviewData.name || 'Happy Customer').trim()
+    const payload = {
+      name,
+      initials: (reviewData.initials || computeInitials(name)).trim().toUpperCase().slice(0, 3),
+      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
+      quote: (reviewData.quote || '').trim(),
+      badge: (reviewData.badge || 'Verified Buyer').trim(),
+      source: reviewData.source || 'manual',
+      order: Number(reviewData.order) || (storeReviews.value.length + 1),
+      enabled: reviewData.enabled !== false,
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'store_reviews', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveStoreReview warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = storeReviews.value.findIndex((r) => r.id === finalId)
+    if (idx !== -1) {
+      storeReviews.value[idx] = updated
+    } else {
+      storeReviews.value.push(updated)
+    }
+    storeReviews.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+    saveToCache('ystore_store_reviews_cache', storeReviews.value)
+    return finalId
+  }
+
+  const deleteStoreReview = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'store_reviews', id))
+      } catch (err) {
+        console.warn('Firestore deleteStoreReview warning:', err)
+      }
+    }
+    storeReviews.value = storeReviews.value.filter((r) => r.id !== id)
+    saveToCache('ystore_store_reviews_cache', storeReviews.value)
+  }
+
+  const resetStoreReviewsToDefaults = async () => {
+    const db = getDb()
+    const defaults = JSON.parse(JSON.stringify(defaultInitialStoreReviews))
+    if (db) {
+      try {
+        for (const item of defaults) {
+          const { id, ...data } = item
+          await setDoc(doc(db, 'store_reviews', id), {
+            ...data,
+            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+          }, { merge: true })
+        }
+      } catch (err) {
+        console.warn('Firestore resetStoreReviewsToDefaults warning:', err)
+      }
+    }
+    storeReviews.value = defaults
+    saveToCache('ystore_store_reviews_cache', defaults)
+    return defaults
+  }
+
+  const saveGoogleReviewsConfig = async (cfgData) => {
+    const db = getDb()
+    const payload = {
+      source: cfgData.source || 'manual',
+      googlePlaceId: (cfgData.googlePlaceId || '').trim(),
+      googleApiKey: (cfgData.googleApiKey || '').trim(),
+      minRating: Math.min(5, Math.max(1, Number(cfgData.minRating) || 4)),
+      maxReviews: Math.min(20, Math.max(1, Number(cfgData.maxReviews) || 6)),
+      lastSyncedAt: cfgData.lastSyncedAt ?? googleReviewsConfig.value.lastSyncedAt ?? null,
+      cachedGoogleReviews: Array.isArray(cfgData.cachedGoogleReviews)
+        ? cfgData.cachedGoogleReviews
+        : (googleReviewsConfig.value.cachedGoogleReviews || []),
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'config', 'google_reviews'), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveGoogleReviewsConfig warning:', err)
+      }
+    }
+    googleReviewsConfig.value = { ...defaultGoogleReviewsConfig, ...payload, updatedAt: new Date().toISOString() }
+    saveToCache('ystore_google_reviews_config_cache', googleReviewsConfig.value)
+    return googleReviewsConfig.value
+  }
+
+  /**
+   * Google Places API (New v1) integration helper.
+   * Prepped for live Google Business Profile / Place ID syncing once API key & Place ID are supplied.
+   */
+  const syncGoogleReviews = async (placeIdOverride = null, apiKeyOverride = null) => {
+    const placeId = (placeIdOverride ?? googleReviewsConfig.value.googlePlaceId ?? '').trim()
+    const apiKey = (apiKeyOverride ?? googleReviewsConfig.value.googleApiKey ?? '').trim()
+    if (!placeId || !apiKey) {
+      throw new Error('Please enter both a Google Place ID and a Google Places API Key first.')
+    }
+
+    const endpoint = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?fields=displayName,rating,userRatingCount,reviews&key=${encodeURIComponent(apiKey)}`
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      let errMsg = `Google Places API returned HTTP ${response.status}`
+      try {
+        const errJson = await response.json()
+        if (errJson?.error?.message) errMsg = errJson.error.message
+      } catch {}
+      throw new Error(errMsg)
+    }
+
+    const data = await response.json()
+    const rawReviews = Array.isArray(data.reviews) ? data.reviews : []
+    const normalized = rawReviews
+      .map((rev, idx) => {
+        const authorName = rev.authorAttribution?.displayName || 'Google Customer'
+        const quoteText = rev.text?.text || rev.originalText?.text || ''
+        return {
+          id: `google-rev-${idx}-${Date.now()}`,
+          name: authorName,
+          initials: computeInitials(authorName),
+          rating: Number(rev.rating) || 5,
+          quote: quoteText,
+          badge: rev.relativePublishTimeDescription
+            ? `Google Review • ${rev.relativePublishTimeDescription}`
+            : 'Google Review',
+          source: 'google',
+          enabled: true
+        }
+      })
+      .filter((r) => Boolean(r.quote))
+
+    await saveGoogleReviewsConfig({
+      ...googleReviewsConfig.value,
+      googlePlaceId: placeId,
+      googleApiKey: apiKey,
+      lastSyncedAt: new Date().toISOString(),
+      cachedGoogleReviews: normalized
+    })
+
+    return normalized
+  }
+
+  // ==========================================
+  // PRODUCT-SPECIFIC CUSTOMER REVIEWS CRUD
+  // ==========================================
+  const saveProductReview = async (reviewData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || reviewData.id || `prod-rev-${Date.now()}`
+    const createdIso = reviewData.createdAt || new Date().toISOString()
+    const payload = {
+      productId: String(reviewData.productId || '').trim(),
+      productName: String(reviewData.productName || 'Product').trim(),
+      author: String(reviewData.author || 'Anonymous').trim(),
+      email: String(reviewData.email || '').trim(),
+      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
+      title: String(reviewData.title || '').trim(),
+      comment: String(reviewData.comment || '').trim(),
+      badge: String(reviewData.badge || 'Verified Customer').trim(),
+      status: reviewData.status || 'approved', // 'approved' | 'pending' | 'hidden'
+      adminReply: String(reviewData.adminReply || '').trim(),
+      createdAt: createdIso,
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'product_reviews', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveProductReview warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = productReviews.value.findIndex((r) => r.id === finalId)
+    if (idx !== -1) {
+      productReviews.value[idx] = updated
+    } else {
+      productReviews.value.unshift(updated)
+    }
+    saveToCache('ystore_product_reviews_cache', productReviews.value)
+    return finalId
+  }
+
+  const deleteProductReview = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'product_reviews', id))
+      } catch (err) {
+        console.warn('Firestore deleteProductReview warning:', err)
+      }
+    }
+    productReviews.value = productReviews.value.filter((r) => r.id !== id)
+    saveToCache('ystore_product_reviews_cache', productReviews.value)
+  }
+
+  const getReviewsForProduct = (productId, productName = '') => {
+    return (productReviews.value || []).filter((r) => {
+      if (r.status === 'hidden' || r.status === 'pending') return false
+      if (productId && r.productId && String(r.productId) === String(productId)) return true
+      if (productName && r.productName && r.productName.toLowerCase() === String(productName).toLowerCase()) return true
+      return false
+    })
+  }
+
+  return {
+ ...defaultThemeConfig }
+}
+
+const getInitialHeadingSlides = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_heading_slides_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (parsed && typeof parsed === 'object') return { ...defaultHeadingSlides, ...parsed }
+      }
+    } catch {}
+  }
+  // ==========================================
+  // STORE / THEME CUSTOMER REVIEWS & GOOGLE REVIEWS API PREP
+  // ==========================================
+  const computeInitials = (name = '') => {
+    const parts = String(name).trim().split(/\s+/).filter(Boolean)
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    return (parts[0] || 'YB').slice(0, 2).toUpperCase()
+  }
+
+  const saveStoreReview = async (reviewData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || reviewData.id || `store-rev-${Date.now()}`
+    const name = (reviewData.name || 'Happy Customer').trim()
+    const payload = {
+      name,
+      initials: (reviewData.initials || computeInitials(name)).trim().toUpperCase().slice(0, 3),
+      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
+      quote: (reviewData.quote || '').trim(),
+      badge: (reviewData.badge || 'Verified Buyer').trim(),
+      source: reviewData.source || 'manual',
+      order: Number(reviewData.order) || (storeReviews.value.length + 1),
+      enabled: reviewData.enabled !== false,
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'store_reviews', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveStoreReview warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = storeReviews.value.findIndex((r) => r.id === finalId)
+    if (idx !== -1) {
+      storeReviews.value[idx] = updated
+    } else {
+      storeReviews.value.push(updated)
+    }
+    storeReviews.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+    saveToCache('ystore_store_reviews_cache', storeReviews.value)
+    return finalId
+  }
+
+  const deleteStoreReview = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'store_reviews', id))
+      } catch (err) {
+        console.warn('Firestore deleteStoreReview warning:', err)
+      }
+    }
+    storeReviews.value = storeReviews.value.filter((r) => r.id !== id)
+    saveToCache('ystore_store_reviews_cache', storeReviews.value)
+  }
+
+  const resetStoreReviewsToDefaults = async () => {
+    const db = getDb()
+    const defaults = JSON.parse(JSON.stringify(defaultInitialStoreReviews))
+    if (db) {
+      try {
+        for (const item of defaults) {
+          const { id, ...data } = item
+          await setDoc(doc(db, 'store_reviews', id), {
+            ...data,
+            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+          }, { merge: true })
+        }
+      } catch (err) {
+        console.warn('Firestore resetStoreReviewsToDefaults warning:', err)
+      }
+    }
+    storeReviews.value = defaults
+    saveToCache('ystore_store_reviews_cache', defaults)
+    return defaults
+  }
+
+  const saveGoogleReviewsConfig = async (cfgData) => {
+    const db = getDb()
+    const payload = {
+      source: cfgData.source || 'manual',
+      googlePlaceId: (cfgData.googlePlaceId || '').trim(),
+      googleApiKey: (cfgData.googleApiKey || '').trim(),
+      minRating: Math.min(5, Math.max(1, Number(cfgData.minRating) || 4)),
+      maxReviews: Math.min(20, Math.max(1, Number(cfgData.maxReviews) || 6)),
+      lastSyncedAt: cfgData.lastSyncedAt ?? googleReviewsConfig.value.lastSyncedAt ?? null,
+      cachedGoogleReviews: Array.isArray(cfgData.cachedGoogleReviews)
+        ? cfgData.cachedGoogleReviews
+        : (googleReviewsConfig.value.cachedGoogleReviews || []),
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'config', 'google_reviews'), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveGoogleReviewsConfig warning:', err)
+      }
+    }
+    googleReviewsConfig.value = { ...defaultGoogleReviewsConfig, ...payload, updatedAt: new Date().toISOString() }
+    saveToCache('ystore_google_reviews_config_cache', googleReviewsConfig.value)
+    return googleReviewsConfig.value
+  }
+
+  /**
+   * Google Places API (New v1) integration helper.
+   * Prepped for live Google Business Profile / Place ID syncing once API key & Place ID are supplied.
+   */
+  const syncGoogleReviews = async (placeIdOverride = null, apiKeyOverride = null) => {
+    const placeId = (placeIdOverride ?? googleReviewsConfig.value.googlePlaceId ?? '').trim()
+    const apiKey = (apiKeyOverride ?? googleReviewsConfig.value.googleApiKey ?? '').trim()
+    if (!placeId || !apiKey) {
+      throw new Error('Please enter both a Google Place ID and a Google Places API Key first.')
+    }
+
+    const endpoint = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?fields=displayName,rating,userRatingCount,reviews&key=${encodeURIComponent(apiKey)}`
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      let errMsg = `Google Places API returned HTTP ${response.status}`
+      try {
+        const errJson = await response.json()
+        if (errJson?.error?.message) errMsg = errJson.error.message
+      } catch {}
+      throw new Error(errMsg)
+    }
+
+    const data = await response.json()
+    const rawReviews = Array.isArray(data.reviews) ? data.reviews : []
+    const normalized = rawReviews
+      .map((rev, idx) => {
+        const authorName = rev.authorAttribution?.displayName || 'Google Customer'
+        const quoteText = rev.text?.text || rev.originalText?.text || ''
+        return {
+          id: `google-rev-${idx}-${Date.now()}`,
+          name: authorName,
+          initials: computeInitials(authorName),
+          rating: Number(rev.rating) || 5,
+          quote: quoteText,
+          badge: rev.relativePublishTimeDescription
+            ? `Google Review • ${rev.relativePublishTimeDescription}`
+            : 'Google Review',
+          source: 'google',
+          enabled: true
+        }
+      })
+      .filter((r) => Boolean(r.quote))
+
+    await saveGoogleReviewsConfig({
+      ...googleReviewsConfig.value,
+      googlePlaceId: placeId,
+      googleApiKey: apiKey,
+      lastSyncedAt: new Date().toISOString(),
+      cachedGoogleReviews: normalized
+    })
+
+    return normalized
+  }
+
+  // ==========================================
+  // PRODUCT-SPECIFIC CUSTOMER REVIEWS CRUD
+  // ==========================================
+  const saveProductReview = async (reviewData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || reviewData.id || `prod-rev-${Date.now()}`
+    const createdIso = reviewData.createdAt || new Date().toISOString()
+    const payload = {
+      productId: String(reviewData.productId || '').trim(),
+      productName: String(reviewData.productName || 'Product').trim(),
+      author: String(reviewData.author || 'Anonymous').trim(),
+      email: String(reviewData.email || '').trim(),
+      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
+      title: String(reviewData.title || '').trim(),
+      comment: String(reviewData.comment || '').trim(),
+      badge: String(reviewData.badge || 'Verified Customer').trim(),
+      status: reviewData.status || 'approved', // 'approved' | 'pending' | 'hidden'
+      adminReply: String(reviewData.adminReply || '').trim(),
+      createdAt: createdIso,
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'product_reviews', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveProductReview warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = productReviews.value.findIndex((r) => r.id === finalId)
+    if (idx !== -1) {
+      productReviews.value[idx] = updated
+    } else {
+      productReviews.value.unshift(updated)
+    }
+    saveToCache('ystore_product_reviews_cache', productReviews.value)
+    return finalId
+  }
+
+  const deleteProductReview = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'product_reviews', id))
+      } catch (err) {
+        console.warn('Firestore deleteProductReview warning:', err)
+      }
+    }
+    productReviews.value = productReviews.value.filter((r) => r.id !== id)
+    saveToCache('ystore_product_reviews_cache', productReviews.value)
+  }
+
+  const getReviewsForProduct = (productId, productName = '') => {
+    return (productReviews.value || []).filter((r) => {
+      if (r.status === 'hidden' || r.status === 'pending') return false
+      if (productId && r.productId && String(r.productId) === String(productId)) return true
+      if (productName && r.productName && r.productName.toLowerCase() === String(productName).toLowerCase()) return true
+      return false
+    })
+  }
+
+  return {
+ ...defaultHeadingSlides }
+}
+
+const getInitialBannerCategoriesHeader = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_banner_categories_header_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (parsed && typeof parsed === 'object') return { ...defaultBannerCategoriesHeader, ...parsed }
+      }
+    } catch {}
+  }
+  // ==========================================
+  // STORE / THEME CUSTOMER REVIEWS & GOOGLE REVIEWS API PREP
+  // ==========================================
+  const computeInitials = (name = '') => {
+    const parts = String(name).trim().split(/\s+/).filter(Boolean)
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    return (parts[0] || 'YB').slice(0, 2).toUpperCase()
+  }
+
+  const saveStoreReview = async (reviewData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || reviewData.id || `store-rev-${Date.now()}`
+    const name = (reviewData.name || 'Happy Customer').trim()
+    const payload = {
+      name,
+      initials: (reviewData.initials || computeInitials(name)).trim().toUpperCase().slice(0, 3),
+      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
+      quote: (reviewData.quote || '').trim(),
+      badge: (reviewData.badge || 'Verified Buyer').trim(),
+      source: reviewData.source || 'manual',
+      order: Number(reviewData.order) || (storeReviews.value.length + 1),
+      enabled: reviewData.enabled !== false,
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'store_reviews', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveStoreReview warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = storeReviews.value.findIndex((r) => r.id === finalId)
+    if (idx !== -1) {
+      storeReviews.value[idx] = updated
+    } else {
+      storeReviews.value.push(updated)
+    }
+    storeReviews.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+    saveToCache('ystore_store_reviews_cache', storeReviews.value)
+    return finalId
+  }
+
+  const deleteStoreReview = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'store_reviews', id))
+      } catch (err) {
+        console.warn('Firestore deleteStoreReview warning:', err)
+      }
+    }
+    storeReviews.value = storeReviews.value.filter((r) => r.id !== id)
+    saveToCache('ystore_store_reviews_cache', storeReviews.value)
+  }
+
+  const resetStoreReviewsToDefaults = async () => {
+    const db = getDb()
+    const defaults = JSON.parse(JSON.stringify(defaultInitialStoreReviews))
+    if (db) {
+      try {
+        for (const item of defaults) {
+          const { id, ...data } = item
+          await setDoc(doc(db, 'store_reviews', id), {
+            ...data,
+            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+          }, { merge: true })
+        }
+      } catch (err) {
+        console.warn('Firestore resetStoreReviewsToDefaults warning:', err)
+      }
+    }
+    storeReviews.value = defaults
+    saveToCache('ystore_store_reviews_cache', defaults)
+    return defaults
+  }
+
+  const saveGoogleReviewsConfig = async (cfgData) => {
+    const db = getDb()
+    const payload = {
+      source: cfgData.source || 'manual',
+      googlePlaceId: (cfgData.googlePlaceId || '').trim(),
+      googleApiKey: (cfgData.googleApiKey || '').trim(),
+      minRating: Math.min(5, Math.max(1, Number(cfgData.minRating) || 4)),
+      maxReviews: Math.min(20, Math.max(1, Number(cfgData.maxReviews) || 6)),
+      lastSyncedAt: cfgData.lastSyncedAt ?? googleReviewsConfig.value.lastSyncedAt ?? null,
+      cachedGoogleReviews: Array.isArray(cfgData.cachedGoogleReviews)
+        ? cfgData.cachedGoogleReviews
+        : (googleReviewsConfig.value.cachedGoogleReviews || []),
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'config', 'google_reviews'), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveGoogleReviewsConfig warning:', err)
+      }
+    }
+    googleReviewsConfig.value = { ...defaultGoogleReviewsConfig, ...payload, updatedAt: new Date().toISOString() }
+    saveToCache('ystore_google_reviews_config_cache', googleReviewsConfig.value)
+    return googleReviewsConfig.value
+  }
+
+  /**
+   * Google Places API (New v1) integration helper.
+   * Prepped for live Google Business Profile / Place ID syncing once API key & Place ID are supplied.
+   */
+  const syncGoogleReviews = async (placeIdOverride = null, apiKeyOverride = null) => {
+    const placeId = (placeIdOverride ?? googleReviewsConfig.value.googlePlaceId ?? '').trim()
+    const apiKey = (apiKeyOverride ?? googleReviewsConfig.value.googleApiKey ?? '').trim()
+    if (!placeId || !apiKey) {
+      throw new Error('Please enter both a Google Place ID and a Google Places API Key first.')
+    }
+
+    const endpoint = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?fields=displayName,rating,userRatingCount,reviews&key=${encodeURIComponent(apiKey)}`
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      let errMsg = `Google Places API returned HTTP ${response.status}`
+      try {
+        const errJson = await response.json()
+        if (errJson?.error?.message) errMsg = errJson.error.message
+      } catch {}
+      throw new Error(errMsg)
+    }
+
+    const data = await response.json()
+    const rawReviews = Array.isArray(data.reviews) ? data.reviews : []
+    const normalized = rawReviews
+      .map((rev, idx) => {
+        const authorName = rev.authorAttribution?.displayName || 'Google Customer'
+        const quoteText = rev.text?.text || rev.originalText?.text || ''
+        return {
+          id: `google-rev-${idx}-${Date.now()}`,
+          name: authorName,
+          initials: computeInitials(authorName),
+          rating: Number(rev.rating) || 5,
+          quote: quoteText,
+          badge: rev.relativePublishTimeDescription
+            ? `Google Review • ${rev.relativePublishTimeDescription}`
+            : 'Google Review',
+          source: 'google',
+          enabled: true
+        }
+      })
+      .filter((r) => Boolean(r.quote))
+
+    await saveGoogleReviewsConfig({
+      ...googleReviewsConfig.value,
+      googlePlaceId: placeId,
+      googleApiKey: apiKey,
+      lastSyncedAt: new Date().toISOString(),
+      cachedGoogleReviews: normalized
+    })
+
+    return normalized
+  }
+
+  // ==========================================
+  // PRODUCT-SPECIFIC CUSTOMER REVIEWS CRUD
+  // ==========================================
+  const saveProductReview = async (reviewData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || reviewData.id || `prod-rev-${Date.now()}`
+    const createdIso = reviewData.createdAt || new Date().toISOString()
+    const payload = {
+      productId: String(reviewData.productId || '').trim(),
+      productName: String(reviewData.productName || 'Product').trim(),
+      author: String(reviewData.author || 'Anonymous').trim(),
+      email: String(reviewData.email || '').trim(),
+      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
+      title: String(reviewData.title || '').trim(),
+      comment: String(reviewData.comment || '').trim(),
+      badge: String(reviewData.badge || 'Verified Customer').trim(),
+      status: reviewData.status || 'approved', // 'approved' | 'pending' | 'hidden'
+      adminReply: String(reviewData.adminReply || '').trim(),
+      createdAt: createdIso,
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'product_reviews', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveProductReview warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = productReviews.value.findIndex((r) => r.id === finalId)
+    if (idx !== -1) {
+      productReviews.value[idx] = updated
+    } else {
+      productReviews.value.unshift(updated)
+    }
+    saveToCache('ystore_product_reviews_cache', productReviews.value)
+    return finalId
+  }
+
+  const deleteProductReview = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'product_reviews', id))
+      } catch (err) {
+        console.warn('Firestore deleteProductReview warning:', err)
+      }
+    }
+    productReviews.value = productReviews.value.filter((r) => r.id !== id)
+    saveToCache('ystore_product_reviews_cache', productReviews.value)
+  }
+
+  const getReviewsForProduct = (productId, productName = '') => {
+    return (productReviews.value || []).filter((r) => {
+      if (r.status === 'hidden' || r.status === 'pending') return false
+      if (productId && r.productId && String(r.productId) === String(productId)) return true
+      if (productName && r.productName && r.productName.toLowerCase() === String(productName).toLowerCase()) return true
+      return false
+    })
+  }
+
+  return {
+ ...defaultBannerCategoriesHeader }
+}
+
+const getInitialCategoryBanners = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_category_banners_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+  }
+  return [...defaultInitialCategoryBanners]
+}
+
+const defaultInitialStoreReviews = [
+  {
+    id: 'store-rev-1',
+    name: 'Sarah Mkhize',
+    initials: 'SM',
+    rating: 5,
+    quote: 'Ystore delivered our package to Durban in less than 48 hours. The rainbow stacker and wooden train are beautifully made with smooth non-toxic paints. My toddlers play with them every morning.',
+    badge: 'Verified Buyer',
+    source: 'manual',
+    enabled: true,
+    order: 1
+  },
+  {
+    id: 'store-rev-2',
+    name: 'Liam Van Der Merwe',
+    initials: 'LV',
+    rating: 5,
+    quote: 'The collectible figure exceeded all expectations! The articulation and vintage details are exceptional. It is so hard to find high quality toys that survive rough daily play, but Ystore nailed it.',
+    badge: 'Verified Buyer',
+    source: 'manual',
+    enabled: true,
+    order: 2
+  },
+  {
+    id: 'store-rev-3',
+    name: 'Amanda Naidoo',
+    initials: 'AN',
+    rating: 5,
+    quote: 'Customer service was super responsive when I had questions about shipping before my daughter’s birthday. The afternoon tea set is absolutely adorable and well packaged. Highly recommended!',
+    badge: 'Verified Buyer',
+    source: 'manual',
+    enabled: true,
+    order: 3
+  }
+]
+
+const defaultGoogleReviewsConfig = {
+  source: 'manual', // 'manual' | 'google' | 'hybrid'
+  googlePlaceId: '',
+  googleApiKey: '',
+  minRating: 4,
+  maxReviews: 6,
+  lastSyncedAt: null,
+  cachedGoogleReviews: []
+}
+
+const getInitialStoreReviews = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_store_reviews_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+  }
+  return [...defaultInitialStoreReviews]
+}
+
+const getInitialGoogleReviewsConfig = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_google_reviews_config_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (parsed && typeof parsed === 'object') return { ...defaultGoogleReviewsConfig, ...parsed }
+      }
+    } catch {}
+  }
+  return {
+ ...defaultGoogleReviewsConfig }
+}
+
+const getInitialProductReviews = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_product_reviews_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed)) return parsed
+      }
+    } catch {}
+  }
+  return []
+}
+
+const defaultInitialStoreReviews = [
+  {
+    id: 'store-rev-1',
+    name: 'Sarah Mkhize',
+    initials: 'SM',
+    rating: 5,
+    quote: 'Ystore delivered our package to Durban in less than 48 hours. The rainbow stacker and wooden train are beautifully made with smooth non-toxic paints. My toddlers play with them every morning.',
+    badge: 'Verified Buyer',
+    source: 'manual',
+    enabled: true,
+    order: 1
+  },
+  {
+    id: 'store-rev-2',
+    name: 'Liam Van Der Merwe',
+    initials: 'LV',
+    rating: 5,
+    quote: 'The collectible figure exceeded all expectations! The articulation and vintage details are exceptional. It is so hard to find high quality toys that survive rough daily play, but Ystore nailed it.',
+    badge: 'Verified Buyer',
+    source: 'manual',
+    enabled: true,
+    order: 2
+  },
+  {
+    id: 'store-rev-3',
+    name: 'Amanda Naidoo',
+    initials: 'AN',
+    rating: 5,
+    quote: 'Customer service was super responsive when I had questions about shipping before my daughter’s birthday. The afternoon tea set is absolutely adorable and well packaged. Highly recommended!',
+    badge: 'Verified Buyer',
+    source: 'manual',
+    enabled: true,
+    order: 3
+  }
+]
+
+const defaultGoogleReviewsConfig = {
+  source: 'manual', // 'manual' | 'google' | 'hybrid'
+  googlePlaceId: '',
+  googleApiKey: '',
+  minRating: 4,
+  maxReviews: 6,
+  lastSyncedAt: null,
+  cachedGoogleReviews: []
+}
+
+const getInitialStoreReviews = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_store_reviews_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+  }
+  return [...defaultInitialStoreReviews]
+}
+
+const getInitialGoogleReviewsConfig = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_google_reviews_config_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (parsed && typeof parsed === 'object') return { ...defaultGoogleReviewsConfig, ...parsed }
+      }
+    } catch {}
+  }
+  // ==========================================
+  // STORE / THEME CUSTOMER REVIEWS & GOOGLE REVIEWS API PREP
+  // ==========================================
+  const computeInitials = (name = '') => {
+    const parts = String(name).trim().split(/\s+/).filter(Boolean)
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    return (parts[0] || 'YB').slice(0, 2).toUpperCase()
+  }
+
+  const saveStoreReview = async (reviewData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || reviewData.id || `store-rev-${Date.now()}`
+    const name = (reviewData.name || 'Happy Customer').trim()
+    const payload = {
+      name,
+      initials: (reviewData.initials || computeInitials(name)).trim().toUpperCase().slice(0, 3),
+      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
+      quote: (reviewData.quote || '').trim(),
+      badge: (reviewData.badge || 'Verified Buyer').trim(),
+      source: reviewData.source || 'manual',
+      order: Number(reviewData.order) || (storeReviews.value.length + 1),
+      enabled: reviewData.enabled !== false,
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'store_reviews', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveStoreReview warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = storeReviews.value.findIndex((r) => r.id === finalId)
+    if (idx !== -1) {
+      storeReviews.value[idx] = updated
+    } else {
+      storeReviews.value.push(updated)
+    }
+    storeReviews.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+    saveToCache('ystore_store_reviews_cache', storeReviews.value)
+    return finalId
+  }
+
+  const deleteStoreReview = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'store_reviews', id))
+      } catch (err) {
+        console.warn('Firestore deleteStoreReview warning:', err)
+      }
+    }
+    storeReviews.value = storeReviews.value.filter((r) => r.id !== id)
+    saveToCache('ystore_store_reviews_cache', storeReviews.value)
+  }
+
+  const resetStoreReviewsToDefaults = async () => {
+    const db = getDb()
+    const defaults = JSON.parse(JSON.stringify(defaultInitialStoreReviews))
+    if (db) {
+      try {
+        for (const item of defaults) {
+          const { id, ...data } = item
+          await setDoc(doc(db, 'store_reviews', id), {
+            ...data,
+            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+          }, { merge: true })
+        }
+      } catch (err) {
+        console.warn('Firestore resetStoreReviewsToDefaults warning:', err)
+      }
+    }
+    storeReviews.value = defaults
+    saveToCache('ystore_store_reviews_cache', defaults)
+    return defaults
+  }
+
+  const saveGoogleReviewsConfig = async (cfgData) => {
+    const db = getDb()
+    const payload = {
+      source: cfgData.source || 'manual',
+      googlePlaceId: (cfgData.googlePlaceId || '').trim(),
+      googleApiKey: (cfgData.googleApiKey || '').trim(),
+      minRating: Math.min(5, Math.max(1, Number(cfgData.minRating) || 4)),
+      maxReviews: Math.min(20, Math.max(1, Number(cfgData.maxReviews) || 6)),
+      lastSyncedAt: cfgData.lastSyncedAt ?? googleReviewsConfig.value.lastSyncedAt ?? null,
+      cachedGoogleReviews: Array.isArray(cfgData.cachedGoogleReviews)
+        ? cfgData.cachedGoogleReviews
+        : (googleReviewsConfig.value.cachedGoogleReviews || []),
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'config', 'google_reviews'), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveGoogleReviewsConfig warning:', err)
+      }
+    }
+    googleReviewsConfig.value = { ...defaultGoogleReviewsConfig, ...payload, updatedAt: new Date().toISOString() }
+    saveToCache('ystore_google_reviews_config_cache', googleReviewsConfig.value)
+    return googleReviewsConfig.value
+  }
+
+  /**
+   * Google Places API (New v1) integration helper.
+   * Prepped for live Google Business Profile / Place ID syncing once API key & Place ID are supplied.
+   */
+  const syncGoogleReviews = async (placeIdOverride = null, apiKeyOverride = null) => {
+    const placeId = (placeIdOverride ?? googleReviewsConfig.value.googlePlaceId ?? '').trim()
+    const apiKey = (apiKeyOverride ?? googleReviewsConfig.value.googleApiKey ?? '').trim()
+    if (!placeId || !apiKey) {
+      throw new Error('Please enter both a Google Place ID and a Google Places API Key first.')
+    }
+
+    const endpoint = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?fields=displayName,rating,userRatingCount,reviews&key=${encodeURIComponent(apiKey)}`
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      let errMsg = `Google Places API returned HTTP ${response.status}`
+      try {
+        const errJson = await response.json()
+        if (errJson?.error?.message) errMsg = errJson.error.message
+      } catch {}
+      throw new Error(errMsg)
+    }
+
+    const data = await response.json()
+    const rawReviews = Array.isArray(data.reviews) ? data.reviews : []
+    const normalized = rawReviews
+      .map((rev, idx) => {
+        const authorName = rev.authorAttribution?.displayName || 'Google Customer'
+        const quoteText = rev.text?.text || rev.originalText?.text || ''
+        return {
+          id: `google-rev-${idx}-${Date.now()}`,
+          name: authorName,
+          initials: computeInitials(authorName),
+          rating: Number(rev.rating) || 5,
+          quote: quoteText,
+          badge: rev.relativePublishTimeDescription
+            ? `Google Review • ${rev.relativePublishTimeDescription}`
+            : 'Google Review',
+          source: 'google',
+          enabled: true
+        }
+      })
+      .filter((r) => Boolean(r.quote))
+
+    await saveGoogleReviewsConfig({
+      ...googleReviewsConfig.value,
+      googlePlaceId: placeId,
+      googleApiKey: apiKey,
+      lastSyncedAt: new Date().toISOString(),
+      cachedGoogleReviews: normalized
+    })
+
+    return normalized
+  }
+
+  // ==========================================
+  // PRODUCT-SPECIFIC CUSTOMER REVIEWS CRUD
+  // ==========================================
+  const saveProductReview = async (reviewData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || reviewData.id || `prod-rev-${Date.now()}`
+    const createdIso = reviewData.createdAt || new Date().toISOString()
+    const payload = {
+      productId: String(reviewData.productId || '').trim(),
+      productName: String(reviewData.productName || 'Product').trim(),
+      author: String(reviewData.author || 'Anonymous').trim(),
+      email: String(reviewData.email || '').trim(),
+      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
+      title: String(reviewData.title || '').trim(),
+      comment: String(reviewData.comment || '').trim(),
+      badge: String(reviewData.badge || 'Verified Customer').trim(),
+      status: reviewData.status || 'approved', // 'approved' | 'pending' | 'hidden'
+      adminReply: String(reviewData.adminReply || '').trim(),
+      createdAt: createdIso,
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'product_reviews', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveProductReview warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = productReviews.value.findIndex((r) => r.id === finalId)
+    if (idx !== -1) {
+      productReviews.value[idx] = updated
+    } else {
+      productReviews.value.unshift(updated)
+    }
+    saveToCache('ystore_product_reviews_cache', productReviews.value)
+    return finalId
+  }
+
+  const deleteProductReview = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'product_reviews', id))
+      } catch (err) {
+        console.warn('Firestore deleteProductReview warning:', err)
+      }
+    }
+    productReviews.value = productReviews.value.filter((r) => r.id !== id)
+    saveToCache('ystore_product_reviews_cache', productReviews.value)
+  }
+
+  const getReviewsForProduct = (productId, productName = '') => {
+    return (productReviews.value || []).filter((r) => {
+      if (r.status === 'hidden' || r.status === 'pending') return false
+      if (productId && r.productId && String(r.productId) === String(productId)) return true
+      if (productName && r.productName && r.productName.toLowerCase() === String(productName).toLowerCase()) return true
+      return false
+    })
+  }
+
+  return { ...defaultGoogleReviewsConfig }
+}
+
+const getInitialProductReviews = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_product_reviews_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed)) return parsed
+      }
+    } catch {}
+  }
+  return []
+}
+
+const getInitialCollectionBanners = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_collection_banners_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+  }
+  return [...defaultInitialCollectionBanners]
+}
+
 // Shared reactive singleton state across Admin Dashboard and Storefront
 const products = ref(getInitialProducts())
 const categories = ref(getInitialCategories())
@@ -644,6 +2412,34 @@ const customers = ref([])
 const customerSegments = ref([])
 const purchaseOrders = ref([])
 const banners = ref(getInitialBanners())
+const guaranteeStats = ref(getInitialGuaranteeStats())
+const productStories = ref(getInitialStories())
+const bannerCategories = ref(getInitialBannerCategories())
+const bannerCategoriesHeader = ref(getInitialBannerCategoriesHeader())
+const themeConfig = ref(getInitialThemeConfig())
+const headingSlides = ref(getInitialHeadingSlides())
+const showBadgePills = computed(() => Boolean(themeConfig.value?.showBadgePills))
+const categoryBanners = ref(getInitialCategoryBanners())
+const collectionBanners = ref(getInitialCollectionBanners())
+const storeReviews = ref(getInitialStoreReviews())
+const googleReviewsConfig = ref(getInitialGoogleReviewsConfig())
+const productReviews = ref(getInitialProductReviews())
+const activeStoreReviews = computed(() => {
+  const cfg = googleReviewsConfig.value || defaultGoogleReviewsConfig
+  const minRating = Number(cfg.minRating) || 1
+  const maxReviews = Number(cfg.maxReviews) || 6
+  const manualList = (storeReviews.value || []).filter((r) => r.enabled !== false && (Number(r.rating) || 5) >= minRating)
+  const googleList = (Array.isArray(cfg.cachedGoogleReviews) ? cfg.cachedGoogleReviews : []).filter(
+    (r) => (Number(r.rating) || 5) >= minRating
+  )
+  if (cfg.source === 'google') {
+    return googleList.slice(0, maxReviews)
+  }
+  if (cfg.source === 'hybrid') {
+    return [...manualList, ...googleList].slice(0, maxReviews)
+  }
+  return manualList.slice(0, maxReviews)
+})
 const paymentSettings = ref(getInitialPaymentSettings())
 const adminUsers = ref(getInitialAdminUsers())
 const contentLoading = ref(false)
@@ -791,6 +2587,181 @@ export const useStoreContent = () => {
       },
       () => { }
     )
+
+    // 8. Guarantee Stats Listener (Trust Badges under Banner)
+    onSnapshot(
+      collection(db, 'guarantee_stats'),
+      (snap) => {
+        if (!snap.empty) {
+          const stats = snap.docs.map((d) => ({
+            id: d.id,
+            ...d.data()
+          }))
+          stats.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+          guaranteeStats.value = stats
+          saveToCache('ystore_guarantee_stats_cache', guaranteeStats.value)
+        }
+      },
+      (err) => {
+        console.warn('Firestore guarantee_stats listener warning:', err)
+      }
+    )
+
+    // 9. Product Stories Listener (Circles Above Hero Banner)
+    onSnapshot(
+      collection(db, 'product_stories'),
+      (snap) => {
+        if (!snap.empty) {
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+          list.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+          productStories.value = list
+          saveToCache('ystore_stories_cache', productStories.value)
+        }
+      },
+      (err) => {
+        console.warn('Firestore product_stories listener warning:', err)
+      }
+    )
+
+    // 10. Banner Categories Listener (Latest Categories Below Hero Banner)
+    onSnapshot(
+      collection(db, 'banner_categories'),
+      (snap) => {
+        if (!snap.empty) {
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+          list.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+          bannerCategories.value = list
+          saveToCache('ystore_banner_categories_cache', bannerCategories.value)
+        }
+      },
+      (err) => {
+        console.warn('Firestore banner_categories listener warning:', err)
+      }
+    )
+
+    // 11. Banner Categories Header Listener
+    onSnapshot(
+      doc(db, 'config', 'banner_categories_header'),
+      (snap) => {
+        if (snap.exists()) {
+          bannerCategoriesHeader.value = { ...defaultBannerCategoriesHeader, ...snap.data() }
+          saveToCache('ystore_banner_categories_header_cache', bannerCategoriesHeader.value)
+        }
+      },
+      (err) => {
+        console.warn('Firestore banner_categories_header listener warning:', err)
+      }
+    )
+
+    // 12. Category Banners Listener (Category Page Hero Banners)
+    onSnapshot(
+      collection(db, 'category_banners'),
+      (snap) => {
+        if (!snap.empty) {
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+          list.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+          categoryBanners.value = list
+          saveToCache('ystore_category_banners_cache', categoryBanners.value)
+        }
+      },
+      (err) => {
+        console.warn('Firestore category_banners listener warning:', err)
+      }
+    )
+
+    // 13. Collection Banners Listener (Collection Page Hero Banners)
+    onSnapshot(
+      collection(db, 'collections_banners'),
+      (snap) => {
+        if (!snap.empty) {
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+          list.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+          collectionBanners.value = list
+          saveToCache('ystore_collection_banners_cache', collectionBanners.value)
+        }
+      },
+      (err) => {
+        console.warn('Firestore collections_banners listener warning:', err)
+      }
+    )
+
+    // 14. Theme & Badges Config Listener
+    onSnapshot(
+      doc(db, 'config', 'theme'),
+      (snap) => {
+        if (snap.exists()) {
+          themeConfig.value = { ...defaultThemeConfig, ...snap.data() }
+          saveToCache('ystore_theme_config_cache', themeConfig.value)
+        }
+      },
+      (err) => {
+        console.warn('Firestore theme config listener warning:', err)
+      }
+    )
+
+    // 15. Heading Slides Config Listener
+    onSnapshot(
+      doc(db, 'config', 'heading_slides'),
+      (snap) => {
+        if (snap.exists()) {
+          headingSlides.value = { ...defaultHeadingSlides, ...snap.data() }
+          saveToCache('ystore_heading_slides_cache', headingSlides.value)
+        }
+      },
+      (err) => {
+        console.warn('Firestore heading_slides listener warning:', err)
+      }
+    )
+
+    // 16. Store Reviews (Theme Testimonials) Listener
+    onSnapshot(
+      collection(db, 'store_reviews'),
+      (snap) => {
+        if (!snap.empty) {
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+          list.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+          storeReviews.value = list
+          saveToCache('ystore_store_reviews_cache', storeReviews.value)
+        }
+      },
+      (err) => {
+        console.warn('Firestore store_reviews listener warning:', err)
+      }
+    )
+
+    // 17. Google Reviews API Config Listener
+    onSnapshot(
+      doc(db, 'config', 'google_reviews'),
+      (snap) => {
+        if (snap.exists()) {
+          googleReviewsConfig.value = { ...defaultGoogleReviewsConfig, ...snap.data() }
+          saveToCache('ystore_google_reviews_config_cache', googleReviewsConfig.value)
+        }
+      },
+      (err) => {
+        console.warn('Firestore google_reviews config listener warning:', err)
+      }
+    )
+
+    // 18. Product Customer Reviews Listener
+    onSnapshot(
+      collection(db, 'product_reviews'),
+      (snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        list.sort((a, b) => {
+          const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime()
+          const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime()
+          return tB - tA
+        })
+        productReviews.value = list
+        saveToCache('ystore_product_reviews_cache', productReviews.value)
+      },
+      (err) => {
+        console.warn('Firestore product_reviews listener warning:', err)
+      }
+    )
+
+
   }
 
   // Initialize real-time listeners for sensitive management records (Super Admin Only)
@@ -1432,6 +3403,465 @@ export const useStoreContent = () => {
   }
 
   // ==========================================
+  // GUARANTEE STATS (THEME TRUST BADGES) CRUD
+  // ==========================================
+  const saveGuaranteeStat = async (statData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || statData.id || `stat-${Date.now()}`
+    const payload = {
+      title: (statData.title || '').trim(),
+      subtitle: (statData.subtitle || '').trim(),
+      icon: (statData.icon || '/images/free-shipping-icon.svg').trim(),
+      order: Number(statData.order) || (guaranteeStats.value.length + 1),
+      enabled: statData.enabled !== false,
+      link: (statData.link || '').trim(),
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+
+    if (db) {
+      try {
+        await setDoc(doc(db, 'guarantee_stats', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveGuaranteeStat failed, updated local cache:', err)
+      }
+    }
+
+    const updatedItem = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = guaranteeStats.value.findIndex((s) => s.id === finalId)
+    if (idx !== -1) {
+      guaranteeStats.value[idx] = updatedItem
+    } else {
+      guaranteeStats.value.push(updatedItem)
+    }
+    guaranteeStats.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+    saveToCache('ystore_guarantee_stats_cache', guaranteeStats.value)
+    return finalId
+  }
+
+  const deleteGuaranteeStat = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'guarantee_stats', id))
+      } catch (err) {
+        console.warn('Firestore deleteGuaranteeStat failed:', err)
+      }
+    }
+    guaranteeStats.value = guaranteeStats.value.filter((s) => s.id !== id)
+    saveToCache('ystore_guarantee_stats_cache', guaranteeStats.value)
+  }
+
+  const resetGuaranteeStatsToDefaults = async () => {
+    const db = getDb()
+    const defaults = JSON.parse(JSON.stringify(defaultInitialGuaranteeStats))
+    if (db) {
+      try {
+        for (const item of defaults) {
+          const { id, ...data } = item
+          await setDoc(doc(db, 'guarantee_stats', id), {
+            ...data,
+            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+          }, { merge: true })
+        }
+      } catch (err) {
+        console.warn('Firestore resetGuaranteeStatsToDefaults failed:', err)
+      }
+    }
+    guaranteeStats.value = defaults
+    saveToCache('ystore_guarantee_stats_cache', defaults)
+    return defaults
+  }
+
+  // ==========================================
+  // PRODUCT STORIES (CIRCLES ABOVE BANNER) CRUD
+  // ==========================================
+  const extractMediaUrl = (val) => {
+    if (!val) return ''
+    if (typeof val === 'string') return val.trim()
+    if (typeof val === 'object' && val?.url) return String(val.url).trim()
+    return ''
+  }
+
+  const saveStory = async (storyData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || storyData.id || `story-${Date.now()}`
+    const payload = {
+      title: (storyData.title || '').trim(),
+      subtitle: (storyData.subtitle || '').trim(),
+      icon: extractMediaUrl(storyData.icon),
+      coverImage: extractMediaUrl(storyData.coverImage),
+      order: Number(storyData.order) || (productStories.value.length + 1),
+      enabled: storyData.enabled !== false,
+      slides: (Array.isArray(storyData.slides) ? storyData.slides : []).map((s) => ({
+        ...s,
+        image: extractMediaUrl(s?.image),
+        caption: (s?.caption || '').trim(),
+        ctaText: (s?.ctaText || 'Shop Now').trim(),
+        ctaLink: (s?.ctaLink || 'All').trim()
+      })),
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'product_stories', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveStory warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = productStories.value.findIndex((s) => s.id === finalId)
+    if (idx !== -1) {
+      productStories.value[idx] = updated
+    } else {
+      productStories.value.push(updated)
+    }
+    productStories.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+    saveToCache('ystore_stories_cache', productStories.value)
+    return finalId
+  }
+
+  const deleteStory = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'product_stories', id))
+      } catch (err) {
+        console.warn('Firestore deleteStory warning:', err)
+      }
+    }
+    productStories.value = productStories.value.filter((s) => s.id !== id)
+    saveToCache('ystore_stories_cache', productStories.value)
+  }
+
+  const resetStoriesToDefaults = async () => {
+    const db = getDb()
+    const defaults = JSON.parse(JSON.stringify(defaultInitialStories))
+    if (db) {
+      try {
+        for (const item of defaults) {
+          const { id, ...data } = item
+          await setDoc(doc(db, 'product_stories', id), {
+            ...data,
+            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+          }, { merge: true })
+        }
+      } catch (err) {
+        console.warn('Firestore resetStoriesToDefaults warning:', err)
+      }
+    }
+    productStories.value = defaults
+    saveToCache('ystore_stories_cache', defaults)
+    return defaults
+  }
+
+  // ==========================================
+  // BANNER CATEGORIES (LATEST BELOW BANNER) CRUD
+  // ==========================================
+  const saveBannerCategory = async (catData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || catData.id || `bcat-${Date.now()}`
+    const payload = {
+      name: (catData.name || '').trim(),
+      image: (catData.image || '').trim(),
+      badge: (catData.badge || '').trim(),
+      targetCategory: (catData.targetCategory || catData.name || '').trim(),
+      order: Number(catData.order) || (bannerCategories.value.length + 1),
+      enabled: catData.enabled !== false,
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'banner_categories', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveBannerCategory warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = bannerCategories.value.findIndex((c) => c.id === finalId)
+    if (idx !== -1) {
+      bannerCategories.value[idx] = updated
+    } else {
+      bannerCategories.value.push(updated)
+    }
+    bannerCategories.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+    saveToCache('ystore_banner_categories_cache', bannerCategories.value)
+    return finalId
+  }
+
+  const deleteBannerCategory = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'banner_categories', id))
+      } catch (err) {
+        console.warn('Firestore deleteBannerCategory warning:', err)
+      }
+    }
+    bannerCategories.value = bannerCategories.value.filter((c) => c.id !== id)
+    saveToCache('ystore_banner_categories_cache', bannerCategories.value)
+  }
+
+  const resetBannerCategoriesToDefaults = async () => {
+    const db = getDb()
+    const defaults = JSON.parse(JSON.stringify(defaultInitialBannerCategories))
+    if (db) {
+      try {
+        for (const item of defaults) {
+          const { id, ...data } = item
+          await setDoc(doc(db, 'banner_categories', id), {
+            ...data,
+            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+          }, { merge: true })
+        }
+      } catch (err) {
+        console.warn('Firestore resetBannerCategoriesToDefaults warning:', err)
+      }
+    }
+    bannerCategories.value = defaults
+    saveToCache('ystore_banner_categories_cache', defaults)
+    return defaults
+  }
+
+  const saveBannerCategoriesHeader = async (headerData) => {
+    const db = getDb()
+    const payload = {
+      badge: (headerData.badge || '').trim(),
+      title: (headerData.title || '').trim(),
+      highlight: (headerData.highlight || '').trim(),
+      subtitle: (headerData.subtitle || '').trim(),
+      viewAllText: (headerData.viewAllText || '').trim(),
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'config', 'banner_categories_header'), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveBannerCategoriesHeader warning:', err)
+      }
+    }
+    bannerCategoriesHeader.value = { ...defaultBannerCategoriesHeader, ...payload }
+    saveToCache('ystore_banner_categories_header_cache', bannerCategoriesHeader.value)
+    return bannerCategoriesHeader.value
+  }
+
+  // ==========================================
+  // CATEGORY BANNERS CRUD
+  // ==========================================
+  const saveCategoryBanner = async (bannerData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || bannerData.id || `cbanner-${Date.now()}`
+    const payload = {
+      category: (bannerData.category || 'All').trim(),
+      categoryName: (bannerData.categoryName || bannerData.category || 'All Categories').trim(),
+      title: (bannerData.title || '').trim(),
+      subtitle: (bannerData.subtitle || bannerData.description || '').trim(),
+      badge: (bannerData.badge || '').trim(),
+      image: (bannerData.image || '').trim(),
+      mobileImage: (bannerData.mobileImage || '').trim(),
+      overlayOpacity: Number(bannerData.overlayOpacity ?? 70),
+      order: Number(bannerData.order ?? 1),
+      enabled: bannerData.enabled !== false,
+      isDefault: Boolean(bannerData.isDefault),
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+
+    if (db) {
+      try {
+        await setDoc(doc(db, 'category_banners', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveCategoryBanner warning:', err)
+      }
+    }
+
+    const idx = categoryBanners.value.findIndex((b) => b.id === finalId)
+    const updated = { id: finalId, ...payload }
+    if (idx !== -1) {
+      categoryBanners.value[idx] = updated
+    } else {
+      categoryBanners.value.push(updated)
+    }
+    categoryBanners.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+    saveToCache('ystore_category_banners_cache', categoryBanners.value)
+    return finalId
+  }
+
+  const deleteCategoryBanner = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'category_banners', id))
+      } catch (err) {
+        console.warn('Firestore deleteCategoryBanner warning:', err)
+      }
+    }
+    categoryBanners.value = categoryBanners.value.filter((b) => b.id !== id)
+    saveToCache('ystore_category_banners_cache', categoryBanners.value)
+  }
+
+  const resetCategoryBannersToDefaults = async () => {
+    const db = getDb()
+    const defaults = JSON.parse(JSON.stringify(defaultInitialCategoryBanners))
+    if (db) {
+      try {
+        for (const item of defaults) {
+          const { id, ...data } = item
+          await setDoc(doc(db, 'category_banners', id), {
+            ...data,
+            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+          }, { merge: true })
+        }
+      } catch (err) {
+        console.warn('Firestore resetCategoryBannersToDefaults warning:', err)
+      }
+    }
+    categoryBanners.value = defaults
+    saveToCache('ystore_category_banners_cache', defaults)
+    return defaults
+  }
+
+
+  // ==========================================
+  // THEME & BADGE PILLS CONFIG
+  // ==========================================
+  const saveThemeConfig = async (configData) => {
+    const db = getDb()
+    const payload = {
+      showBadgePills: Boolean(configData.showBadgePills),
+      showHeroBannerBadge: configData.showHeroBannerBadge !== undefined ? Boolean(configData.showHeroBannerBadge) : Boolean(configData.showBadgePills),
+      showCategoryHeadingBadge: configData.showCategoryHeadingBadge !== undefined ? Boolean(configData.showCategoryHeadingBadge) : Boolean(configData.showBadgePills),
+      showCategoryCardBadges: configData.showCategoryCardBadges !== undefined ? Boolean(configData.showCategoryCardBadges) : Boolean(configData.showBadgePills),
+      showProductBadges: configData.showProductBadges !== undefined ? Boolean(configData.showProductBadges) : Boolean(configData.showBadgePills),
+      showCategoryBannerBadges: configData.showCategoryBannerBadges !== undefined ? Boolean(configData.showCategoryBannerBadges) : Boolean(configData.showBadgePills),
+      updatedAt: new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'config', 'theme'), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveThemeConfig warning:', err)
+      }
+    }
+    themeConfig.value = { ...defaultThemeConfig, ...payload }
+    saveToCache('ystore_theme_config_cache', themeConfig.value)
+    return themeConfig.value
+  }
+
+
+  // ==========================================
+  // THEME: HEADING SLIDES (ROTATING ITALIC WORDS)
+  // ==========================================
+  const saveHeadingSlides = async (slidesData) => {
+    const db = getDb()
+    const cleanWords = (arr = []) => {
+      if (!Array.isArray(arr)) return []
+      return arr.map((w) => String(w || '').trim()).filter(Boolean).slice(0, 5)
+    }
+
+    const payload = {
+      enabled: slidesData.enabled !== false,
+      intervalSeconds: Math.max(1.5, Math.min(10, Number(slidesData.intervalSeconds) || 3.5)),
+      categoryWords: cleanWords(slidesData.categoryWords).length > 0
+        ? cleanWords(slidesData.categoryWords)
+        : defaultHeadingSlides.categoryWords,
+      collectionWords: cleanWords(slidesData.collectionWords).length > 0
+        ? cleanWords(slidesData.collectionWords)
+        : defaultHeadingSlides.collectionWords,
+      updatedAt: new Date().toISOString()
+    }
+
+    if (db) {
+      try {
+        await setDoc(doc(db, 'config', 'heading_slides'), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveHeadingSlides warning:', err)
+      }
+    }
+    headingSlides.value = { ...defaultHeadingSlides, ...payload }
+    saveToCache('ystore_heading_slides_cache', headingSlides.value)
+    return headingSlides.value
+  }
+
+  // ==========================================
+  // COLLECTION BANNERS CRUD
+  // ==========================================
+  const saveCollectionBanner = async (bannerData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || bannerData.id || `colbanner-${Date.now()}`
+    const payload = {
+      collection: (bannerData.collection || 'All Collections').trim(),
+      collectionName: (bannerData.collectionName || bannerData.collection || 'All Collections').trim(),
+      title: (bannerData.title || '').trim(),
+      subtitle: (bannerData.subtitle || bannerData.description || '').trim(),
+      badge: (bannerData.badge || '').trim(),
+      image: (bannerData.image || '').trim(),
+      mobileImage: (bannerData.mobileImage || '').trim(),
+      overlayOpacity: Number(bannerData.overlayOpacity ?? 70),
+      order: Number(bannerData.order ?? 1),
+      enabled: bannerData.enabled !== false,
+      isDefault: Boolean(bannerData.isDefault),
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+
+    if (db) {
+      try {
+        await setDoc(doc(db, 'collections_banners', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveCollectionBanner warning:', err)
+      }
+    }
+
+    const idx = collectionBanners.value.findIndex((b) => b.id === finalId)
+    const updated = { id: finalId, ...payload }
+    if (idx !== -1) {
+      collectionBanners.value[idx] = updated
+    } else {
+      collectionBanners.value.push(updated)
+    }
+    collectionBanners.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+    saveToCache('ystore_collection_banners_cache', collectionBanners.value)
+    return finalId
+  }
+
+  const deleteCollectionBanner = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'collections_banners', id))
+      } catch (err) {
+        console.warn('Firestore deleteCollectionBanner warning:', err)
+      }
+    }
+    collectionBanners.value = collectionBanners.value.filter((b) => b.id !== id)
+    saveToCache('ystore_collection_banners_cache', collectionBanners.value)
+  }
+
+  const resetCollectionBannersToDefaults = async () => {
+    const db = getDb()
+    const defaults = JSON.parse(JSON.stringify(defaultInitialCollectionBanners))
+    if (db) {
+      try {
+        for (const item of defaults) {
+          const { id, ...data } = item
+          await setDoc(doc(db, 'collections_banners', id), {
+            ...data,
+            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+          }, { merge: true })
+        }
+      } catch (err) {
+        console.warn('Firestore resetCollectionBannersToDefaults warning:', err)
+      }
+    }
+    collectionBanners.value = defaults
+    saveToCache('ystore_collection_banners_cache', defaults)
+    return defaults
+  }
+
+  // ==========================================
   // CUSTOMER SEGMENTS CRUD
   // ==========================================
   const saveCustomerSegment = async (segmentData, existingId = null) => {
@@ -1774,7 +4204,234 @@ export const useStoreContent = () => {
         const matchingProducts = publishedProducts.value.filter((p) => {
           return (p.category || '').trim().toLowerCase() === catName
         })
+        // ==========================================
+  // STORE / THEME CUSTOMER REVIEWS & GOOGLE REVIEWS API PREP
+  // ==========================================
+  const computeInitials = (name = '') => {
+    const parts = String(name).trim().split(/\s+/).filter(Boolean)
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    return (parts[0] || 'YB').slice(0, 2).toUpperCase()
+  }
+
+  const saveStoreReview = async (reviewData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || reviewData.id || `store-rev-${Date.now()}`
+    const name = (reviewData.name || 'Happy Customer').trim()
+    const payload = {
+      name,
+      initials: (reviewData.initials || computeInitials(name)).trim().toUpperCase().slice(0, 3),
+      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
+      quote: (reviewData.quote || '').trim(),
+      badge: (reviewData.badge || 'Verified Buyer').trim(),
+      source: reviewData.source || 'manual',
+      order: Number(reviewData.order) || (storeReviews.value.length + 1),
+      enabled: reviewData.enabled !== false,
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'store_reviews', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveStoreReview warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = storeReviews.value.findIndex((r) => r.id === finalId)
+    if (idx !== -1) {
+      storeReviews.value[idx] = updated
+    } else {
+      storeReviews.value.push(updated)
+    }
+    storeReviews.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+    saveToCache('ystore_store_reviews_cache', storeReviews.value)
+    return finalId
+  }
+
+  const deleteStoreReview = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'store_reviews', id))
+      } catch (err) {
+        console.warn('Firestore deleteStoreReview warning:', err)
+      }
+    }
+    storeReviews.value = storeReviews.value.filter((r) => r.id !== id)
+    saveToCache('ystore_store_reviews_cache', storeReviews.value)
+  }
+
+  const resetStoreReviewsToDefaults = async () => {
+    const db = getDb()
+    const defaults = JSON.parse(JSON.stringify(defaultInitialStoreReviews))
+    if (db) {
+      try {
+        for (const item of defaults) {
+          const { id, ...data } = item
+          await setDoc(doc(db, 'store_reviews', id), {
+            ...data,
+            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+          }, { merge: true })
+        }
+      } catch (err) {
+        console.warn('Firestore resetStoreReviewsToDefaults warning:', err)
+      }
+    }
+    storeReviews.value = defaults
+    saveToCache('ystore_store_reviews_cache', defaults)
+    return defaults
+  }
+
+  const saveGoogleReviewsConfig = async (cfgData) => {
+    const db = getDb()
+    const payload = {
+      source: cfgData.source || 'manual',
+      googlePlaceId: (cfgData.googlePlaceId || '').trim(),
+      googleApiKey: (cfgData.googleApiKey || '').trim(),
+      minRating: Math.min(5, Math.max(1, Number(cfgData.minRating) || 4)),
+      maxReviews: Math.min(20, Math.max(1, Number(cfgData.maxReviews) || 6)),
+      lastSyncedAt: cfgData.lastSyncedAt ?? googleReviewsConfig.value.lastSyncedAt ?? null,
+      cachedGoogleReviews: Array.isArray(cfgData.cachedGoogleReviews)
+        ? cfgData.cachedGoogleReviews
+        : (googleReviewsConfig.value.cachedGoogleReviews || []),
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'config', 'google_reviews'), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveGoogleReviewsConfig warning:', err)
+      }
+    }
+    googleReviewsConfig.value = { ...defaultGoogleReviewsConfig, ...payload, updatedAt: new Date().toISOString() }
+    saveToCache('ystore_google_reviews_config_cache', googleReviewsConfig.value)
+    return googleReviewsConfig.value
+  }
+
+  /**
+   * Google Places API (New v1) integration helper.
+   * Prepped for live Google Business Profile / Place ID syncing once API key & Place ID are supplied.
+   */
+  const syncGoogleReviews = async (placeIdOverride = null, apiKeyOverride = null) => {
+    const placeId = (placeIdOverride ?? googleReviewsConfig.value.googlePlaceId ?? '').trim()
+    const apiKey = (apiKeyOverride ?? googleReviewsConfig.value.googleApiKey ?? '').trim()
+    if (!placeId || !apiKey) {
+      throw new Error('Please enter both a Google Place ID and a Google Places API Key first.')
+    }
+
+    const endpoint = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?fields=displayName,rating,userRatingCount,reviews&key=${encodeURIComponent(apiKey)}`
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      let errMsg = `Google Places API returned HTTP ${response.status}`
+      try {
+        const errJson = await response.json()
+        if (errJson?.error?.message) errMsg = errJson.error.message
+      } catch {}
+      throw new Error(errMsg)
+    }
+
+    const data = await response.json()
+    const rawReviews = Array.isArray(data.reviews) ? data.reviews : []
+    const normalized = rawReviews
+      .map((rev, idx) => {
+        const authorName = rev.authorAttribution?.displayName || 'Google Customer'
+        const quoteText = rev.text?.text || rev.originalText?.text || ''
         return {
+
+          id: `google-rev-${idx}-${Date.now()}`,
+          name: authorName,
+          initials: computeInitials(authorName),
+          rating: Number(rev.rating) || 5,
+          quote: quoteText,
+          badge: rev.relativePublishTimeDescription
+            ? `Google Review • ${rev.relativePublishTimeDescription}`
+            : 'Google Review',
+          source: 'google',
+          enabled: true
+        }
+      })
+      .filter((r) => Boolean(r.quote))
+
+    await saveGoogleReviewsConfig({
+      ...googleReviewsConfig.value,
+      googlePlaceId: placeId,
+      googleApiKey: apiKey,
+      lastSyncedAt: new Date().toISOString(),
+      cachedGoogleReviews: normalized
+    })
+
+    return normalized
+  }
+
+  // ==========================================
+  // PRODUCT-SPECIFIC CUSTOMER REVIEWS CRUD
+  // ==========================================
+  const saveProductReview = async (reviewData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || reviewData.id || `prod-rev-${Date.now()}`
+    const createdIso = reviewData.createdAt || new Date().toISOString()
+    const payload = {
+      productId: String(reviewData.productId || '').trim(),
+      productName: String(reviewData.productName || 'Product').trim(),
+      author: String(reviewData.author || 'Anonymous').trim(),
+      email: String(reviewData.email || '').trim(),
+      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
+      title: String(reviewData.title || '').trim(),
+      comment: String(reviewData.comment || '').trim(),
+      badge: String(reviewData.badge || 'Verified Customer').trim(),
+      status: reviewData.status || 'approved', // 'approved' | 'pending' | 'hidden'
+      adminReply: String(reviewData.adminReply || '').trim(),
+      createdAt: createdIso,
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'product_reviews', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveProductReview warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = productReviews.value.findIndex((r) => r.id === finalId)
+    if (idx !== -1) {
+      productReviews.value[idx] = updated
+    } else {
+      productReviews.value.unshift(updated)
+    }
+    saveToCache('ystore_product_reviews_cache', productReviews.value)
+    return finalId
+  }
+
+  const deleteProductReview = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'product_reviews', id))
+      } catch (err) {
+        console.warn('Firestore deleteProductReview warning:', err)
+      }
+    }
+    productReviews.value = productReviews.value.filter((r) => r.id !== id)
+    saveToCache('ystore_product_reviews_cache', productReviews.value)
+  }
+
+  const getReviewsForProduct = (productId, productName = '') => {
+    return (productReviews.value || []).filter((r) => {
+      if (r.status === 'hidden' || r.status === 'pending') return false
+      if (productId && r.productId && String(r.productId) === String(productId)) return true
+      if (productName && r.productName && r.productName.toLowerCase() === String(productName).toLowerCase()) return true
+      return false
+    })
+  }
+
+  return {
           ...cat,
           itemCount: matchingProducts.length,
           image: cat.image || matchingProducts[0]?.image || matchingProducts[0]?.images?.[0] || ''
@@ -1838,6 +4495,232 @@ export const useStoreContent = () => {
     return true
   }
 
+  // ==========================================
+  // STORE / THEME CUSTOMER REVIEWS & GOOGLE REVIEWS API PREP
+  // ==========================================
+  const computeInitials = (name = '') => {
+    const parts = String(name).trim().split(/\s+/).filter(Boolean)
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    return (parts[0] || 'YB').slice(0, 2).toUpperCase()
+  }
+
+  const saveStoreReview = async (reviewData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || reviewData.id || `store-rev-${Date.now()}`
+    const name = (reviewData.name || 'Happy Customer').trim()
+    const payload = {
+      name,
+      initials: (reviewData.initials || computeInitials(name)).trim().toUpperCase().slice(0, 3),
+      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
+      quote: (reviewData.quote || '').trim(),
+      badge: (reviewData.badge || 'Verified Buyer').trim(),
+      source: reviewData.source || 'manual',
+      order: Number(reviewData.order) || (storeReviews.value.length + 1),
+      enabled: reviewData.enabled !== false,
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'store_reviews', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveStoreReview warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = storeReviews.value.findIndex((r) => r.id === finalId)
+    if (idx !== -1) {
+      storeReviews.value[idx] = updated
+    } else {
+      storeReviews.value.push(updated)
+    }
+    storeReviews.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+    saveToCache('ystore_store_reviews_cache', storeReviews.value)
+    return finalId
+  }
+
+  const deleteStoreReview = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'store_reviews', id))
+      } catch (err) {
+        console.warn('Firestore deleteStoreReview warning:', err)
+      }
+    }
+    storeReviews.value = storeReviews.value.filter((r) => r.id !== id)
+    saveToCache('ystore_store_reviews_cache', storeReviews.value)
+  }
+
+  const resetStoreReviewsToDefaults = async () => {
+    const db = getDb()
+    const defaults = JSON.parse(JSON.stringify(defaultInitialStoreReviews))
+    if (db) {
+      try {
+        for (const item of defaults) {
+          const { id, ...data } = item
+          await setDoc(doc(db, 'store_reviews', id), {
+            ...data,
+            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+          }, { merge: true })
+        }
+      } catch (err) {
+        console.warn('Firestore resetStoreReviewsToDefaults warning:', err)
+      }
+    }
+    storeReviews.value = defaults
+    saveToCache('ystore_store_reviews_cache', defaults)
+    return defaults
+  }
+
+  const saveGoogleReviewsConfig = async (cfgData) => {
+    const db = getDb()
+    const payload = {
+      source: cfgData.source || 'manual',
+      googlePlaceId: (cfgData.googlePlaceId || '').trim(),
+      googleApiKey: (cfgData.googleApiKey || '').trim(),
+      minRating: Math.min(5, Math.max(1, Number(cfgData.minRating) || 4)),
+      maxReviews: Math.min(20, Math.max(1, Number(cfgData.maxReviews) || 6)),
+      lastSyncedAt: cfgData.lastSyncedAt ?? googleReviewsConfig.value.lastSyncedAt ?? null,
+      cachedGoogleReviews: Array.isArray(cfgData.cachedGoogleReviews)
+        ? cfgData.cachedGoogleReviews
+        : (googleReviewsConfig.value.cachedGoogleReviews || []),
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'config', 'google_reviews'), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveGoogleReviewsConfig warning:', err)
+      }
+    }
+    googleReviewsConfig.value = { ...defaultGoogleReviewsConfig, ...payload, updatedAt: new Date().toISOString() }
+    saveToCache('ystore_google_reviews_config_cache', googleReviewsConfig.value)
+    return googleReviewsConfig.value
+  }
+
+  /**
+   * Google Places API (New v1) integration helper.
+   * Prepped for live Google Business Profile / Place ID syncing once API key & Place ID are supplied.
+   */
+  const syncGoogleReviews = async (placeIdOverride = null, apiKeyOverride = null) => {
+    const placeId = (placeIdOverride ?? googleReviewsConfig.value.googlePlaceId ?? '').trim()
+    const apiKey = (apiKeyOverride ?? googleReviewsConfig.value.googleApiKey ?? '').trim()
+    if (!placeId || !apiKey) {
+      throw new Error('Please enter both a Google Place ID and a Google Places API Key first.')
+    }
+
+    const endpoint = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?fields=displayName,rating,userRatingCount,reviews&key=${encodeURIComponent(apiKey)}`
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      let errMsg = `Google Places API returned HTTP ${response.status}`
+      try {
+        const errJson = await response.json()
+        if (errJson?.error?.message) errMsg = errJson.error.message
+      } catch {}
+      throw new Error(errMsg)
+    }
+
+    const data = await response.json()
+    const rawReviews = Array.isArray(data.reviews) ? data.reviews : []
+    const normalized = rawReviews
+      .map((rev, idx) => {
+        const authorName = rev.authorAttribution?.displayName || 'Google Customer'
+        const quoteText = rev.text?.text || rev.originalText?.text || ''
+        return {
+          id: `google-rev-${idx}-${Date.now()}`,
+          name: authorName,
+          initials: computeInitials(authorName),
+          rating: Number(rev.rating) || 5,
+          quote: quoteText,
+          badge: rev.relativePublishTimeDescription
+            ? `Google Review • ${rev.relativePublishTimeDescription}`
+            : 'Google Review',
+          source: 'google',
+          enabled: true
+        }
+      })
+      .filter((r) => Boolean(r.quote))
+
+    await saveGoogleReviewsConfig({
+      ...googleReviewsConfig.value,
+      googlePlaceId: placeId,
+      googleApiKey: apiKey,
+      lastSyncedAt: new Date().toISOString(),
+      cachedGoogleReviews: normalized
+    })
+
+    return normalized
+  }
+
+  // ==========================================
+  // PRODUCT-SPECIFIC CUSTOMER REVIEWS CRUD
+  // ==========================================
+  const saveProductReview = async (reviewData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || reviewData.id || `prod-rev-${Date.now()}`
+    const createdIso = reviewData.createdAt || new Date().toISOString()
+    const payload = {
+      productId: String(reviewData.productId || '').trim(),
+      productName: String(reviewData.productName || 'Product').trim(),
+      author: String(reviewData.author || 'Anonymous').trim(),
+      email: String(reviewData.email || '').trim(),
+      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
+      title: String(reviewData.title || '').trim(),
+      comment: String(reviewData.comment || '').trim(),
+      badge: String(reviewData.badge || 'Verified Customer').trim(),
+      status: reviewData.status || 'approved', // 'approved' | 'pending' | 'hidden'
+      adminReply: String(reviewData.adminReply || '').trim(),
+      createdAt: createdIso,
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'product_reviews', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveProductReview warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
+    const idx = productReviews.value.findIndex((r) => r.id === finalId)
+    if (idx !== -1) {
+      productReviews.value[idx] = updated
+    } else {
+      productReviews.value.unshift(updated)
+    }
+    saveToCache('ystore_product_reviews_cache', productReviews.value)
+    return finalId
+  }
+
+  const deleteProductReview = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'product_reviews', id))
+      } catch (err) {
+        console.warn('Firestore deleteProductReview warning:', err)
+      }
+    }
+    productReviews.value = productReviews.value.filter((r) => r.id !== id)
+    saveToCache('ystore_product_reviews_cache', productReviews.value)
+  }
+
+  const getReviewsForProduct = (productId, productName = '') => {
+    return (productReviews.value || []).filter((r) => {
+      if (r.status === 'hidden' || r.status === 'pending') return false
+      if (productId && r.productId && String(r.productId) === String(productId)) return true
+      if (productName && r.productName && r.productName.toLowerCase() === String(productName).toLowerCase()) return true
+      return false
+    })
+  }
+
   return {
     products,
     publishedProducts,
@@ -1889,6 +4772,11 @@ export const useStoreContent = () => {
     deleteOrder,
     saveBanner,
     deleteBanner,
+    guaranteeStats,
+    saveGuaranteeStat,
+    deleteGuaranteeStat,
+    resetGuaranteeStatsToDefaults,
+    defaultInitialGuaranteeStats,
     saveCustomerSegment,
     deleteCustomerSegment,
     savePurchaseOrder,
@@ -1900,6 +4788,49 @@ export const useStoreContent = () => {
     defaultInitialCategories,
     defaultInitialDiscounts,
     defaultInitialBlogs,
+    productStories,
+    saveStory,
+    deleteStory,
+    resetStoriesToDefaults,
+    defaultInitialStories,
+    bannerCategories,
+    saveBannerCategory,
+    deleteBannerCategory,
+    resetBannerCategoriesToDefaults,
+    defaultInitialBannerCategories,
+    bannerCategoriesHeader,
+    saveBannerCategoriesHeader,
+    defaultBannerCategoriesHeader,
+    categoryBanners,
+    saveCategoryBanner,
+    deleteCategoryBanner,
+    resetCategoryBannersToDefaults,
+    defaultInitialCategoryBanners,
+    collectionBanners,
+    saveCollectionBanner,
+    deleteCollectionBanner,
+    resetCollectionBannersToDefaults,
+    defaultInitialCollectionBanners,
+    themeConfig,
+    saveThemeConfig,
+    defaultThemeConfig,
+    headingSlides,
+    saveHeadingSlides,
+    defaultHeadingSlides,
+    storeReviews,
+    activeStoreReviews,
+    googleReviewsConfig,
+    saveStoreReview,
+    deleteStoreReview,
+    resetStoreReviewsToDefaults,
+    defaultInitialStoreReviews,
+    saveGoogleReviewsConfig,
+    syncGoogleReviews,
+    productReviews,
+    saveProductReview,
+    deleteProductReview,
+    getReviewsForProduct,
+    showBadgePills,
     isVideoFile
   }
 }

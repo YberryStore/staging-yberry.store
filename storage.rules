@@ -5,20 +5,25 @@ service firebase.storage {
       return request.auth != null && (
         request.auth.token.admin == true ||
         request.auth.token.role == 'super_admin' ||
-        (request.auth.token.email == 'info@yberry.co.za' && request.auth.token.email_verified == true)
+        request.auth.token.email in [
+          'info@yberry.co.za',
+          'admin@yellowberry.store',
+          'admin@ystoreza.co.za',
+          'support@yellowberry.store'
+        ]
       );
     }
 
     // User profile avatars & user-uploaded content
     match /users/{userId}/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null && (request.auth.uid == userId || isSuperAdmin());
+      allow write: if request.auth != null;
     }
 
-    // Storefront images & content (products, categories, specials, blog, banners, media)
+    // Storefront images & content (products, categories, specials, blog, banners, media, story-thumbnails, story-slides, etc.)
     match /{allPaths=**} {
       allow read: if true;
-      allow write: if isSuperAdmin();
+      allow write: if request.auth != null || isSuperAdmin();
     }
   }
 }

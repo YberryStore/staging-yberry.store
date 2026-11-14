@@ -442,25 +442,110 @@
 
           <!-- Column 2: Customer Reviews -->
           <div class="flex flex-col">
-            <h2 class="text-xl sm:text-2xl font-bold text-neutral-900 mb-5 tracking-tight">
-              Customer Reviews
-            </h2>
+            <div class="flex items-center justify-between gap-3 mb-5">
+              <div>
+                <h2 class="text-xl sm:text-2xl font-bold text-neutral-900 tracking-tight">
+                  Customer Reviews
+                </h2>
+                <p v-if="extendedReviews.length > 0" class="text-xs text-neutral-500 mt-0.5">
+                  {{ averageRating }} out of 5 ({{ extendedReviews.length }} {{ extendedReviews.length === 1 ? 'review' : 'reviews' }})
+                </p>
+              </div>
+              <button
+                type="button"
+                @click="showWriteReviewForm = !showWriteReviewForm"
+                class="px-4 py-2 rounded-full bg-neutral-900 hover:bg-neutral-800 text-[#F4EB6A] text-xs font-semibold transition-all cursor-pointer shrink-0 active:scale-95"
+              >
+                {{ showWriteReviewForm ? 'Close Form' : 'Write a Review' }}
+              </button>
+            </div>
+
+            <!-- Inline Write a Review Form -->
+            <div
+              v-if="showWriteReviewForm"
+              class="mb-6 p-5 rounded-2xl bg-neutral-50 border border-neutral-200 space-y-3"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-neutral-700">Share your experience</span>
+                <div class="flex items-center gap-1">
+                  <button
+                    v-for="s in 5"
+                    :key="s"
+                    type="button"
+                    @click="reviewForm.rating = s"
+                    class="p-0.5 cursor-pointer transition-transform hover:scale-110"
+                    :aria-label="`Rate ${s} stars`"
+                  >
+                    <FlowbiteIcon
+                      name="star"
+                      size="18"
+                      :fill="s <= reviewForm.rating"
+                      :class="s <= reviewForm.rating ? 'text-[#EAB308]' : 'text-neutral-300'"
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <input
+                  v-model="reviewForm.author"
+                  type="text"
+                  placeholder="Your Name *"
+                  class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 bg-white text-xs text-neutral-900 focus:outline-none focus:border-[#F4EB6A]"
+                />
+                <input
+                  v-model="reviewForm.title"
+                  type="text"
+                  placeholder="Review Headline (e.g. Great quality!)"
+                  class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 bg-white text-xs text-neutral-900 focus:outline-none focus:border-[#F4EB6A]"
+                />
+              </div>
+
+              <textarea
+                v-model="reviewForm.comment"
+                rows="3"
+                placeholder="Tell other shoppers what you loved about this product *"
+                class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 bg-white text-xs text-neutral-900 focus:outline-none focus:border-[#F4EB6A]"
+              ></textarea>
+
+              <div class="flex items-center justify-between gap-3 pt-1">
+                <span v-if="reviewFormMessage" class="text-xs font-medium text-emerald-700">{{ reviewFormMessage }}</span>
+                <span v-else-if="reviewFormError" class="text-xs font-medium text-red-600">{{ reviewFormError }}</span>
+                <span v-else class="text-[11px] text-neutral-400">Your review will appear below immediately.</span>
+
+                <button
+                  type="button"
+                  :disabled="reviewSubmitting"
+                  @click="handleSubmitProductReview"
+                  class="px-5 py-2 rounded-full bg-[#F4EB6A] hover:bg-[#e8df56] text-neutral-950 font-semibold text-xs transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {{ reviewSubmitting ? 'Submitting...' : 'Submit Review' }}
+                </button>
+              </div>
+            </div>
 
             <div v-if="customerReviews.length === 0" class="text-xs sm:text-sm text-neutral-500 font-light">
-              No reviews yet for this product.
+              No reviews yet for this product. Be the first to leave one!
             </div>
             <div v-else class="space-y-6">
               <div
                 v-for="(review, rIdx) in customerReviews"
-                :key="rIdx"
+                :key="review.id || rIdx"
                 class="flex flex-col gap-1.5"
               >
                 <!-- Stars and Title -->
                 <div class="flex items-center gap-2 flex-wrap">
                   <div class="flex items-center text-[#EAB308]">
-                    <FlowbiteIcon v-for="star in 5" :key="star" name="star" size="16" fill class="text-[#EAB308]" />
+                    <FlowbiteIcon
+                      v-for="star in 5"
+                      :key="star"
+                      name="star"
+                      size="16"
+                      :fill="star <= (Number(review.rating) || 5)"
+                      :class="star <= (Number(review.rating) || 5) ? 'text-[#EAB308]' : 'text-neutral-200'"
+                    />
                   </div>
-                  <span class="font-bold text-neutral-900 text-sm sm:text-base">
+                  <span v-if="review.title" class="font-bold text-neutral-900 text-sm sm:text-base">
                     {{ review.title }}
                   </span>
                 </div>
@@ -472,19 +557,27 @@
 
                 <!-- Review Author -->
                 <div class="text-xs text-neutral-500 font-light">
-                  — {{ review.author }} <span class="text-emerald-700 italic font-medium">({{ review.badge }})</span>
+                  — {{ review.author }} <span class="text-emerald-700 italic font-medium">({{ review.badge || 'Verified Customer' }})</span>
+                </div>
+
+                <!-- Admin Reply if any -->
+                <div
+                  v-if="review.adminReply"
+                  class="mt-1.5 pl-3 border-l-2 border-[#F4EB6A] text-xs text-neutral-600 bg-neutral-50 py-1.5 px-2.5 rounded-r-lg"
+                >
+                  <span class="font-semibold text-neutral-900">Ystore Reply:</span> {{ review.adminReply }}
                 </div>
               </div>
             </div>
 
             <!-- View all reviews button -->
             <button
-              v-if="customerReviews.length > 0"
+              v-if="extendedReviews.length > 0"
               type="button"
               @click="showReviewsModal = true"
               class="mt-8 w-full py-2.5 sm:py-3 px-6 rounded-full border border-neutral-700 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white text-neutral-900 font-medium text-xs sm:text-sm transition-all text-center cursor-pointer active:scale-98"
             >
-              View all reviews
+              View all reviews ({{ extendedReviews.length }})
             </button>
           </div>
 
@@ -665,17 +758,30 @@
           </div>
 
           <div class="divide-y divide-neutral-100 mt-4 space-y-4">
-            <div v-for="(review, idx) in extendedReviews" :key="idx" class="pt-4 flex flex-col gap-1.5">
+            <div v-for="(review, idx) in extendedReviews" :key="review.id || idx" class="pt-4 flex flex-col gap-1.5">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-1.5 text-[#EAB308]">
-                  <FlowbiteIcon v-for="star in 5" :key="star" name="star" size="15" fill class="text-[#EAB308]" />
+                  <FlowbiteIcon
+                    v-for="star in 5"
+                    :key="star"
+                    name="star"
+                    size="15"
+                    :fill="star <= (Number(review.rating) || 5)"
+                    :class="star <= (Number(review.rating) || 5) ? 'text-[#EAB308]' : 'text-neutral-200'"
+                  />
                 </div>
-                <span class="text-xs text-neutral-400">{{ review.date }}</span>
+                <span class="text-xs text-neutral-400">{{ formatReviewDate(review.createdAt || review.date) }}</span>
               </div>
-              <h4 class="font-bold text-neutral-900 text-sm">{{ review.title }}</h4>
+              <h4 v-if="review.title" class="font-bold text-neutral-900 text-sm">{{ review.title }}</h4>
               <p class="text-xs sm:text-sm text-neutral-600 font-light leading-relaxed">{{ review.comment }}</p>
               <div class="text-xs text-neutral-500 font-light mt-1">
-                — {{ review.author }} <span class="text-emerald-700 italic font-medium">({{ review.badge }})</span>
+                — {{ review.author }} <span class="text-emerald-700 italic font-medium">({{ review.badge || 'Verified Customer' }})</span>
+              </div>
+              <div
+                v-if="review.adminReply"
+                class="mt-1 pl-3 border-l-2 border-[#F4EB6A] text-xs text-neutral-600 bg-neutral-50 py-1.5 px-2.5 rounded-r-lg"
+              >
+                <span class="font-semibold text-neutral-900">Ystore Reply:</span> {{ review.adminReply }}
               </div>
             </div>
           </div>
@@ -724,6 +830,13 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import FlowbiteIcon from './FlowbiteIcon.vue'
+import { useStoreContent } from '../composables/useStoreContent'
+
+const { productReviews, saveProductReview, initContentListeners } = useStoreContent()
+
+onMounted(() => {
+  initContentListeners()
+})
 
 const props = defineProps({
   product: {
@@ -869,10 +982,84 @@ const features = [
   }
 ]
 
-// Customer reviews (populated from live product reviews)
-const customerReviews = []
+// Customer reviews (populated from live Firestore product_reviews)
+const extendedReviews = computed(() => {
+  const pid = props.product?.id ? String(props.product.id) : ''
+  const pname = (props.product?.name || '').toLowerCase().trim()
+  return (productReviews.value || []).filter((r) => {
+    if (r.status === 'hidden' || r.status === 'pending') return false
+    if (pid && r.productId && String(r.productId) === pid) return true
+    if (pname && r.productName && String(r.productName).toLowerCase().trim() === pname) return true
+    return false
+  })
+})
 
-const extendedReviews = []
+const customerReviews = computed(() => extendedReviews.value.slice(0, 3))
+
+const averageRating = computed(() => {
+  const list = extendedReviews.value
+  if (!list.length) return '5.0'
+  const sum = list.reduce((acc, r) => acc + (Number(r.rating) || 5), 0)
+  return (sum / list.length).toFixed(1)
+})
+
+const showWriteReviewForm = ref(false)
+const reviewSubmitting = ref(false)
+const reviewFormMessage = ref('')
+const reviewFormError = ref('')
+const reviewForm = ref({
+  author: '',
+  rating: 5,
+  title: '',
+  comment: ''
+})
+
+const handleSubmitProductReview = async () => {
+  reviewFormError.value = ''
+  reviewFormMessage.value = ''
+  if (!reviewForm.value.author?.trim()) {
+    reviewFormError.value = 'Please enter your name.'
+    return
+  }
+  if (!reviewForm.value.comment?.trim()) {
+    reviewFormError.value = 'Please write a short review comment.'
+    return
+  }
+  reviewSubmitting.value = true
+  try {
+    await saveProductReview({
+      productId: props.product?.id || props.product?.name || 'unknown',
+      productName: props.product?.name || 'Product',
+      author: reviewForm.value.author.trim(),
+      rating: reviewForm.value.rating || 5,
+      title: reviewForm.value.title.trim(),
+      comment: reviewForm.value.comment.trim(),
+      badge: 'Verified Customer',
+      status: 'approved'
+    })
+    reviewForm.value = { author: '', rating: 5, title: '', comment: '' }
+    reviewFormMessage.value = 'Thank you! Your review has been published.'
+    setTimeout(() => {
+      showWriteReviewForm.value = false
+      reviewFormMessage.value = ''
+    }, 1800)
+  } catch (err) {
+    reviewFormError.value = err?.message || 'Could not submit review. Please try again.'
+  } finally {
+    reviewSubmitting.value = false
+  }
+}
+
+const formatReviewDate = (val) => {
+  if (!val) return ''
+  try {
+    const d = val?.toDate ? val.toDate() : new Date(val)
+    if (isNaN(d.getTime())) return String(val)
+    return d.toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' })
+  } catch {
+    return ''
+  }
+}
 
 // Product-specific FAQs: only questions and answers explicitly added to this product
 const productFaqs = computed(() => {

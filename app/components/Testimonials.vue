@@ -11,25 +11,33 @@
         </p>
       </div>
 
-      <!-- 3 Testimonial Cards Grid -->
+      <!-- Testimonial Cards Grid -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
         <div
-          v-for="item in testimonials"
-          :key="item.name"
+          v-for="(item, idx) in activeStoreReviews"
+          :key="item.id || item.name || idx"
           class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm hover:shadow-lg border border-neutral-100 hover:border-[#F4EB6A] transition-all duration-300 flex flex-col justify-between"
         >
           <div>
             <!-- Stars -->
-            <div class="flex items-center gap-1 text-[#F4EB6A] mb-4">
-              <FlowbiteIcon
-                v-for="s in 5"
-                :key="s"
-                name="star"
-                size="18"
-                stroke-width="1.5"
-                fill
-                class="text-[#DEC02A]"
-              />
+            <div class="flex items-center justify-between gap-2 mb-4">
+              <div class="flex items-center gap-1 text-[#F4EB6A]">
+                <FlowbiteIcon
+                  v-for="s in 5"
+                  :key="s"
+                  name="star"
+                  size="18"
+                  stroke-width="1.5"
+                  :fill="s <= (Number(item.rating) || 5)"
+                  :class="s <= (Number(item.rating) || 5) ? 'text-[#DEC02A]' : 'text-neutral-200'"
+                />
+              </div>
+              <span
+                v-if="item.source === 'google'"
+                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200"
+              >
+                Google
+              </span>
             </div>
 
             <!-- Review Text -->
@@ -40,8 +48,8 @@
 
           <!-- Customer Info -->
           <div class="flex items-center gap-3 pt-4 border-t border-neutral-100">
-            <div class="w-10 h-10 rounded-full bg-[#FEFEEB] border border-[#F4EB6A] flex items-center justify-center font-bold text-neutral-800 text-sm">
-              {{ item.initials }}
+            <div class="w-10 h-10 rounded-full bg-[#FEFEEB] border border-[#F4EB6A] flex items-center justify-center font-bold text-neutral-800 text-sm shrink-0">
+              {{ item.initials || (item.name || 'YB').slice(0, 2).toUpperCase() }}
             </div>
             <div>
               <h4 class="text-sm font-semibold text-neutral-900">
@@ -49,7 +57,7 @@
               </h4>
               <div class="flex items-center gap-1 text-xs text-neutral-400">
                 <FlowbiteIcon name="check" size="12" stroke-width="2" class="text-green-500" />
-                <span>Verified Buyer</span>
+                <span>{{ item.badge || 'Verified Buyer' }}</span>
               </div>
             </div>
           </div>
@@ -60,23 +68,13 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
 import FlowbiteIcon from './FlowbiteIcon.vue'
+import { useStoreContent } from '../composables/useStoreContent'
 
-const testimonials = [
-  {
-    name: 'Sarah Mkhize',
-    initials: 'SM',
-    quote: 'Ystore delivered our package to Durban in less than 48 hours. The rainbow stacker and wooden train are beautifully made with smooth non-toxic paints. My toddlers play with them every morning.'
-  },
-  {
-    name: 'Liam Van Der Merwe',
-    initials: 'LV',
-    quote: 'The collectible figure exceeded all expectations! The articulation and vintage details are exceptional. It is so hard to find high quality toys that survive rough daily play, but Ystore nailed it.'
-  },
-  {
-    name: 'Amanda Naidoo',
-    initials: 'AN',
-    quote: 'Customer service was super responsive when I had questions about shipping before my daughter’s birthday. The afternoon tea set is absolutely adorable and well packaged. Highly recommended!'
-  }
-]
+const { activeStoreReviews, initContentListeners } = useStoreContent()
+
+onMounted(() => {
+  initContentListeners()
+})
 </script>

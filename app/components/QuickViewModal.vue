@@ -44,7 +44,7 @@
                   @error="modalImageLoading = false"
                 />
                 <span
-                  v-if="product.tag"
+                  v-if="showBadgePills && product.tag"
                   class="absolute top-3 left-3 bg-[#FEFEEB] text-neutral-900 border border-[#F4EB6A] text-xs font-semibold px-3 py-1 rounded-full shadow-xs z-20"
                 >
                   {{ product.tag }}
@@ -156,6 +156,9 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import FlowbiteIcon from './FlowbiteIcon.vue'
+import { useStoreContent } from '../composables/useStoreContent'
+
+const { showBadgePills } = useStoreContent()
 
 const props = defineProps({
   isOpen: {

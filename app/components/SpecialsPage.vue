@@ -75,7 +75,7 @@
           <!-- Top Row: Badge & Countdown Timer -->
           <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6">
             <div class="flex items-center gap-3">
-              <span class="inline-flex items-center gap-1.5 bg-[#FEFEEB] text-neutral-900 border border-[#F4EB6A] text-xs font-bold px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-sm">
+              <span v-if="showBadgePills" class="inline-flex items-center gap-1.5 bg-[#FEFEEB] text-neutral-900 border border-[#F4EB6A] text-xs font-bold px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-sm">
                 <FlowbiteIcon name="fire" size="14" stroke-width="2" class="text-red-500" />
                 <span>Limited-Time Specials</span>
               </span>
@@ -248,8 +248,8 @@
               />
 
               <!-- Top Left Badges -->
-              <div class="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-                <span class="bg-[#F4EB6A] text-neutral-900 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
+              <div v-if="showBadgePills && (product.discount || product.tag)" class="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+                <span v-if="product.discount" class="bg-[#F4EB6A] text-neutral-900 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
                   -{{ product.discount }}% OFF
                 </span>
                 <span
@@ -344,7 +344,7 @@
     <section v-if="bundles.length > 0" class="py-12 sm:py-16 bg-[#FFFEE5]/60 border-y border-[#F4EB6A]/40 font-poppins">
       <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center max-w-2xl mx-auto mb-10">
-          <span class="inline-block bg-[#FEFEEB] text-neutral-900 border border-[#F4EB6A] text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-2">
+          <span v-if="showBadgePills" class="inline-block bg-[#FEFEEB] text-neutral-900 border border-[#F4EB6A] text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-2">
             Curated Bundles
           </span>
           <h2 class="text-3xl sm:text-4xl font-bold text-neutral-900 tracking-tight">
@@ -454,7 +454,8 @@ const {
   specialProducts: specialsProducts,
   categories: liveCategories,
   discounts: liveDiscounts,
-  initContentListeners
+  initContentListeners,
+  showBadgePills
 } = useStoreContent()
 
 const categoryMenuOpen = ref(false)

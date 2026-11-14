@@ -5,19 +5,19 @@
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >
-    <!-- Slide Container with Full-Width Object-Cover Dimensions (1920x800 Desktop, 700x700 Mobile) -->
+    <!-- Slide Container with Full-Width Auto Height (No 1920x800 Limit) -->
     <div
       ref="bannerFrameRef"
-      class="relative w-full hero-banner-frame aspect-square max-h-[700px] sm:aspect-[1920/800] sm:max-h-[800px] overflow-hidden"
+      class="relative w-full hero-banner-frame h-auto overflow-hidden"
     >
-      <transition-group name="fade" tag="div" class="relative w-full h-full">
+      <transition-group name="fade" tag="div" class="relative w-full h-auto">
         <div
           v-for="(slide, index) in slides"
           :key="slide.id"
           v-show="currentSlide === index"
           :class="[
-            'absolute inset-0 w-full h-full',
-            currentSlide === index ? 'hero-slide-active z-10' : 'pointer-events-none z-0'
+            'w-full',
+            currentSlide === index ? 'relative hero-slide-active z-10 w-full h-auto' : 'absolute inset-0 pointer-events-none z-0'
           ]"
         >
           <!-- Full Cover Background Media: Responsive Separate Mobile Asset or Unified Asset -->
@@ -33,17 +33,19 @@
               playsinline
               webkit-playsinline
               preload="auto"
-              class="sm:hidden block absolute inset-0 w-full h-full object-cover object-center"
-              style="object-fit: cover !important; object-position: center !important; width: 100%; height: 100%;"
+              class="sm:hidden block w-full h-auto object-cover object-center"
+              style="object-fit: cover !important; object-position: center !important; width: 100%; height: auto;"
               :aria-label="slide.altText || slide.title"
             ></video>
             <img
               v-else-if="slide.mobileUrl"
               :src="slide.mobileUrl"
               :alt="slide.altText || slide.title"
-              class="sm:hidden block absolute inset-0 w-full h-full object-cover object-center"
-              style="object-fit: cover !important; object-position: center !important; width: 100%; height: 100%;"
-              loading="eager"
+              class="sm:hidden block w-full h-auto object-cover object-center"
+              style="object-fit: cover !important; object-position: center !important; width: 100%; height: auto;"
+              :loading="index === 0 ? 'eager' : 'lazy'"
+              :fetchpriority="index === 0 ? 'high' : 'low'"
+              decoding="async"
             />
 
             <!-- Desktop Presentation (>= 640px) -->
@@ -57,17 +59,19 @@
               playsinline
               webkit-playsinline
               preload="auto"
-              class="hidden sm:block absolute inset-0 w-full h-full object-cover object-center transform scale-100 group-hover:scale-102 transition-transform duration-700 ease-out"
-              style="object-fit: cover !important; object-position: center !important; width: 100%; height: 100%;"
+              class="hidden sm:block w-full h-auto min-h-[380px] object-cover object-center transform scale-100 group-hover:scale-102 transition-transform duration-700 ease-out"
+              style="object-fit: cover !important; object-position: center !important; width: 100%; height: auto;"
               :aria-label="slide.altText || slide.title"
             ></video>
             <img
               v-else-if="slide.desktopUrl"
               :src="slide.desktopUrl"
               :alt="slide.altText || slide.title"
-              class="hidden sm:block absolute inset-0 w-full h-full object-cover object-center transform scale-100 group-hover:scale-102 transition-transform duration-700 ease-out"
-              style="object-fit: cover !important; object-position: center !important; width: 100%; height: 100%;"
-              loading="eager"
+              class="hidden sm:block w-full h-auto min-h-[380px] object-cover object-center transform scale-100 group-hover:scale-102 transition-transform duration-700 ease-out"
+              style="object-fit: cover !important; object-position: center !important; width: 100%; height: auto;"
+              :loading="index === 0 ? 'eager' : 'lazy'"
+              :fetchpriority="index === 0 ? 'high' : 'low'"
+              decoding="async"
             />
           </template>
 
@@ -83,42 +87,44 @@
               playsinline
               webkit-playsinline
               preload="auto"
-              class="absolute inset-0 w-full h-full object-cover object-center transform scale-100 group-hover:scale-102 transition-transform duration-700 ease-out"
-              style="object-fit: cover !important; object-position: center !important; width: 100%; height: 100%;"
+              class="w-full h-auto sm:min-h-[380px] object-cover object-center transform scale-100 group-hover:scale-102 transition-transform duration-700 ease-out block"
+              style="object-fit: cover !important; object-position: center !important; width: 100%; height: auto;"
               :aria-label="slide.altText || slide.title"
             ></video>
             <img
               v-else-if="slide.desktopUrl || slide.mobileUrl"
               :src="slide.desktopUrl || slide.mobileUrl"
               :alt="slide.altText || slide.title"
-              class="absolute inset-0 w-full h-full object-cover object-center transform scale-100 group-hover:scale-102 transition-transform duration-700 ease-out"
-              style="object-fit: cover !important; object-position: center !important; width: 100%; height: 100%;"
-              loading="eager"
+              class="w-full h-auto sm:min-h-[380px] object-cover object-center transform scale-100 group-hover:scale-102 transition-transform duration-700 ease-out block"
+              style="object-fit: cover !important; object-position: center !important; width: 100%; height: auto;"
+              :loading="index === 0 ? 'eager' : 'lazy'"
+              :fetchpriority="index === 0 ? 'high' : 'low'"
+              decoding="async"
             />
           </template>
 
           <!-- Gradient Overlays for Readability -->
-          <div class="absolute inset-0 bg-gradient-to-r from-neutral-950/85 via-neutral-950/45 to-transparent hidden sm:block pointer-events-none"></div>
-          <div class="absolute inset-0 bg-gradient-to-b from-neutral-950/85 via-neutral-950/40 to-transparent sm:hidden pointer-events-none"></div>
+          <div class="absolute inset-0 bg-gradient-to-r from-neutral-950/85 via-neutral-950/45 to-transparent hidden sm:block pointer-events-none z-[1]"></div>
+          <div class="absolute inset-0 bg-gradient-to-b from-neutral-950/85 via-neutral-950/40 to-transparent sm:hidden pointer-events-none z-[1]"></div>
 
-          <!-- Aligned Hero Caption Content Container: Top-aligned on mobile in marked banner zone, centered on desktop -->
-          <div class="relative z-10 w-full h-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex items-start sm:items-center pt-6 sm:pt-0 pointer-events-none">
-            <div class="max-w-xl text-white drop-shadow-md pointer-events-auto">
+          <!-- Aligned Hero Caption Content Container: Full Width & Auto-height overlay -->
+          <div class="absolute inset-0 z-10 w-full h-full px-4 sm:px-8 lg:px-16 xl:px-20 flex items-center py-6 sm:py-16 md:py-20 lg:py-24 pointer-events-none">
+            <div class="w-full max-w-4xl lg:max-w-5xl xl:max-w-6xl text-white drop-shadow-md pointer-events-auto">
               <span
-                v-if="slide.badge"
+                v-if="showBadgePills && slide.badge"
                 class="inline-block px-3 py-0.5 sm:px-3.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-[#F4EB6A] text-neutral-900 mb-2 sm:mb-3 shadow-sm tracking-wide"
               >
                 {{ slide.badge }}
               </span>
               <h1
                 v-if="slide.title"
-                class="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight text-white mb-2 sm:mb-4 leading-tight sm:leading-[1.15]"
+                class="w-full max-w-4xl text-2xl sm:text-[36px] font-medium tracking-tight text-white mb-2 sm:mb-4 leading-tight sm:leading-[1.25]"
               >
                 {{ slide.title }}
               </h1>
               <p
                 v-if="slide.description"
-                class="text-xs sm:text-base lg:text-lg text-neutral-200 mb-4 sm:mb-8 font-light leading-relaxed max-w-lg line-clamp-3 sm:line-clamp-none"
+                class="text-xs sm:text-base lg:text-lg text-neutral-200 mb-4 sm:mb-8 font-light leading-relaxed max-w-2xl line-clamp-3 sm:line-clamp-none"
               >
                 {{ slide.description }}
               </p>
@@ -135,17 +141,6 @@
           </div>
         </div>
       </transition-group>
-
-      <!-- Left Arrow Navigation -->
-      <button
-        v-if="slides.length > 1"
-        type="button"
-        @click="prevSlide"
-        class="absolute left-2 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-[#FAF7BA]/90 hover:bg-[#F4EB6A] text-neutral-900 flex items-center justify-center shadow-xl transition-all duration-200 hover:scale-110 active:scale-95 z-20 backdrop-blur-sm"
-        aria-label="Previous slide"
-      >
-        <FlowbiteIcon name="chevron-left" size="18" class="sm:w-[22px] sm:h-[22px]" stroke-width="2" />
-      </button>
 
       <!-- Right Arrow Navigation -->
       <button
@@ -200,7 +195,7 @@ import { useStoreContent } from '../composables/useStoreContent'
 
 const SLIDE_DURATION = 5000
 
-const { activeBanners, initContentListeners, isVideoFile } = useStoreContent()
+const { activeBanners, initContentListeners, isVideoFile, showBadgePills } = useStoreContent()
 
 const bannerFrameRef = ref(null)
 const currentSlide = ref(0)
@@ -371,15 +366,8 @@ onUnmounted(() => {
 
 <style scoped>
 .hero-banner-frame {
-  aspect-ratio: 1 / 1;
-  max-height: 700px;
-}
-
-@media (min-width: 640px) {
-  .hero-banner-frame {
-    aspect-ratio: 1920 / 800;
-    max-height: 800px;
-  }
+  width: 100%;
+  height: auto;
 }
 
 @keyframes bannerProgressFill {

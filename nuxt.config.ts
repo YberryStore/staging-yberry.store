@@ -1,19 +1,18 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
-// Calculate baseURL: defaults to '/staging-yberry.store/' for GitHub Pages, or '/' for local dev / root domains
+// Calculate baseURL: defaults to '/' for root domains and production, or GitHub Pages subpath if in GitHub Actions
 const getBaseURL = () => {
   if (process.env.NUXT_APP_BASE_URL) return process.env.NUXT_APP_BASE_URL
-  if (process.env.NODE_ENV === 'development') return '/'
-  if (process.env.GITHUB_REPOSITORY) {
+  if (process.env.GITHUB_ACTIONS && process.env.GITHUB_REPOSITORY) {
     const repo = process.env.GITHUB_REPOSITORY.split('/')[1]
     return `/${repo}/`
   }
-  return '/staging-yberry.store/'
+  return '/'
 }
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
+  devtools: { enabled: false },
   ssr: false, // Pure client-side SPA mode for zero-latency static hosting
   modules: ['@nuxtjs/tailwindcss'],
   css: ['~/assets/css/main.css'],
@@ -53,7 +52,11 @@ export default defineNuxtConfig({
         }
       ],
       link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+        { rel: 'preconnect', href: 'https://firebasestorage.googleapis.com', crossorigin: '' },
+        { rel: 'dns-prefetch', href: 'https://firebasestorage.googleapis.com' },
+        { rel: 'preconnect', href: 'https://firestore.googleapis.com', crossorigin: '' },
+        { rel: 'dns-prefetch', href: 'https://firestore.googleapis.com' }
       ]
     }
   }

@@ -108,6 +108,24 @@ service cloud.firestore {
       allow read, write: if isApprovedAdmin();
     }
 
+    // 7. Storefront & Product Customer Reviews
+    match /store_reviews/{docId} {
+      allow read: if true;
+      allow write: if isApprovedAdmin();
+    }
+
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if isApprovedAdmin();
+    }
+
+    match /product_reviews/{docId} {
+      allow read: if true;
+      allow create: if request.resource.data.author is string
+                    && request.resource.data.comment is string;
+      allow update, delete: if isApprovedAdmin();
+    }
+
     // Default fallback
     match /{document=**} {
       allow read, write: if isApprovedAdmin();

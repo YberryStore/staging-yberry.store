@@ -9,12 +9,16 @@
           class="absolute inset-0 w-full h-full object-cover object-center opacity-40 mix-blend-luminosity filter brightness-90 hover:scale-103 transition-transform duration-700"
           style="object-fit: cover !important; object-position: center !important;"
           loading="lazy"
+          decoding="async"
         />
         <div class="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-950/80 to-transparent"></div>
 
         <!-- Content Card Overlay -->
         <div class="relative z-10 max-w-xl p-8 sm:p-14">
-          <span class="inline-block bg-[#FEFEEB] text-neutral-900 border border-[#F4EB6A] text-xs font-semibold px-3.5 py-1 rounded-full uppercase tracking-wider mb-4 shadow-sm">
+          <span
+            v-if="showBadgePills"
+            class="inline-block bg-[#FEFEEB] text-neutral-900 border border-[#F4EB6A] text-xs font-semibold px-3.5 py-1 rounded-full uppercase tracking-wider mb-4 shadow-sm"
+          >
             Limited time offer
           </span>
 
@@ -41,4 +45,7 @@
 
 <script setup>
 import FlowbiteIcon from './FlowbiteIcon.vue'
+import { useStoreContent } from '../composables/useStoreContent'
+
+const { showBadgePills } = useStoreContent()
 </script>

@@ -63,7 +63,7 @@
       <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div>
           <!-- Tag matching reference "Plan Trip" -->
-          <span class="inline-block bg-neutral-100 text-neutral-700 border border-neutral-200/80 text-xs font-medium px-3.5 py-1 rounded-full uppercase tracking-wider mb-4 shadow-2xs">
+          <span v-if="showBadgePills" class="inline-block bg-neutral-100 text-neutral-700 border border-neutral-200/80 text-xs font-medium px-3.5 py-1 rounded-full uppercase tracking-wider mb-4 shadow-2xs">
             Custom Orders &amp; Support
           </span>
 
@@ -385,6 +385,9 @@
 <script setup>
 import { ref } from 'vue'
 import FlowbiteIcon from './FlowbiteIcon.vue'
+import { useStoreContent } from '../composables/useStoreContent'
+
+const { showBadgePills } = useStoreContent()
 
 defineEmits(['back-home', 'view-specials'])
 
