@@ -1,28 +1,76 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 overflow-y-auto">
-    <!-- Backdrop Blur & Darken -->
-    <div
-      class="fixed inset-0 bg-neutral-900/70 backdrop-blur-sm transition-opacity"
-      @click="handleClose"
-    ></div>
+  <section class="min-h-screen bg-neutral-50/70 py-8 sm:py-12 font-poppins">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <!-- Dedicated Page Breadcrumb & Journey Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <button
+          type="button"
+          @click="handleClose"
+          class="inline-flex items-center gap-2 text-xs font-semibold text-neutral-600 hover:text-neutral-900 transition-colors cursor-pointer self-start"
+        >
+          <FlowbiteIcon name="arrow-left" size="16" stroke-width="2" />
+          <span>Back to Store</span>
+        </button>
 
-    <!-- Modal Center Alignment Container -->
-    <div class="min-h-full flex items-center justify-center p-3 sm:p-6 lg:p-8">
+        <!-- Customer Journey Stepper -->
+        <ol class="flex items-center gap-2 sm:gap-3 text-[11px] font-semibold">
+          <li class="flex items-center gap-1.5 text-emerald-700">
+            <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px]">✓</span>
+            <span>Cart</span>
+          </li>
+          <span class="text-neutral-300">/</span>
+          <li class="flex items-center gap-1.5" :class="orderConfirmed ? 'text-emerald-700' : 'text-neutral-900'">
+            <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px]" :class="orderConfirmed ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-900 text-[#F4EB6A]'">
+              {{ orderConfirmed ? '✓' : '2' }}
+            </span>
+            <span>Checkout &amp; Payment</span>
+          </li>
+          <span class="text-neutral-300">/</span>
+          <li class="flex items-center gap-1.5" :class="orderConfirmed ? 'text-neutral-900' : 'text-neutral-400'">
+            <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px]" :class="orderConfirmed ? 'bg-neutral-900 text-[#F4EB6A]' : 'bg-neutral-200 text-neutral-500'">
+              3
+            </span>
+            <span>Confirmed</span>
+          </li>
+        </ol>
+      </div>
+
+      <!-- Empty Cart Guard -->
       <div
-        class="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-neutral-200 overflow-hidden transform transition-all z-10"
-        @click.stop
+        v-if="!orderConfirmed && (!cartItems || cartItems.length === 0)"
+        class="bg-white rounded-3xl border border-neutral-200 p-10 text-center space-y-4 shadow-xs"
       >
-        <!-- Top Sticky Header -->
-        <div class="px-6 py-4 bg-white border-b border-neutral-100 flex items-center justify-between sticky top-0 z-20">
+        <div class="w-14 h-14 rounded-2xl bg-neutral-100 text-neutral-500 flex items-center justify-center mx-auto">
+          <FlowbiteIcon name="bag" size="24" stroke-width="1.6" />
+        </div>
+        <h2 class="text-xl font-bold text-neutral-900">Your bag is currently empty</h2>
+        <p class="text-xs sm:text-sm text-neutral-500 max-w-md mx-auto">
+          Add items to your shopping bag before proceeding through checkout.
+        </p>
+        <button
+          type="button"
+          @click="handleClose"
+          class="btn-primary !px-6 !py-2.5 !text-xs"
+        >
+          Continue Shopping
+        </button>
+      </div>
+
+      <div
+        v-else
+        class="relative w-full bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden"
+      >
+        <!-- Top Page Card Header -->
+        <div class="px-6 py-4 bg-white border-b border-neutral-100 flex items-center justify-between">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-neutral-900 text-[#F4EB6A] flex items-center justify-center shrink-0">
               <FlowbiteIcon name="shield-check" size="20" stroke-width="1.8" />
             </div>
             <div>
               <div class="flex items-center gap-2">
-                <h3 class="text-base sm:text-lg font-bold text-neutral-900">
+                <h1 class="text-base sm:text-lg font-bold text-neutral-900">
                   {{ orderConfirmed ? 'Order Confirmed' : 'Secure Checkout' }}
-                </h3>
+                </h1>
                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
                   256-Bit SSL Encrypted
                 </span>
@@ -35,11 +83,11 @@
 
           <button
             type="button"
-            @click="handleClose"
-            class="w-9 h-9 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-neutral-900 flex items-center justify-center cursor-pointer transition-colors"
-            title="Close Checkout"
+            @click="$emit('open-cart')"
+            class="px-3.5 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
           >
-            <FlowbiteIcon name="close" size="16" stroke-width="2" />
+            <FlowbiteIcon name="bag" size="14" stroke-width="1.8" />
+            <span>Edit Bag</span>
           </button>
         </div>
 
@@ -525,18 +573,18 @@
         </div>
       </div>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import FlowbiteIcon from './FlowbiteIcon.vue'
 import { useStoreContent } from '../composables/useStoreContent'
 
 const props = defineProps({
   isOpen: {
     type: Boolean,
-    default: false
+    default: true
   },
   cartItems: {
     type: Array,
@@ -760,5 +808,43 @@ const handleFinish = () => {
   confirmedOrder.value = null
   emit('close')
 }
+
+// Track Checkout Page View & Journey Steps for Google Tag / GA4
+const pushCheckoutTagEvent = (eventName, params = {}) => {
+  if (typeof window === 'undefined') return
+  window.dataLayer = window.dataLayer || []
+  window.dataLayer.push({ event: eventName, ...params })
+  if (typeof window.gtag === 'function') {
+    window.gtag('event', eventName, params)
+  }
+}
+
+onMounted(() => {
+  if (props.cartItems?.length) {
+    pushCheckoutTagEvent('page_view', {
+      page_title: 'Secure Checkout | Yellow Berry Store',
+      page_location: window.location.href,
+      page_path: '/checkout'
+    })
+  }
+})
+
+watch(() => form.value.deliveryMethod, (method) => {
+  if (!props.cartItems?.length) return
+  pushCheckoutTagEvent('add_shipping_info', {
+    currency: 'ZAR',
+    value: grandTotal.value,
+    shipping_tier: method
+  })
+})
+
+watch(() => form.value.paymentMethod, (method) => {
+  if (!props.cartItems?.length) return
+  pushCheckoutTagEvent('add_payment_info', {
+    currency: 'ZAR',
+    value: grandTotal.value,
+    payment_type: method
+  })
+})
 </script>
 

@@ -71,7 +71,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if request.auth != null && (request.auth.uid == userId || isApprovedAdmin());
       allow create, update: if request.auth != null && (request.auth.uid == userId || isApprovedAdmin());
-      allow delete: if isSuperAdmin();
+      allow delete: if isSuperAdmin() || (request.auth != null && request.auth.uid == userId && request.auth.token.firebase.sign_in_provider == 'anonymous');
     }
 
     // 4. Customer Orders (POPIA Protected)
@@ -124,6 +124,29 @@ service cloud.firestore {
       allow create: if request.resource.data.author is string
                     && request.resource.data.comment is string;
       allow update, delete: if isApprovedAdmin();
+    }
+
+    match /newsletter_subscribers/{docId} {
+      allow read: if isApprovedAdmin();
+      allow create: if request.resource.data.email is string;
+      allow update, delete: if isApprovedAdmin();
+    }
+
+    match /settings/subscription_mailbox {
+      allow read, write: if isApprovedAdmin();
+    }
+
+    // 8. Real-time Active Storefront Sessions (Zero PII - ephemeral view + timestamp heartbeat)
+    match /active_sessions/{sessionId} {
+      allow read: if isApprovedAdmin();
+      allow create, update: if request.resource.data.lastSeenMs is number
+                            && request.resource.data.view is string;
+      allow delete: if isApprovedAdmin() || resource.data.lastSeenMs is number;
+    }
+
+    // 9. Admin Marketing Mailer Campaigns
+    match /mailer_campaigns/{docId} {
+      allow read, write: if isApprovedAdmin();
     }
 
     // Default fallback

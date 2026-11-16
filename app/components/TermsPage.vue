@@ -150,7 +150,7 @@
             Users are strictly prohibited from:
           </p>
           <ul class="list-disc pl-5 text-sm text-neutral-700 space-y-1.5 leading-relaxed font-light">
-            <li>Attempting unauthorized access to CMS administrative terminals, Firebase datastores, or employee accounts.</li>
+            <li>Attempting unauthorized access to administrative terminals, backend datastores, or employee accounts.</li>
             <li>Conducting automated credential brute-force attacks, DDoS stress tests, or injecting malicious payloads.</li>
             <li>Exploiting promotional discount codes through fraudulent multi-account generation.</li>
           </ul>
@@ -171,8 +171,9 @@
             We reserve the right to revise these Terms periodically. For questions or support concerning an order or return:
           </p>
           <div class="text-sm text-neutral-800 space-y-1 pt-1 font-light">
-            <p><strong>Customer Support:</strong> <a href="mailto:support@yellowberry.store" class="text-neutral-900 font-medium underline">support@yellowberry.store</a></p>
-            <p><strong>Legal &amp; Business:</strong> <a href="mailto:admin@yellowberry.store" class="text-neutral-900 font-medium underline">admin@yellowberry.store</a></p>
+            <p><strong>Customer Support:</strong> <a :href="`mailto:${companyProfile.supportEmail}`" class="text-neutral-900 font-medium underline">{{ companyProfile.supportEmail }}</a></p>
+            <p><strong>Legal &amp; Business:</strong> <a :href="`mailto:${companyProfile.adminEmail}`" class="text-neutral-900 font-medium underline">{{ companyProfile.adminEmail }}</a></p>
+            <p v-if="companyProfile.streetAddress || companyProfile.city"><strong>Address:</strong> {{ [companyProfile.streetAddress, companyProfile.city, companyProfile.postalCode, companyProfile.country].filter(Boolean).join(', ') }}</p>
             <p><strong>Support Desk:</strong> <button type="button" @click="$emit('navigate-contact')" class="text-neutral-900 underline font-medium cursor-pointer">Contact Our Team</button></p>
           </div>
         </section>
@@ -183,6 +184,9 @@
 
 <script setup>
 import FlowbiteIcon from './FlowbiteIcon.vue'
+import { useStoreContent } from '../composables/useStoreContent'
+
+const { companyProfile } = useStoreContent()
 
 defineEmits(['back-home', 'navigate-contact', 'navigate-privacy'])
 </script>

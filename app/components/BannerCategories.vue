@@ -14,8 +14,8 @@
           </div>
 
           <!-- Main Title with rotating italic highlight word (Fade In from Bottom) -->
-          <h2 class="text-2xl sm:text-3xl lg:text-[32px] font-bold text-neutral-900 tracking-tight leading-tight flex items-baseline flex-wrap">
-            <span>{{ headerConfig.title || 'Latest' }}</span>
+          <h2 class="text-2xl sm:text-3xl lg:text-[32px] font-medium text-neutral-900 tracking-tight leading-tight flex items-baseline flex-wrap">
+            <span>{{ headingSlides?.categoryPrefix || headerConfig.title || 'The Perfect Gift for' }}</span>
             <span class="inline-block relative overflow-hidden align-baseline ml-2 min-h-[1.25em]">
               <transition name="heading-slide" mode="out-in">
                 <span
@@ -30,7 +30,7 @@
 
           <!-- Subtitle -->
           <p class="text-xs sm:text-sm text-neutral-500 mt-0.5 max-w-2xl">
-            {{ headerConfig.subtitle || 'Handpicked worlds of developmental toys, learning sets, and everyday joys.' }}
+            {{ headingSlides?.categorySubtitle || headerConfig.subtitle || "There's Always Something to Unwrap" }}
           </p>
         </div>
 
@@ -155,11 +155,9 @@ const headerConfig = computed(() => {
   return bannerCategoriesHeader?.value || defaultBannerCategoriesHeader
 })
 
-// Filtered categories
+// Filtered categories (only live categories from Firestore, no dummy fallback)
 const visibleCategories = computed(() => {
-  const list = bannerCategories?.value && bannerCategories.value.length > 0
-    ? bannerCategories.value
-    : defaultInitialBannerCategories
+  const list = Array.isArray(bannerCategories?.value) ? bannerCategories.value : []
   return list.filter((c) => c.enabled !== false && c.status !== 'draft')
 })
 
@@ -184,7 +182,7 @@ const scrollRight = () => {
 const cardImageIndices = ref({})
 let cardRotateTimer = null
 
-// Collect multiple images per category card (cat.image, cat.images, and related catalog products)
+// Use only the image/GIF loaded to the Banner Category item itself (never override with product images)
 const getCardImages = (cat) => {
   if (!cat) return ['/images/category-blocks.jpg']
   const images = []
@@ -194,27 +192,7 @@ const getCardImages = (cat) => {
       if (img && !images.includes(img)) images.push(img)
     })
   }
-
-  // Also include product images belonging to this category
-  if (products?.value && Array.isArray(products.value)) {
-    const targetName = (cat.targetCategory || cat.name || '').toLowerCase().trim()
-    const matchingProducts = products.value.filter((p) => {
-      const pCat = (p.category || '').toLowerCase().trim()
-      return pCat === targetName || pCat.includes(targetName)
-    })
-    for (const prod of matchingProducts) {
-      if (images.length >= 4) break
-      if (prod.image && !images.includes(prod.image)) images.push(prod.image)
-      if (Array.isArray(prod.images)) {
-        for (const pImg of prod.images) {
-          if (images.length >= 4) break
-          if (pImg && !images.includes(pImg)) images.push(pImg)
-        }
-      }
-    }
-  }
-
-  return images.length > 0 ? images : [cat.image || '/images/category-blocks.jpg']
+  return images.length > 0 ? images : ['/images/category-blocks.jpg']
 }
 
 const getCurrentImageIndex = (cat) => {

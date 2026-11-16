@@ -1,17 +1,59 @@
 <template>
   <div
-    class="group relative flex flex-col rounded-2xl bg-white border border-neutral-200/80 p-3 sm:p-4 shadow-sm hover:shadow-xl hover:border-[#F4EB6A] transition-all duration-300 font-poppins cursor-pointer"
+    class="group relative min-w-0 flex flex-col rounded-2xl bg-white border border-neutral-200/80 p-2.5 sm:p-4 shadow-sm hover:shadow-xl hover:border-[#F4EB6A] transition-all duration-300 font-poppins cursor-pointer"
     @click="$emit('view-product', product)"
   >
-    <!-- Image Area with Badges & Action Overlays -->
+    <!-- Image Area with Scrollable Gallery, Badges & Action Overlays -->
     <div class="relative aspect-square w-full rounded-xl overflow-hidden bg-neutral-100 mb-3 sm:mb-4">
-      <img
-        :src="product.image"
-        :alt="product.name"
-        class="w-full h-full object-cover object-center group-hover:scale-106 transition-transform duration-500 ease-out"
-        loading="lazy"
-        decoding="async"
-      />
+      <div
+        ref="imageTrackRef"
+        @scroll.passive="handleTrackScroll"
+        class="flex w-full h-full overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none touch-pan-x"
+      >
+        <div
+          v-for="(img, idx) in cardImages"
+          :key="idx"
+          class="w-full h-full shrink-0 snap-center overflow-hidden"
+        >
+          <img
+            :src="img"
+            :alt="`${product.name} ${idx + 1}`"
+            class="w-full h-full object-cover object-center group-hover:scale-106 transition-transform duration-500 ease-out"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      </div>
+
+      <!-- Gallery Carousel Controls & Dots (when product has multiple gallery images) -->
+      <template v-if="cardImages.length > 1">
+        <button
+          type="button"
+          @click.stop="prevCardImage"
+          class="absolute left-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/85 hover:bg-white text-neutral-800 flex items-center justify-center shadow-xs opacity-0 group-hover:opacity-100 transition-opacity z-10 cursor-pointer"
+          aria-label="Previous product image"
+        >
+          <FlowbiteIcon name="chevron-left" size="12" stroke-width="2.5" />
+        </button>
+        <button
+          type="button"
+          @click.stop="nextCardImage"
+          class="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/85 hover:bg-white text-neutral-800 flex items-center justify-center shadow-xs opacity-0 group-hover:opacity-100 transition-opacity z-10 cursor-pointer"
+          aria-label="Next product image"
+        >
+          <FlowbiteIcon name="chevron-right" size="12" stroke-width="2.5" />
+        </button>
+        <div class="absolute bottom-2 inset-x-0 flex items-center justify-center gap-1 z-10 pointer-events-none">
+          <span
+            v-for="(img, idx) in cardImages"
+            :key="idx"
+            :class="[
+              'h-1.5 rounded-full transition-all duration-300',
+              currentImageIndex === idx ? 'w-3.5 bg-[#F4EB6A] shadow-2xs' : 'w-1.5 bg-white/70'
+            ]"
+          ></span>
+        </div>
+      </template>
 
       <!-- Badge (Category / Sale) -->
       <div v-if="showBadgePills && (product.tag || product.discount)" class="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
@@ -89,12 +131,12 @@
       </div>
 
       <!-- Price & Add To Cart Button -->
-      <div class="mt-4 pt-3 border-t border-neutral-100 flex items-center justify-between gap-2">
-        <div class="flex flex-col">
-          <span class="text-base sm:text-lg font-semibold text-neutral-900 leading-tight">
+      <div class="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-neutral-100 flex items-center justify-between gap-1.5 sm:gap-2 min-w-0">
+        <div class="flex flex-col min-w-0">
+          <span class="text-sm sm:text-lg font-semibold text-neutral-900 leading-tight truncate">
             R{{ product.price }}
           </span>
-          <span v-if="product.originalPrice" class="text-xs text-neutral-400 line-through">
+          <span v-if="product.originalPrice" class="text-[11px] sm:text-xs text-neutral-400 line-through truncate">
             R{{ product.originalPrice }}
           </span>
         </div>
@@ -103,10 +145,11 @@
         <button
           type="button"
           @click.stop="$emit('add-to-cart', product)"
-          class="btn-primary !text-xs !py-2 !px-4 shadow-none hover:shadow-sm flex items-center gap-1.5 shrink-0"
+          class="btn-primary !text-[11px] sm:!text-xs !py-1.5 sm:!py-2 !px-2.5 sm:!px-4 shadow-none hover:shadow-sm flex items-center gap-1 sm:gap-1.5 shrink-0"
         >
-          <FlowbiteIcon name="cart" size="14" stroke-width="1.5" />
-          <span>Add to cart</span>
+          <FlowbiteIcon name="cart" size="13" stroke-width="1.5" />
+          <span class="sm:hidden">Add</span>
+          <span class="hidden sm:inline">Add to cart</span>
         </button>
       </div>
     </div>
@@ -114,7 +157,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import FlowbiteIcon from './FlowbiteIcon.vue'
 import { useStoreContent } from '../composables/useStoreContent'
 
@@ -130,6 +173,46 @@ const props = defineProps({
 const emit = defineEmits(['add-to-cart', 'quick-view', 'toggle-wishlist', 'view-product'])
 
 const isWishlisted = ref(false)
+const imageTrackRef = ref(null)
+const currentImageIndex = ref(0)
+
+const cardImages = computed(() => {
+  const list = []
+  const pushUnique = (src) => {
+    const url = typeof src === 'object' && src?.url ? String(src.url).trim() : String(src || '').trim()
+    if (url && !list.includes(url)) list.push(url)
+  }
+  pushUnique(props.product?.image)
+  if (Array.isArray(props.product?.gallery)) props.product.gallery.forEach(pushUnique)
+  if (Array.isArray(props.product?.images)) props.product.images.forEach(pushUnique)
+  return list.length > 0 ? list : ['/images/prod-robot.jpg']
+})
+
+const scrollToImage = (idx) => {
+  if (!imageTrackRef.value) return
+  const clamped = Math.max(0, Math.min(idx, cardImages.value.length - 1))
+  currentImageIndex.value = clamped
+  imageTrackRef.value.scrollTo({
+    left: clamped * imageTrackRef.value.clientWidth,
+    behavior: 'smooth'
+  })
+}
+
+const handleTrackScroll = () => {
+  if (!imageTrackRef.value || imageTrackRef.value.clientWidth <= 0) return
+  const idx = Math.round(imageTrackRef.value.scrollLeft / imageTrackRef.value.clientWidth)
+  currentImageIndex.value = Math.max(0, Math.min(idx, cardImages.value.length - 1))
+}
+
+const nextCardImage = () => {
+  if (cardImages.value.length <= 1) return
+  scrollToImage((currentImageIndex.value + 1) % cardImages.value.length)
+}
+
+const prevCardImage = () => {
+  if (cardImages.value.length <= 1) return
+  scrollToImage((currentImageIndex.value - 1 + cardImages.value.length) % cardImages.value.length)
+}
 
 const toggleWishlist = () => {
   isWishlisted.value = !isWishlisted.value

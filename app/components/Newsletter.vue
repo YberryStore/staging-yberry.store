@@ -1,17 +1,17 @@
 <template>
-  <section class="py-14 sm:py-20 font-poppins">
+  <section v-if="subscriptionConfig.enabled !== false" class="py-14 sm:py-20 font-poppins">
     <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
       <div class="rounded-3xl bg-neutral-100/90 border border-neutral-200/80 p-8 sm:p-14 lg:p-16 flex flex-col lg:flex-row items-center justify-between gap-10">
         <!-- Left Content -->
         <div class="max-w-lg text-center lg:text-left">
-          <span class="text-xs sm:text-sm font-semibold tracking-wider uppercase text-neutral-500 mb-2 block">
-            Never miss our deals
+          <span v-if="subscriptionConfig.eyebrow" class="text-xs sm:text-sm font-semibold tracking-wider uppercase text-neutral-500 mb-2 block">
+            {{ subscriptionConfig.eyebrow }}
           </span>
           <h2 class="text-3xl sm:text-[40px] font-medium text-neutral-900 tracking-tight leading-tight">
-            Subscribe
+            {{ subscriptionConfig.heading || 'Subscribe' }}
           </h2>
-          <p class="text-sm sm:text-base text-neutral-600 mt-3 leading-relaxed">
-            Get exclusive product drops, member-only discounts, and inspiring playroom ideas delivered straight to your inbox.
+          <p v-if="subscriptionConfig.description" class="text-sm sm:text-base text-neutral-600 mt-3 leading-relaxed">
+            {{ subscriptionConfig.description }}
           </p>
         </div>
 
@@ -23,14 +23,15 @@
                 v-model="email"
                 type="email"
                 required
-                placeholder="Enter your email address..."
+                :placeholder="subscriptionConfig.placeholder || 'Enter your email address...'"
                 class="w-full bg-transparent pl-4 pr-3 py-2 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none"
               />
               <button
                 type="submit"
-                class="btn-primary !text-xs sm:!text-sm !py-2.5 !px-5 shrink-0"
+                :disabled="submitting"
+                class="btn-primary !text-xs sm:!text-sm !py-2.5 !px-5 shrink-0 disabled:opacity-60"
               >
-                <span>Subscribe</span>
+                <span>{{ submitting ? 'Sending...' : (subscriptionConfig.buttonText || 'Subscribe') }}</span>
               </button>
             </div>
 
@@ -42,7 +43,7 @@
                 required
                 class="mt-0.5 rounded text-[#F4EB6A] focus:ring-[#F4EB6A] border-neutral-300"
               />
-              <span>I agree to receive promotional updates and news from Ystore. Unsubscribe anytime.</span>
+              <span>{{ subscriptionConfig.consentText || 'I agree to receive promotional updates and news from Ystore. Unsubscribe anytime.' }}</span>
             </label>
 
             <!-- Success notification -->
@@ -52,7 +53,16 @@
                 class="mt-2 p-3 rounded-xl bg-[#FEFEEB] border border-[#F4EB6A] text-[#423C27] text-xs font-medium flex items-center gap-2"
               >
                 <FlowbiteIcon name="check" size="16" stroke-width="2" class="text-green-600 shrink-0" />
-                <span>Thank you for subscribing! Check your inbox for a 10% welcome coupon.</span>
+                <span>{{ subscriptionConfig.successMessage || 'Thank you for subscribing! Check your inbox for a 10% welcome coupon.' }}</span>
+              </div>
+            </transition>
+
+            <transition name="fade">
+              <div
+                v-if="submitError"
+                class="mt-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"
+              >
+                {{ submitError }}
               </div>
             </transition>
           </form>
@@ -63,20 +73,41 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import FlowbiteIcon from './FlowbiteIcon.vue'
+import { useStoreContent } from '../composables/useStoreContent'
+
+const {
+  subscriptionConfig,
+  submitNewsletterSubscription,
+  initContentListeners
+} = useStoreContent()
+
+onMounted(() => {
+  initContentListeners()
+})
 
 const email = ref('')
-const agreed = ref(true)
+const agreed = ref(false)
 const subscribed = ref(false)
+const submitting = ref(false)
+const submitError = ref('')
 
-const handleSubscribe = () => {
-  if (email.value) {
+const handleSubscribe = async () => {
+  if (!email.value || submitting.value) return
+  submitting.value = true
+  submitError.value = ''
+  try {
+    await submitNewsletterSubscription(email.value, 'home')
     subscribed.value = true
     email.value = ''
     setTimeout(() => {
       subscribed.value = false
     }, 5000)
+  } catch (err) {
+    submitError.value = err?.message || 'Unable to subscribe right now. Please try again.'
+  } finally {
+    submitting.value = false
   }
 }
 </script>

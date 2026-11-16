@@ -45,9 +45,11 @@
           v-if="currentView === 'product'"
           :product="selectedProduct"
           @back-home="currentView = 'home'"
+          @select-category="handleCategorySelect"
           @add-to-cart="addToCart"
           @buy-now="handleBuyNow"
           @view-product="handleViewProduct"
+          @open-auth="isAuthOpen = true"
         />
 
         <!-- Dedicated Specials & Flash Deals Page -->
@@ -117,6 +119,18 @@
           @navigate-privacy="currentView = 'privacy'"
         />
 
+        <!-- Dedicated Checkout Page (Full-page customer journey & Google Tag tracking) -->
+        <CheckoutModal
+          v-else-if="currentView === 'checkout'"
+          :is-open="true"
+          :cart-items="cartItems"
+          :user="currentUser"
+          @close="currentView = 'home'"
+          @order-placed="handleOrderPlaced"
+          @open-cart="handleCheckoutOpenCart"
+          @require-auth="handleRequireAuthForCheckout"
+        />
+
         <!-- Dedicated Thank You & Order Confirmation Page -->
         <ThankYouPage
           v-else-if="currentView === 'thank-you'"
@@ -134,17 +148,17 @@
           <!-- Hero Banner Carousel (Hidden when no banner is loaded) -->
           <HeroBanner v-if="hasActiveBanners" />
 
+          <!-- Shop by category (Under the Banner) -->
+          <CategoryGrid
+            v-if="hasCategoriesWithProducts"
+            @select-category="handleCategorySelect"
+          />
+
           <!-- Banner Categories (Latest categories under Hero Banner) -->
           <BannerCategories @select-category="handleCategorySelect" />
 
           <!-- Value Propositions / Features Bar -->
           <FeaturesBar />
-
-          <!-- Shop by category (Hidden when no products loaded or mapped) -->
-          <CategoryGrid
-            v-if="hasCategoriesWithProducts"
-            @select-category="handleCategorySelect"
-          />
 
           <!-- Feature Products (Hidden when no featured products loaded or mapped) -->
           <FeaturedProducts
@@ -207,17 +221,6 @@
       @start-checkout="handleStartCheckout"
     />
 
-    <!-- Checkout Modal (Step-by-Step Checkout & Payment Gateways) -->
-    <CheckoutModal
-      :is-open="isCheckoutOpen"
-      :cart-items="cartItems"
-      :user="currentUser"
-      @close="isCheckoutOpen = false"
-      @order-placed="handleOrderPlaced"
-      @open-cart="handleCheckoutOpenCart"
-      @require-auth="handleRequireAuthForCheckout"
-    />
-
     <!-- Slide-over Auth & Account Portal (ystore-db) -->
     <AuthModal
       :is-open="isAuthOpen"
@@ -227,6 +230,7 @@
       @open-admin="openAdminDashboard"
       @navigate-specials="currentView = 'specials'"
       @navigate-contact="currentView = 'contact'"
+      @navigate-privacy="currentView = 'privacy'"
     />
 
     <!-- Quick View Modal -->
@@ -300,12 +304,15 @@ import { useCookieConsent } from './composables/useCookieConsent'
 
 const { currentUser, isAdmin, initFirebase } = useFirebaseAuth()
 const {
+  products,
+  publishedProducts,
   hasActiveBanners,
   hasCategoriesWithProducts,
   hasFeaturedProducts,
   hasNewArrivals,
   hasBestSellers,
-  initContentListeners
+  initContentListeners,
+  startSessionHeartbeat
 } = useStoreContent()
 
 const {
@@ -338,7 +345,7 @@ if (config?.public?.cmsSecretKey && !CMS_SECRET_KEYS.includes(config.public.cmsS
 }
 
 // Permitted navigation views (including secret cms-auth gateway and compliance pages)
-const VALID_VIEWS = ['home', 'category', 'product', 'specials', 'blog', 'contact', 'about', 'admin', 'cms-auth', 'privacy', 'terms', 'cookies', 'thank-you']
+const VALID_VIEWS = ['home', 'category', 'product', 'specials', 'blog', 'contact', 'about', 'admin', 'cms-auth', 'privacy', 'terms', 'cookies', 'checkout', 'thank-you']
 
 // Verify secret URL parameters (e.g. ?cms_auth=..., ?portal=..., ?cms_key=...)
 // Sets session authorization and purges secret parameters from address bar for anti-shoulder-surfing
@@ -545,11 +552,14 @@ const handlePopState = () => {
   }
 }
 
+let sessionHeartbeatCtrl = null
+
 onMounted(() => {
   initFirebase()
   initContentListeners()
   initConsent()
   initTrackingListener()
+  sessionHeartbeatCtrl = startSessionHeartbeat(() => currentView.value)
   if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search)
     const catParam = params.get('cat')
@@ -565,7 +575,16 @@ onMounted(() => {
   }
 })
 
+watch(currentView, (view) => {
+  if (sessionHeartbeatCtrl?.ping) {
+    sessionHeartbeatCtrl.ping(view)
+  }
+})
+
 onUnmounted(() => {
+  if (sessionHeartbeatCtrl?.stop) {
+    sessionHeartbeatCtrl.stop()
+  }
   if (typeof window !== 'undefined') {
     window.removeEventListener('popstate', handlePopState)
   }
@@ -650,26 +669,30 @@ const totalCartCount = computed(() => {
 
 const addToCart = (product) => {
   const quantityToAdd = product.qty || 1
-  const existingIndex = cartItems.value.findIndex(item => item.id === product.id)
+  const itemId = product.variantKey || (product.selectedColor ? `${product.id}::${product.selectedColor}` : product.id)
+  const displayName = product.selectedColor ? `${product.name} (${product.selectedColor})` : product.name
+  const existingIndex = cartItems.value.findIndex(item => item.id === itemId)
   
   if (existingIndex > -1) {
     cartItems.value[existingIndex].qty += quantityToAdd
   } else {
     cartItems.value.push({
-      id: product.id,
-      name: product.name,
-      price: product.price,
+      id: itemId,
+      productId: product.id,
+      name: displayName,
+      price: Number(product.price),
+      selectedColor: product.selectedColor || null,
       image: product.image,
       qty: quantityToAdd
     })
   }
   
   trackEcommerceEvent('add_to_cart', {
-    items: [{ id: product.id, name: product.name, price: product.price, quantity: quantityToAdd }],
-    value: product.price * quantityToAdd
+    items: [{ id: itemId, name: displayName, price: Number(product.price), quantity: quantityToAdd }],
+    value: Number(product.price) * quantityToAdd
   })
 
-  showToast('Added to Cart', `${product.name} (x${quantityToAdd}) added to your cart.`)
+  showToast('Added to Cart', `${displayName} (x${quantityToAdd}) added to your cart.`)
 }
 
 const updateCartQty = ({ id, qty }) => {
@@ -719,7 +742,22 @@ const handleStoryNavigate = (link) => {
   }
 
   const clean = String(link).toLowerCase().trim()
-  if (clean === 'specials' || clean === 'deals' || clean === 'offers') {
+  if (clean.startsWith('product:')) {
+    const targetRef = String(link).substring(8).trim()
+    const targetLower = targetRef.toLowerCase()
+    const catalog = (products.value && products.value.length ? products.value : publishedProducts.value) || []
+    const matched = catalog.find(
+      (p) =>
+        String(p.id) === targetRef ||
+        String(p.slug || '').toLowerCase() === targetLower ||
+        String(p.name || '').toLowerCase() === targetLower
+    )
+    if (matched) {
+      handleViewProduct(matched)
+      return
+    }
+    handleCategorySelect('All')
+  } else if (clean === 'specials' || clean === 'deals' || clean === 'offers') {
     currentView.value = 'specials'
   } else if (clean === 'about' || clean === 'promise' || clean === 'about us') {
     currentView.value = 'about'
@@ -758,7 +796,10 @@ const handleStartCheckout = () => {
     value: cartItems.value.reduce((acc, it) => acc + (it.price * it.qty), 0)
   })
   isCartOpen.value = false
-  isCheckoutOpen.value = true
+  currentView.value = 'checkout'
+  if (typeof window !== 'undefined') {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 }
 
 const getInitialLastOrder = () => {
@@ -790,7 +831,6 @@ const handleOrderPlaced = (order) => {
     items: order?.items || []
   })
   cartItems.value = []
-  isCheckoutOpen.value = false
   currentView.value = 'thank-you'
   showToast(
     'Order Confirmed!',
@@ -799,7 +839,6 @@ const handleOrderPlaced = (order) => {
 }
 
 const handleCheckoutOpenCart = () => {
-  isCheckoutOpen.value = false
   isCartOpen.value = true
 }
 
@@ -826,7 +865,14 @@ const handleViewProduct = (product) => {
 const handleBuyNow = (product) => {
   addToCart(product)
   isCartOpen.value = false
-  isCheckoutOpen.value = true
+  trackEcommerceEvent('begin_checkout', {
+    items: cartItems.value,
+    value: cartItems.value.reduce((acc, it) => acc + (it.price * it.qty), 0)
+  })
+  currentView.value = 'checkout'
+  if (typeof window !== 'undefined') {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 }
 </script>
 

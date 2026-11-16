@@ -1,12 +1,15 @@
 import {
   collection,
   doc,
+  getDoc,
+  getDocs,
   addDoc,
   setDoc,
   updateDoc,
   deleteDoc,
   onSnapshot,
   query,
+  where,
   orderBy,
   serverTimestamp
 } from 'firebase/firestore'
@@ -121,231 +124,6 @@ export const sanitizePublicPaymentSettings = (s = {}) => {
   const gateways = s.gateways || defaultPaymentSettings.gateways
   const payouts = s.payouts || defaultPaymentSettings.payouts
 
-  // ==========================================
-  // STORE / THEME CUSTOMER REVIEWS & GOOGLE REVIEWS API PREP
-  // ==========================================
-  const computeInitials = (name = '') => {
-    const parts = String(name).trim().split(/\s+/).filter(Boolean)
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    return (parts[0] || 'YB').slice(0, 2).toUpperCase()
-  }
-
-  const saveStoreReview = async (reviewData, existingId = null) => {
-    const db = getDb()
-    const finalId = existingId || reviewData.id || `store-rev-${Date.now()}`
-    const name = (reviewData.name || 'Happy Customer').trim()
-    const payload = {
-      name,
-      initials: (reviewData.initials || computeInitials(name)).trim().toUpperCase().slice(0, 3),
-      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
-      quote: (reviewData.quote || '').trim(),
-      badge: (reviewData.badge || 'Verified Buyer').trim(),
-      source: reviewData.source || 'manual',
-      order: Number(reviewData.order) || (storeReviews.value.length + 1),
-      enabled: reviewData.enabled !== false,
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'store_reviews', finalId), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveStoreReview warning:', err)
-      }
-    }
-    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
-    const idx = storeReviews.value.findIndex((r) => r.id === finalId)
-    if (idx !== -1) {
-      storeReviews.value[idx] = updated
-    } else {
-      storeReviews.value.push(updated)
-    }
-    storeReviews.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
-    saveToCache('ystore_store_reviews_cache', storeReviews.value)
-    return finalId
-  }
-
-  const deleteStoreReview = async (id) => {
-    if (!id) return
-    const db = getDb()
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'store_reviews', id))
-      } catch (err) {
-        console.warn('Firestore deleteStoreReview warning:', err)
-      }
-    }
-    storeReviews.value = storeReviews.value.filter((r) => r.id !== id)
-    saveToCache('ystore_store_reviews_cache', storeReviews.value)
-  }
-
-  const resetStoreReviewsToDefaults = async () => {
-    const db = getDb()
-    const defaults = JSON.parse(JSON.stringify(defaultInitialStoreReviews))
-    if (db) {
-      try {
-        for (const item of defaults) {
-          const { id, ...data } = item
-          await setDoc(doc(db, 'store_reviews', id), {
-            ...data,
-            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-          }, { merge: true })
-        }
-      } catch (err) {
-        console.warn('Firestore resetStoreReviewsToDefaults warning:', err)
-      }
-    }
-    storeReviews.value = defaults
-    saveToCache('ystore_store_reviews_cache', defaults)
-    return defaults
-  }
-
-  const saveGoogleReviewsConfig = async (cfgData) => {
-    const db = getDb()
-    const payload = {
-      source: cfgData.source || 'manual',
-      googlePlaceId: (cfgData.googlePlaceId || '').trim(),
-      googleApiKey: (cfgData.googleApiKey || '').trim(),
-      minRating: Math.min(5, Math.max(1, Number(cfgData.minRating) || 4)),
-      maxReviews: Math.min(20, Math.max(1, Number(cfgData.maxReviews) || 6)),
-      lastSyncedAt: cfgData.lastSyncedAt ?? googleReviewsConfig.value.lastSyncedAt ?? null,
-      cachedGoogleReviews: Array.isArray(cfgData.cachedGoogleReviews)
-        ? cfgData.cachedGoogleReviews
-        : (googleReviewsConfig.value.cachedGoogleReviews || []),
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'config', 'google_reviews'), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveGoogleReviewsConfig warning:', err)
-      }
-    }
-    googleReviewsConfig.value = { ...defaultGoogleReviewsConfig, ...payload, updatedAt: new Date().toISOString() }
-    saveToCache('ystore_google_reviews_config_cache', googleReviewsConfig.value)
-    return googleReviewsConfig.value
-  }
-
-  /**
-   * Google Places API (New v1) integration helper.
-   * Prepped for live Google Business Profile / Place ID syncing once API key & Place ID are supplied.
-   */
-  const syncGoogleReviews = async (placeIdOverride = null, apiKeyOverride = null) => {
-    const placeId = (placeIdOverride ?? googleReviewsConfig.value.googlePlaceId ?? '').trim()
-    const apiKey = (apiKeyOverride ?? googleReviewsConfig.value.googleApiKey ?? '').trim()
-    if (!placeId || !apiKey) {
-      throw new Error('Please enter both a Google Place ID and a Google Places API Key first.')
-    }
-
-    const endpoint = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?fields=displayName,rating,userRatingCount,reviews&key=${encodeURIComponent(apiKey)}`
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json'
-      }
-    })
-
-    if (!response.ok) {
-      let errMsg = `Google Places API returned HTTP ${response.status}`
-      try {
-        const errJson = await response.json()
-        if (errJson?.error?.message) errMsg = errJson.error.message
-      } catch {}
-      throw new Error(errMsg)
-    }
-
-    const data = await response.json()
-    const rawReviews = Array.isArray(data.reviews) ? data.reviews : []
-    const normalized = rawReviews
-      .map((rev, idx) => {
-        const authorName = rev.authorAttribution?.displayName || 'Google Customer'
-        const quoteText = rev.text?.text || rev.originalText?.text || ''
-        return {
-          id: `google-rev-${idx}-${Date.now()}`,
-          name: authorName,
-          initials: computeInitials(authorName),
-          rating: Number(rev.rating) || 5,
-          quote: quoteText,
-          badge: rev.relativePublishTimeDescription
-            ? `Google Review • ${rev.relativePublishTimeDescription}`
-            : 'Google Review',
-          source: 'google',
-          enabled: true
-        }
-      })
-      .filter((r) => Boolean(r.quote))
-
-    await saveGoogleReviewsConfig({
-      ...googleReviewsConfig.value,
-      googlePlaceId: placeId,
-      googleApiKey: apiKey,
-      lastSyncedAt: new Date().toISOString(),
-      cachedGoogleReviews: normalized
-    })
-
-    return normalized
-  }
-
-  // ==========================================
-  // PRODUCT-SPECIFIC CUSTOMER REVIEWS CRUD
-  // ==========================================
-  const saveProductReview = async (reviewData, existingId = null) => {
-    const db = getDb()
-    const finalId = existingId || reviewData.id || `prod-rev-${Date.now()}`
-    const createdIso = reviewData.createdAt || new Date().toISOString()
-    const payload = {
-      productId: String(reviewData.productId || '').trim(),
-      productName: String(reviewData.productName || 'Product').trim(),
-      author: String(reviewData.author || 'Anonymous').trim(),
-      email: String(reviewData.email || '').trim(),
-      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
-      title: String(reviewData.title || '').trim(),
-      comment: String(reviewData.comment || '').trim(),
-      badge: String(reviewData.badge || 'Verified Customer').trim(),
-      status: reviewData.status || 'approved', // 'approved' | 'pending' | 'hidden'
-      adminReply: String(reviewData.adminReply || '').trim(),
-      createdAt: createdIso,
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'product_reviews', finalId), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveProductReview warning:', err)
-      }
-    }
-    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
-    const idx = productReviews.value.findIndex((r) => r.id === finalId)
-    if (idx !== -1) {
-      productReviews.value[idx] = updated
-    } else {
-      productReviews.value.unshift(updated)
-    }
-    saveToCache('ystore_product_reviews_cache', productReviews.value)
-    return finalId
-  }
-
-  const deleteProductReview = async (id) => {
-    if (!id) return
-    const db = getDb()
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'product_reviews', id))
-      } catch (err) {
-        console.warn('Firestore deleteProductReview warning:', err)
-      }
-    }
-    productReviews.value = productReviews.value.filter((r) => r.id !== id)
-    saveToCache('ystore_product_reviews_cache', productReviews.value)
-  }
-
-  const getReviewsForProduct = (productId, productName = '') => {
-    return (productReviews.value || []).filter((r) => {
-      if (r.status === 'hidden' || r.status === 'pending') return false
-      if (productId && r.productId && String(r.productId) === String(productId)) return true
-      if (productName && r.productName && r.productName.toLowerCase() === String(productName).toLowerCase()) return true
-      return false
-    })
-  }
 
   return {
 
@@ -460,6 +238,40 @@ const getInitialPaymentSettings = () => {
     }
   }
   return sanitizePublicPaymentSettings(defaultPaymentSettings)
+}
+
+// Default Company Address & Contact Details (South Africa)
+export const defaultCompanyProfile = {
+  companyName: 'Yellow Berry Store (Pty) Ltd',
+  domain: 'ystoreza.co.za',
+  streetAddress: 'Studio 4, The Palms Centre, 145 Sir Lowry Rd, Woodstock',
+  city: 'Cape Town',
+  province: 'Western Cape',
+  postalCode: '7925',
+  country: 'South Africa',
+  timezone: 'Africa/Johannesburg (GMT+2)',
+  supportEmail: 'support@yellowberry.store',
+  infoEmail: 'info@ystore.co.za',
+  customEmail: 'custom@ystore.co.za',
+  adminEmail: 'admin@yellowberry.store',
+  primaryPhone: '+27 71 234 5678',
+  secondaryPhone: '+27 82 987 6543',
+  workingHoursWeekday: 'Daily: 8am - 5pm',
+  workingHoursWeekend: 'Sundays: Closed'
+}
+
+const getInitialCompanyProfile = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_company_profile')
+      if (cached) {
+        return { ...defaultCompanyProfile, ...JSON.parse(cached) }
+      }
+    } catch {
+      // Fallback to default
+    }
+  }
+  return { ...defaultCompanyProfile }
 }
 
 // Helper to initialize cached admin & staff users (dummy users purged)
@@ -736,8 +548,24 @@ export const defaultThemeConfig = {
 export const defaultHeadingSlides = {
   enabled: true,
   intervalSeconds: 3.5,
+  categoryPrefix: 'The Perfect Gift for',
+  categorySubtitle: "There's Always Something to Unwrap",
   categoryWords: ['Readers', 'Categories', 'Builders', 'Creators', 'Explorers'],
-  collectionWords: ['Collections', 'Gift Boxes', 'Treasures', 'Bundles', 'Editions'],
+  newPrefix: 'New',
+  newSubtitle: 'Discover the latest innovative toys and lovable companions just added to our collection.',
+  collectionWords: ['Models', 'Treasures', 'Bundles', 'Gift Boxes', 'Editions'],
+  shopCategoryPrefix: 'Shop by',
+  shopCategoryHighlight: 'category',
+  shopCategorySubtitle: 'Discover curated worlds of wonder, learning, and playful exploration.',
+  shopCategoryButtonText: 'View all categories',
+  featuredPrefix: 'Feature',
+  featuredSubtitle: 'Discover our handpicked selection of top-rated products designed to spark joy, imagination, and endless creative play.',
+  bestSellersPrefix: 'Best',
+  bestSellersHighlight: 'sellers',
+  bestSellersSubtitle: 'The community favorites loved by children and parents across South Africa.',
+  reviewsPrefix: 'What our',
+  reviewsHighlight: 'customers say',
+  reviewsSubtitle: 'Real stories from happy parents, educators, and little adventurers.',
   updatedAt: null
 }
 
@@ -1147,11 +975,11 @@ const getInitialProducts = () => {
       const cached = localStorage.getItem('ystore_products_cache')
       if (cached) {
         const parsed = JSON.parse(cached)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        if (Array.isArray(parsed)) return parsed
       }
-    } catch {}
+    } catch { }
   }
-  return [...defaultInitialProducts]
+  return []
 }
 
 const getInitialCategories = () => {
@@ -1160,11 +988,11 @@ const getInitialCategories = () => {
       const cached = localStorage.getItem('ystore_categories_cache')
       if (cached) {
         const parsed = JSON.parse(cached)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        if (Array.isArray(parsed)) return parsed
       }
-    } catch {}
+    } catch { }
   }
-  return [...defaultInitialCategories]
+  return []
 }
 
 const getInitialBanners = () => {
@@ -1173,11 +1001,11 @@ const getInitialBanners = () => {
       const cached = localStorage.getItem('ystore_banners_cache')
       if (cached) {
         const parsed = JSON.parse(cached)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        if (Array.isArray(parsed)) return parsed
       }
-    } catch {}
+    } catch { }
   }
-  return [...defaultInitialBanners]
+  return []
 }
 
 const getInitialCollections = () => {
@@ -1188,7 +1016,7 @@ const getInitialCollections = () => {
         const parsed = JSON.parse(cached)
         if (Array.isArray(parsed)) return parsed
       }
-    } catch {}
+    } catch { }
   }
   return []
 }
@@ -1199,11 +1027,11 @@ const getInitialDiscounts = () => {
       const cached = localStorage.getItem('ystore_discounts_cache')
       if (cached) {
         const parsed = JSON.parse(cached)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        if (Array.isArray(parsed)) return parsed
       }
-    } catch {}
+    } catch { }
   }
-  return [...defaultInitialDiscounts]
+  return []
 }
 
 const getInitialBlogs = () => {
@@ -1212,11 +1040,11 @@ const getInitialBlogs = () => {
       const cached = localStorage.getItem('ystore_blogs_cache')
       if (cached) {
         const parsed = JSON.parse(cached)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        if (Array.isArray(parsed)) return parsed
       }
-    } catch {}
+    } catch { }
   }
-  return [...defaultInitialBlogs]
+  return []
 }
 
 const getInitialGuaranteeStats = () => {
@@ -1227,7 +1055,7 @@ const getInitialGuaranteeStats = () => {
         const parsed = JSON.parse(cached)
         if (Array.isArray(parsed) && parsed.length > 0) return parsed
       }
-    } catch {}
+    } catch { }
   }
   return [...defaultInitialGuaranteeStats]
 }
@@ -1238,11 +1066,11 @@ const getInitialStories = () => {
       const cached = localStorage.getItem('ystore_stories_cache')
       if (cached) {
         const parsed = JSON.parse(cached)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        if (Array.isArray(parsed)) return parsed
       }
-    } catch {}
+    } catch { }
   }
-  return [...defaultInitialStories]
+  return []
 }
 
 const getInitialBannerCategories = () => {
@@ -1251,11 +1079,11 @@ const getInitialBannerCategories = () => {
       const cached = localStorage.getItem('ystore_banner_categories_cache')
       if (cached) {
         const parsed = JSON.parse(cached)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        if (Array.isArray(parsed)) return parsed
       }
-    } catch {}
+    } catch { }
   }
-  return [...defaultInitialBannerCategories]
+  return []
 }
 
 const getInitialThemeConfig = () => {
@@ -1266,236 +1094,12 @@ const getInitialThemeConfig = () => {
         const parsed = JSON.parse(cached)
         if (parsed && typeof parsed === 'object') return { ...defaultThemeConfig, ...parsed }
       }
-    } catch {}
-  }
-  // ==========================================
-  // STORE / THEME CUSTOMER REVIEWS & GOOGLE REVIEWS API PREP
-  // ==========================================
-  const computeInitials = (name = '') => {
-    const parts = String(name).trim().split(/\s+/).filter(Boolean)
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    return (parts[0] || 'YB').slice(0, 2).toUpperCase()
-  }
-
-  const saveStoreReview = async (reviewData, existingId = null) => {
-    const db = getDb()
-    const finalId = existingId || reviewData.id || `store-rev-${Date.now()}`
-    const name = (reviewData.name || 'Happy Customer').trim()
-    const payload = {
-      name,
-      initials: (reviewData.initials || computeInitials(name)).trim().toUpperCase().slice(0, 3),
-      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
-      quote: (reviewData.quote || '').trim(),
-      badge: (reviewData.badge || 'Verified Buyer').trim(),
-      source: reviewData.source || 'manual',
-      order: Number(reviewData.order) || (storeReviews.value.length + 1),
-      enabled: reviewData.enabled !== false,
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'store_reviews', finalId), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveStoreReview warning:', err)
-      }
-    }
-    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
-    const idx = storeReviews.value.findIndex((r) => r.id === finalId)
-    if (idx !== -1) {
-      storeReviews.value[idx] = updated
-    } else {
-      storeReviews.value.push(updated)
-    }
-    storeReviews.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
-    saveToCache('ystore_store_reviews_cache', storeReviews.value)
-    return finalId
-  }
-
-  const deleteStoreReview = async (id) => {
-    if (!id) return
-    const db = getDb()
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'store_reviews', id))
-      } catch (err) {
-        console.warn('Firestore deleteStoreReview warning:', err)
-      }
-    }
-    storeReviews.value = storeReviews.value.filter((r) => r.id !== id)
-    saveToCache('ystore_store_reviews_cache', storeReviews.value)
-  }
-
-  const resetStoreReviewsToDefaults = async () => {
-    const db = getDb()
-    const defaults = JSON.parse(JSON.stringify(defaultInitialStoreReviews))
-    if (db) {
-      try {
-        for (const item of defaults) {
-          const { id, ...data } = item
-          await setDoc(doc(db, 'store_reviews', id), {
-            ...data,
-            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-          }, { merge: true })
-        }
-      } catch (err) {
-        console.warn('Firestore resetStoreReviewsToDefaults warning:', err)
-      }
-    }
-    storeReviews.value = defaults
-    saveToCache('ystore_store_reviews_cache', defaults)
-    return defaults
-  }
-
-  const saveGoogleReviewsConfig = async (cfgData) => {
-    const db = getDb()
-    const payload = {
-      source: cfgData.source || 'manual',
-      googlePlaceId: (cfgData.googlePlaceId || '').trim(),
-      googleApiKey: (cfgData.googleApiKey || '').trim(),
-      minRating: Math.min(5, Math.max(1, Number(cfgData.minRating) || 4)),
-      maxReviews: Math.min(20, Math.max(1, Number(cfgData.maxReviews) || 6)),
-      lastSyncedAt: cfgData.lastSyncedAt ?? googleReviewsConfig.value.lastSyncedAt ?? null,
-      cachedGoogleReviews: Array.isArray(cfgData.cachedGoogleReviews)
-        ? cfgData.cachedGoogleReviews
-        : (googleReviewsConfig.value.cachedGoogleReviews || []),
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'config', 'google_reviews'), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveGoogleReviewsConfig warning:', err)
-      }
-    }
-    googleReviewsConfig.value = { ...defaultGoogleReviewsConfig, ...payload, updatedAt: new Date().toISOString() }
-    saveToCache('ystore_google_reviews_config_cache', googleReviewsConfig.value)
-    return googleReviewsConfig.value
-  }
-
-  /**
-   * Google Places API (New v1) integration helper.
-   * Prepped for live Google Business Profile / Place ID syncing once API key & Place ID are supplied.
-   */
-  const syncGoogleReviews = async (placeIdOverride = null, apiKeyOverride = null) => {
-    const placeId = (placeIdOverride ?? googleReviewsConfig.value.googlePlaceId ?? '').trim()
-    const apiKey = (apiKeyOverride ?? googleReviewsConfig.value.googleApiKey ?? '').trim()
-    if (!placeId || !apiKey) {
-      throw new Error('Please enter both a Google Place ID and a Google Places API Key first.')
-    }
-
-    const endpoint = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?fields=displayName,rating,userRatingCount,reviews&key=${encodeURIComponent(apiKey)}`
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json'
-      }
-    })
-
-    if (!response.ok) {
-      let errMsg = `Google Places API returned HTTP ${response.status}`
-      try {
-        const errJson = await response.json()
-        if (errJson?.error?.message) errMsg = errJson.error.message
-      } catch {}
-      throw new Error(errMsg)
-    }
-
-    const data = await response.json()
-    const rawReviews = Array.isArray(data.reviews) ? data.reviews : []
-    const normalized = rawReviews
-      .map((rev, idx) => {
-        const authorName = rev.authorAttribution?.displayName || 'Google Customer'
-        const quoteText = rev.text?.text || rev.originalText?.text || ''
-        return {
-          id: `google-rev-${idx}-${Date.now()}`,
-          name: authorName,
-          initials: computeInitials(authorName),
-          rating: Number(rev.rating) || 5,
-          quote: quoteText,
-          badge: rev.relativePublishTimeDescription
-            ? `Google Review • ${rev.relativePublishTimeDescription}`
-            : 'Google Review',
-          source: 'google',
-          enabled: true
-        }
-      })
-      .filter((r) => Boolean(r.quote))
-
-    await saveGoogleReviewsConfig({
-      ...googleReviewsConfig.value,
-      googlePlaceId: placeId,
-      googleApiKey: apiKey,
-      lastSyncedAt: new Date().toISOString(),
-      cachedGoogleReviews: normalized
-    })
-
-    return normalized
-  }
-
-  // ==========================================
-  // PRODUCT-SPECIFIC CUSTOMER REVIEWS CRUD
-  // ==========================================
-  const saveProductReview = async (reviewData, existingId = null) => {
-    const db = getDb()
-    const finalId = existingId || reviewData.id || `prod-rev-${Date.now()}`
-    const createdIso = reviewData.createdAt || new Date().toISOString()
-    const payload = {
-      productId: String(reviewData.productId || '').trim(),
-      productName: String(reviewData.productName || 'Product').trim(),
-      author: String(reviewData.author || 'Anonymous').trim(),
-      email: String(reviewData.email || '').trim(),
-      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
-      title: String(reviewData.title || '').trim(),
-      comment: String(reviewData.comment || '').trim(),
-      badge: String(reviewData.badge || 'Verified Customer').trim(),
-      status: reviewData.status || 'approved', // 'approved' | 'pending' | 'hidden'
-      adminReply: String(reviewData.adminReply || '').trim(),
-      createdAt: createdIso,
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'product_reviews', finalId), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveProductReview warning:', err)
-      }
-    }
-    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
-    const idx = productReviews.value.findIndex((r) => r.id === finalId)
-    if (idx !== -1) {
-      productReviews.value[idx] = updated
-    } else {
-      productReviews.value.unshift(updated)
-    }
-    saveToCache('ystore_product_reviews_cache', productReviews.value)
-    return finalId
-  }
-
-  const deleteProductReview = async (id) => {
-    if (!id) return
-    const db = getDb()
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'product_reviews', id))
-      } catch (err) {
-        console.warn('Firestore deleteProductReview warning:', err)
-      }
-    }
-    productReviews.value = productReviews.value.filter((r) => r.id !== id)
-    saveToCache('ystore_product_reviews_cache', productReviews.value)
-  }
-
-  const getReviewsForProduct = (productId, productName = '') => {
-    return (productReviews.value || []).filter((r) => {
-      if (r.status === 'hidden' || r.status === 'pending') return false
-      if (productId && r.productId && String(r.productId) === String(productId)) return true
-      if (productName && r.productName && r.productName.toLowerCase() === String(productName).toLowerCase()) return true
-      return false
-    })
+    } catch { }
   }
 
   return {
- ...defaultThemeConfig }
+    ...defaultThemeConfig
+  }
 }
 
 const getInitialHeadingSlides = () => {
@@ -1506,236 +1110,12 @@ const getInitialHeadingSlides = () => {
         const parsed = JSON.parse(cached)
         if (parsed && typeof parsed === 'object') return { ...defaultHeadingSlides, ...parsed }
       }
-    } catch {}
-  }
-  // ==========================================
-  // STORE / THEME CUSTOMER REVIEWS & GOOGLE REVIEWS API PREP
-  // ==========================================
-  const computeInitials = (name = '') => {
-    const parts = String(name).trim().split(/\s+/).filter(Boolean)
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    return (parts[0] || 'YB').slice(0, 2).toUpperCase()
-  }
-
-  const saveStoreReview = async (reviewData, existingId = null) => {
-    const db = getDb()
-    const finalId = existingId || reviewData.id || `store-rev-${Date.now()}`
-    const name = (reviewData.name || 'Happy Customer').trim()
-    const payload = {
-      name,
-      initials: (reviewData.initials || computeInitials(name)).trim().toUpperCase().slice(0, 3),
-      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
-      quote: (reviewData.quote || '').trim(),
-      badge: (reviewData.badge || 'Verified Buyer').trim(),
-      source: reviewData.source || 'manual',
-      order: Number(reviewData.order) || (storeReviews.value.length + 1),
-      enabled: reviewData.enabled !== false,
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'store_reviews', finalId), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveStoreReview warning:', err)
-      }
-    }
-    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
-    const idx = storeReviews.value.findIndex((r) => r.id === finalId)
-    if (idx !== -1) {
-      storeReviews.value[idx] = updated
-    } else {
-      storeReviews.value.push(updated)
-    }
-    storeReviews.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
-    saveToCache('ystore_store_reviews_cache', storeReviews.value)
-    return finalId
-  }
-
-  const deleteStoreReview = async (id) => {
-    if (!id) return
-    const db = getDb()
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'store_reviews', id))
-      } catch (err) {
-        console.warn('Firestore deleteStoreReview warning:', err)
-      }
-    }
-    storeReviews.value = storeReviews.value.filter((r) => r.id !== id)
-    saveToCache('ystore_store_reviews_cache', storeReviews.value)
-  }
-
-  const resetStoreReviewsToDefaults = async () => {
-    const db = getDb()
-    const defaults = JSON.parse(JSON.stringify(defaultInitialStoreReviews))
-    if (db) {
-      try {
-        for (const item of defaults) {
-          const { id, ...data } = item
-          await setDoc(doc(db, 'store_reviews', id), {
-            ...data,
-            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-          }, { merge: true })
-        }
-      } catch (err) {
-        console.warn('Firestore resetStoreReviewsToDefaults warning:', err)
-      }
-    }
-    storeReviews.value = defaults
-    saveToCache('ystore_store_reviews_cache', defaults)
-    return defaults
-  }
-
-  const saveGoogleReviewsConfig = async (cfgData) => {
-    const db = getDb()
-    const payload = {
-      source: cfgData.source || 'manual',
-      googlePlaceId: (cfgData.googlePlaceId || '').trim(),
-      googleApiKey: (cfgData.googleApiKey || '').trim(),
-      minRating: Math.min(5, Math.max(1, Number(cfgData.minRating) || 4)),
-      maxReviews: Math.min(20, Math.max(1, Number(cfgData.maxReviews) || 6)),
-      lastSyncedAt: cfgData.lastSyncedAt ?? googleReviewsConfig.value.lastSyncedAt ?? null,
-      cachedGoogleReviews: Array.isArray(cfgData.cachedGoogleReviews)
-        ? cfgData.cachedGoogleReviews
-        : (googleReviewsConfig.value.cachedGoogleReviews || []),
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'config', 'google_reviews'), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveGoogleReviewsConfig warning:', err)
-      }
-    }
-    googleReviewsConfig.value = { ...defaultGoogleReviewsConfig, ...payload, updatedAt: new Date().toISOString() }
-    saveToCache('ystore_google_reviews_config_cache', googleReviewsConfig.value)
-    return googleReviewsConfig.value
-  }
-
-  /**
-   * Google Places API (New v1) integration helper.
-   * Prepped for live Google Business Profile / Place ID syncing once API key & Place ID are supplied.
-   */
-  const syncGoogleReviews = async (placeIdOverride = null, apiKeyOverride = null) => {
-    const placeId = (placeIdOverride ?? googleReviewsConfig.value.googlePlaceId ?? '').trim()
-    const apiKey = (apiKeyOverride ?? googleReviewsConfig.value.googleApiKey ?? '').trim()
-    if (!placeId || !apiKey) {
-      throw new Error('Please enter both a Google Place ID and a Google Places API Key first.')
-    }
-
-    const endpoint = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?fields=displayName,rating,userRatingCount,reviews&key=${encodeURIComponent(apiKey)}`
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json'
-      }
-    })
-
-    if (!response.ok) {
-      let errMsg = `Google Places API returned HTTP ${response.status}`
-      try {
-        const errJson = await response.json()
-        if (errJson?.error?.message) errMsg = errJson.error.message
-      } catch {}
-      throw new Error(errMsg)
-    }
-
-    const data = await response.json()
-    const rawReviews = Array.isArray(data.reviews) ? data.reviews : []
-    const normalized = rawReviews
-      .map((rev, idx) => {
-        const authorName = rev.authorAttribution?.displayName || 'Google Customer'
-        const quoteText = rev.text?.text || rev.originalText?.text || ''
-        return {
-          id: `google-rev-${idx}-${Date.now()}`,
-          name: authorName,
-          initials: computeInitials(authorName),
-          rating: Number(rev.rating) || 5,
-          quote: quoteText,
-          badge: rev.relativePublishTimeDescription
-            ? `Google Review • ${rev.relativePublishTimeDescription}`
-            : 'Google Review',
-          source: 'google',
-          enabled: true
-        }
-      })
-      .filter((r) => Boolean(r.quote))
-
-    await saveGoogleReviewsConfig({
-      ...googleReviewsConfig.value,
-      googlePlaceId: placeId,
-      googleApiKey: apiKey,
-      lastSyncedAt: new Date().toISOString(),
-      cachedGoogleReviews: normalized
-    })
-
-    return normalized
-  }
-
-  // ==========================================
-  // PRODUCT-SPECIFIC CUSTOMER REVIEWS CRUD
-  // ==========================================
-  const saveProductReview = async (reviewData, existingId = null) => {
-    const db = getDb()
-    const finalId = existingId || reviewData.id || `prod-rev-${Date.now()}`
-    const createdIso = reviewData.createdAt || new Date().toISOString()
-    const payload = {
-      productId: String(reviewData.productId || '').trim(),
-      productName: String(reviewData.productName || 'Product').trim(),
-      author: String(reviewData.author || 'Anonymous').trim(),
-      email: String(reviewData.email || '').trim(),
-      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
-      title: String(reviewData.title || '').trim(),
-      comment: String(reviewData.comment || '').trim(),
-      badge: String(reviewData.badge || 'Verified Customer').trim(),
-      status: reviewData.status || 'approved', // 'approved' | 'pending' | 'hidden'
-      adminReply: String(reviewData.adminReply || '').trim(),
-      createdAt: createdIso,
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'product_reviews', finalId), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveProductReview warning:', err)
-      }
-    }
-    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
-    const idx = productReviews.value.findIndex((r) => r.id === finalId)
-    if (idx !== -1) {
-      productReviews.value[idx] = updated
-    } else {
-      productReviews.value.unshift(updated)
-    }
-    saveToCache('ystore_product_reviews_cache', productReviews.value)
-    return finalId
-  }
-
-  const deleteProductReview = async (id) => {
-    if (!id) return
-    const db = getDb()
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'product_reviews', id))
-      } catch (err) {
-        console.warn('Firestore deleteProductReview warning:', err)
-      }
-    }
-    productReviews.value = productReviews.value.filter((r) => r.id !== id)
-    saveToCache('ystore_product_reviews_cache', productReviews.value)
-  }
-
-  const getReviewsForProduct = (productId, productName = '') => {
-    return (productReviews.value || []).filter((r) => {
-      if (r.status === 'hidden' || r.status === 'pending') return false
-      if (productId && r.productId && String(r.productId) === String(productId)) return true
-      if (productName && r.productName && r.productName.toLowerCase() === String(productName).toLowerCase()) return true
-      return false
-    })
+    } catch { }
   }
 
   return {
- ...defaultHeadingSlides }
+    ...defaultHeadingSlides
+  }
 }
 
 const getInitialBannerCategoriesHeader = () => {
@@ -1746,236 +1126,12 @@ const getInitialBannerCategoriesHeader = () => {
         const parsed = JSON.parse(cached)
         if (parsed && typeof parsed === 'object') return { ...defaultBannerCategoriesHeader, ...parsed }
       }
-    } catch {}
-  }
-  // ==========================================
-  // STORE / THEME CUSTOMER REVIEWS & GOOGLE REVIEWS API PREP
-  // ==========================================
-  const computeInitials = (name = '') => {
-    const parts = String(name).trim().split(/\s+/).filter(Boolean)
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    return (parts[0] || 'YB').slice(0, 2).toUpperCase()
-  }
-
-  const saveStoreReview = async (reviewData, existingId = null) => {
-    const db = getDb()
-    const finalId = existingId || reviewData.id || `store-rev-${Date.now()}`
-    const name = (reviewData.name || 'Happy Customer').trim()
-    const payload = {
-      name,
-      initials: (reviewData.initials || computeInitials(name)).trim().toUpperCase().slice(0, 3),
-      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
-      quote: (reviewData.quote || '').trim(),
-      badge: (reviewData.badge || 'Verified Buyer').trim(),
-      source: reviewData.source || 'manual',
-      order: Number(reviewData.order) || (storeReviews.value.length + 1),
-      enabled: reviewData.enabled !== false,
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'store_reviews', finalId), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveStoreReview warning:', err)
-      }
-    }
-    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
-    const idx = storeReviews.value.findIndex((r) => r.id === finalId)
-    if (idx !== -1) {
-      storeReviews.value[idx] = updated
-    } else {
-      storeReviews.value.push(updated)
-    }
-    storeReviews.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
-    saveToCache('ystore_store_reviews_cache', storeReviews.value)
-    return finalId
-  }
-
-  const deleteStoreReview = async (id) => {
-    if (!id) return
-    const db = getDb()
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'store_reviews', id))
-      } catch (err) {
-        console.warn('Firestore deleteStoreReview warning:', err)
-      }
-    }
-    storeReviews.value = storeReviews.value.filter((r) => r.id !== id)
-    saveToCache('ystore_store_reviews_cache', storeReviews.value)
-  }
-
-  const resetStoreReviewsToDefaults = async () => {
-    const db = getDb()
-    const defaults = JSON.parse(JSON.stringify(defaultInitialStoreReviews))
-    if (db) {
-      try {
-        for (const item of defaults) {
-          const { id, ...data } = item
-          await setDoc(doc(db, 'store_reviews', id), {
-            ...data,
-            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-          }, { merge: true })
-        }
-      } catch (err) {
-        console.warn('Firestore resetStoreReviewsToDefaults warning:', err)
-      }
-    }
-    storeReviews.value = defaults
-    saveToCache('ystore_store_reviews_cache', defaults)
-    return defaults
-  }
-
-  const saveGoogleReviewsConfig = async (cfgData) => {
-    const db = getDb()
-    const payload = {
-      source: cfgData.source || 'manual',
-      googlePlaceId: (cfgData.googlePlaceId || '').trim(),
-      googleApiKey: (cfgData.googleApiKey || '').trim(),
-      minRating: Math.min(5, Math.max(1, Number(cfgData.minRating) || 4)),
-      maxReviews: Math.min(20, Math.max(1, Number(cfgData.maxReviews) || 6)),
-      lastSyncedAt: cfgData.lastSyncedAt ?? googleReviewsConfig.value.lastSyncedAt ?? null,
-      cachedGoogleReviews: Array.isArray(cfgData.cachedGoogleReviews)
-        ? cfgData.cachedGoogleReviews
-        : (googleReviewsConfig.value.cachedGoogleReviews || []),
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'config', 'google_reviews'), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveGoogleReviewsConfig warning:', err)
-      }
-    }
-    googleReviewsConfig.value = { ...defaultGoogleReviewsConfig, ...payload, updatedAt: new Date().toISOString() }
-    saveToCache('ystore_google_reviews_config_cache', googleReviewsConfig.value)
-    return googleReviewsConfig.value
-  }
-
-  /**
-   * Google Places API (New v1) integration helper.
-   * Prepped for live Google Business Profile / Place ID syncing once API key & Place ID are supplied.
-   */
-  const syncGoogleReviews = async (placeIdOverride = null, apiKeyOverride = null) => {
-    const placeId = (placeIdOverride ?? googleReviewsConfig.value.googlePlaceId ?? '').trim()
-    const apiKey = (apiKeyOverride ?? googleReviewsConfig.value.googleApiKey ?? '').trim()
-    if (!placeId || !apiKey) {
-      throw new Error('Please enter both a Google Place ID and a Google Places API Key first.')
-    }
-
-    const endpoint = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?fields=displayName,rating,userRatingCount,reviews&key=${encodeURIComponent(apiKey)}`
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json'
-      }
-    })
-
-    if (!response.ok) {
-      let errMsg = `Google Places API returned HTTP ${response.status}`
-      try {
-        const errJson = await response.json()
-        if (errJson?.error?.message) errMsg = errJson.error.message
-      } catch {}
-      throw new Error(errMsg)
-    }
-
-    const data = await response.json()
-    const rawReviews = Array.isArray(data.reviews) ? data.reviews : []
-    const normalized = rawReviews
-      .map((rev, idx) => {
-        const authorName = rev.authorAttribution?.displayName || 'Google Customer'
-        const quoteText = rev.text?.text || rev.originalText?.text || ''
-        return {
-          id: `google-rev-${idx}-${Date.now()}`,
-          name: authorName,
-          initials: computeInitials(authorName),
-          rating: Number(rev.rating) || 5,
-          quote: quoteText,
-          badge: rev.relativePublishTimeDescription
-            ? `Google Review • ${rev.relativePublishTimeDescription}`
-            : 'Google Review',
-          source: 'google',
-          enabled: true
-        }
-      })
-      .filter((r) => Boolean(r.quote))
-
-    await saveGoogleReviewsConfig({
-      ...googleReviewsConfig.value,
-      googlePlaceId: placeId,
-      googleApiKey: apiKey,
-      lastSyncedAt: new Date().toISOString(),
-      cachedGoogleReviews: normalized
-    })
-
-    return normalized
-  }
-
-  // ==========================================
-  // PRODUCT-SPECIFIC CUSTOMER REVIEWS CRUD
-  // ==========================================
-  const saveProductReview = async (reviewData, existingId = null) => {
-    const db = getDb()
-    const finalId = existingId || reviewData.id || `prod-rev-${Date.now()}`
-    const createdIso = reviewData.createdAt || new Date().toISOString()
-    const payload = {
-      productId: String(reviewData.productId || '').trim(),
-      productName: String(reviewData.productName || 'Product').trim(),
-      author: String(reviewData.author || 'Anonymous').trim(),
-      email: String(reviewData.email || '').trim(),
-      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
-      title: String(reviewData.title || '').trim(),
-      comment: String(reviewData.comment || '').trim(),
-      badge: String(reviewData.badge || 'Verified Customer').trim(),
-      status: reviewData.status || 'approved', // 'approved' | 'pending' | 'hidden'
-      adminReply: String(reviewData.adminReply || '').trim(),
-      createdAt: createdIso,
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'product_reviews', finalId), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveProductReview warning:', err)
-      }
-    }
-    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
-    const idx = productReviews.value.findIndex((r) => r.id === finalId)
-    if (idx !== -1) {
-      productReviews.value[idx] = updated
-    } else {
-      productReviews.value.unshift(updated)
-    }
-    saveToCache('ystore_product_reviews_cache', productReviews.value)
-    return finalId
-  }
-
-  const deleteProductReview = async (id) => {
-    if (!id) return
-    const db = getDb()
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'product_reviews', id))
-      } catch (err) {
-        console.warn('Firestore deleteProductReview warning:', err)
-      }
-    }
-    productReviews.value = productReviews.value.filter((r) => r.id !== id)
-    saveToCache('ystore_product_reviews_cache', productReviews.value)
-  }
-
-  const getReviewsForProduct = (productId, productName = '') => {
-    return (productReviews.value || []).filter((r) => {
-      if (r.status === 'hidden' || r.status === 'pending') return false
-      if (productId && r.productId && String(r.productId) === String(productId)) return true
-      if (productName && r.productName && r.productName.toLowerCase() === String(productName).toLowerCase()) return true
-      return false
-    })
+    } catch { }
   }
 
   return {
- ...defaultBannerCategoriesHeader }
+    ...defaultBannerCategoriesHeader
+  }
 }
 
 const getInitialCategoryBanners = () => {
@@ -1984,95 +1140,9 @@ const getInitialCategoryBanners = () => {
       const cached = localStorage.getItem('ystore_category_banners_cache')
       if (cached) {
         const parsed = JSON.parse(cached)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
-      }
-    } catch {}
-  }
-  return [...defaultInitialCategoryBanners]
-}
-
-const defaultInitialStoreReviews = [
-  {
-    id: 'store-rev-1',
-    name: 'Sarah Mkhize',
-    initials: 'SM',
-    rating: 5,
-    quote: 'Ystore delivered our package to Durban in less than 48 hours. The rainbow stacker and wooden train are beautifully made with smooth non-toxic paints. My toddlers play with them every morning.',
-    badge: 'Verified Buyer',
-    source: 'manual',
-    enabled: true,
-    order: 1
-  },
-  {
-    id: 'store-rev-2',
-    name: 'Liam Van Der Merwe',
-    initials: 'LV',
-    rating: 5,
-    quote: 'The collectible figure exceeded all expectations! The articulation and vintage details are exceptional. It is so hard to find high quality toys that survive rough daily play, but Ystore nailed it.',
-    badge: 'Verified Buyer',
-    source: 'manual',
-    enabled: true,
-    order: 2
-  },
-  {
-    id: 'store-rev-3',
-    name: 'Amanda Naidoo',
-    initials: 'AN',
-    rating: 5,
-    quote: 'Customer service was super responsive when I had questions about shipping before my daughter’s birthday. The afternoon tea set is absolutely adorable and well packaged. Highly recommended!',
-    badge: 'Verified Buyer',
-    source: 'manual',
-    enabled: true,
-    order: 3
-  }
-]
-
-const defaultGoogleReviewsConfig = {
-  source: 'manual', // 'manual' | 'google' | 'hybrid'
-  googlePlaceId: '',
-  googleApiKey: '',
-  minRating: 4,
-  maxReviews: 6,
-  lastSyncedAt: null,
-  cachedGoogleReviews: []
-}
-
-const getInitialStoreReviews = () => {
-  if (typeof window !== 'undefined') {
-    try {
-      const cached = localStorage.getItem('ystore_store_reviews_cache')
-      if (cached) {
-        const parsed = JSON.parse(cached)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
-      }
-    } catch {}
-  }
-  return [...defaultInitialStoreReviews]
-}
-
-const getInitialGoogleReviewsConfig = () => {
-  if (typeof window !== 'undefined') {
-    try {
-      const cached = localStorage.getItem('ystore_google_reviews_config_cache')
-      if (cached) {
-        const parsed = JSON.parse(cached)
-        if (parsed && typeof parsed === 'object') return { ...defaultGoogleReviewsConfig, ...parsed }
-      }
-    } catch {}
-  }
-  return {
- ...defaultGoogleReviewsConfig }
-}
-
-const getInitialProductReviews = () => {
-  if (typeof window !== 'undefined') {
-    try {
-      const cached = localStorage.getItem('ystore_product_reviews_cache')
-      if (cached) {
-        const parsed = JSON.parse(cached)
         if (Array.isArray(parsed)) return parsed
       }
-    } catch {}
+    } catch { }
   }
   return []
 }
@@ -2123,6 +1193,75 @@ const defaultGoogleReviewsConfig = {
   cachedGoogleReviews: []
 }
 
+const defaultSubscriptionConfig = {
+  enabled: true,
+  eyebrow: 'Never miss our deals',
+  heading: 'Subscribe',
+  description: 'Get exclusive product drops, member-only discounts, and inspiring playroom ideas delivered straight to your inbox.',
+  placeholder: 'Enter your email address...',
+  buttonText: 'Subscribe',
+  consentText: 'I agree to receive promotional updates and news from Ystore. Unsubscribe anytime.',
+  successMessage: 'Thank you for subscribing! Check your inbox for a 10% welcome coupon.',
+  routeToEmail: 'info@yberry.co.za',
+  deliveryMethod: 'webhook', // 'webhook' | 'mailbox' | 'both'
+  webhookUrl: '',
+  mailboxEndpointUrl: '/api/subscribe-mail.php',
+  mailboxFromName: 'Ystore Newsletter',
+  mailboxFromEmail: 'noreply@ystoreza.co.za',
+  mailboxSubject: 'New Newsletter Subscriber: {{email}}'
+}
+
+const defaultSubscriptionMailbox = {
+  host: '',
+  port: 465,
+  encryption: 'ssl', // 'ssl' | 'tls' | 'none'
+  username: '',
+  password: '',
+  fromName: 'Ystore Newsletter',
+  fromEmail: 'noreply@ystoreza.co.za',
+  subjectTemplate: 'New Newsletter Subscriber: {{email}}',
+  endpointUrl: '/api/subscribe-mail.php'
+}
+
+const getInitialSubscriptionMailbox = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_subscription_mailbox_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (parsed && typeof parsed === 'object') return { ...defaultSubscriptionMailbox, ...parsed }
+      }
+    } catch { }
+  }
+  return { ...defaultSubscriptionMailbox }
+}
+
+const getInitialSubscriptionConfig = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_subscription_config_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (parsed && typeof parsed === 'object') return { ...defaultSubscriptionConfig, ...parsed }
+      }
+    } catch { }
+  }
+  return { ...defaultSubscriptionConfig }
+}
+
+const getInitialNewsletterSubscribers = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('ystore_newsletter_subscribers_cache')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed)) return parsed
+      }
+    } catch { }
+  }
+  return []
+}
+
 const getInitialStoreReviews = () => {
   if (typeof window !== 'undefined') {
     try {
@@ -2131,7 +1270,7 @@ const getInitialStoreReviews = () => {
         const parsed = JSON.parse(cached)
         if (Array.isArray(parsed) && parsed.length > 0) return parsed
       }
-    } catch {}
+    } catch { }
   }
   return [...defaultInitialStoreReviews]
 }
@@ -2144,235 +1283,11 @@ const getInitialGoogleReviewsConfig = () => {
         const parsed = JSON.parse(cached)
         if (parsed && typeof parsed === 'object') return { ...defaultGoogleReviewsConfig, ...parsed }
       }
-    } catch {}
+    } catch { }
   }
-  // ==========================================
-  // STORE / THEME CUSTOMER REVIEWS & GOOGLE REVIEWS API PREP
-  // ==========================================
-  const computeInitials = (name = '') => {
-    const parts = String(name).trim().split(/\s+/).filter(Boolean)
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    return (parts[0] || 'YB').slice(0, 2).toUpperCase()
+  return {
+    ...defaultGoogleReviewsConfig
   }
-
-  const saveStoreReview = async (reviewData, existingId = null) => {
-    const db = getDb()
-    const finalId = existingId || reviewData.id || `store-rev-${Date.now()}`
-    const name = (reviewData.name || 'Happy Customer').trim()
-    const payload = {
-      name,
-      initials: (reviewData.initials || computeInitials(name)).trim().toUpperCase().slice(0, 3),
-      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
-      quote: (reviewData.quote || '').trim(),
-      badge: (reviewData.badge || 'Verified Buyer').trim(),
-      source: reviewData.source || 'manual',
-      order: Number(reviewData.order) || (storeReviews.value.length + 1),
-      enabled: reviewData.enabled !== false,
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'store_reviews', finalId), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveStoreReview warning:', err)
-      }
-    }
-    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
-    const idx = storeReviews.value.findIndex((r) => r.id === finalId)
-    if (idx !== -1) {
-      storeReviews.value[idx] = updated
-    } else {
-      storeReviews.value.push(updated)
-    }
-    storeReviews.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
-    saveToCache('ystore_store_reviews_cache', storeReviews.value)
-    return finalId
-  }
-
-  const deleteStoreReview = async (id) => {
-    if (!id) return
-    const db = getDb()
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'store_reviews', id))
-      } catch (err) {
-        console.warn('Firestore deleteStoreReview warning:', err)
-      }
-    }
-    storeReviews.value = storeReviews.value.filter((r) => r.id !== id)
-    saveToCache('ystore_store_reviews_cache', storeReviews.value)
-  }
-
-  const resetStoreReviewsToDefaults = async () => {
-    const db = getDb()
-    const defaults = JSON.parse(JSON.stringify(defaultInitialStoreReviews))
-    if (db) {
-      try {
-        for (const item of defaults) {
-          const { id, ...data } = item
-          await setDoc(doc(db, 'store_reviews', id), {
-            ...data,
-            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-          }, { merge: true })
-        }
-      } catch (err) {
-        console.warn('Firestore resetStoreReviewsToDefaults warning:', err)
-      }
-    }
-    storeReviews.value = defaults
-    saveToCache('ystore_store_reviews_cache', defaults)
-    return defaults
-  }
-
-  const saveGoogleReviewsConfig = async (cfgData) => {
-    const db = getDb()
-    const payload = {
-      source: cfgData.source || 'manual',
-      googlePlaceId: (cfgData.googlePlaceId || '').trim(),
-      googleApiKey: (cfgData.googleApiKey || '').trim(),
-      minRating: Math.min(5, Math.max(1, Number(cfgData.minRating) || 4)),
-      maxReviews: Math.min(20, Math.max(1, Number(cfgData.maxReviews) || 6)),
-      lastSyncedAt: cfgData.lastSyncedAt ?? googleReviewsConfig.value.lastSyncedAt ?? null,
-      cachedGoogleReviews: Array.isArray(cfgData.cachedGoogleReviews)
-        ? cfgData.cachedGoogleReviews
-        : (googleReviewsConfig.value.cachedGoogleReviews || []),
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'config', 'google_reviews'), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveGoogleReviewsConfig warning:', err)
-      }
-    }
-    googleReviewsConfig.value = { ...defaultGoogleReviewsConfig, ...payload, updatedAt: new Date().toISOString() }
-    saveToCache('ystore_google_reviews_config_cache', googleReviewsConfig.value)
-    return googleReviewsConfig.value
-  }
-
-  /**
-   * Google Places API (New v1) integration helper.
-   * Prepped for live Google Business Profile / Place ID syncing once API key & Place ID are supplied.
-   */
-  const syncGoogleReviews = async (placeIdOverride = null, apiKeyOverride = null) => {
-    const placeId = (placeIdOverride ?? googleReviewsConfig.value.googlePlaceId ?? '').trim()
-    const apiKey = (apiKeyOverride ?? googleReviewsConfig.value.googleApiKey ?? '').trim()
-    if (!placeId || !apiKey) {
-      throw new Error('Please enter both a Google Place ID and a Google Places API Key first.')
-    }
-
-    const endpoint = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?fields=displayName,rating,userRatingCount,reviews&key=${encodeURIComponent(apiKey)}`
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json'
-      }
-    })
-
-    if (!response.ok) {
-      let errMsg = `Google Places API returned HTTP ${response.status}`
-      try {
-        const errJson = await response.json()
-        if (errJson?.error?.message) errMsg = errJson.error.message
-      } catch {}
-      throw new Error(errMsg)
-    }
-
-    const data = await response.json()
-    const rawReviews = Array.isArray(data.reviews) ? data.reviews : []
-    const normalized = rawReviews
-      .map((rev, idx) => {
-        const authorName = rev.authorAttribution?.displayName || 'Google Customer'
-        const quoteText = rev.text?.text || rev.originalText?.text || ''
-        return {
-          id: `google-rev-${idx}-${Date.now()}`,
-          name: authorName,
-          initials: computeInitials(authorName),
-          rating: Number(rev.rating) || 5,
-          quote: quoteText,
-          badge: rev.relativePublishTimeDescription
-            ? `Google Review • ${rev.relativePublishTimeDescription}`
-            : 'Google Review',
-          source: 'google',
-          enabled: true
-        }
-      })
-      .filter((r) => Boolean(r.quote))
-
-    await saveGoogleReviewsConfig({
-      ...googleReviewsConfig.value,
-      googlePlaceId: placeId,
-      googleApiKey: apiKey,
-      lastSyncedAt: new Date().toISOString(),
-      cachedGoogleReviews: normalized
-    })
-
-    return normalized
-  }
-
-  // ==========================================
-  // PRODUCT-SPECIFIC CUSTOMER REVIEWS CRUD
-  // ==========================================
-  const saveProductReview = async (reviewData, existingId = null) => {
-    const db = getDb()
-    const finalId = existingId || reviewData.id || `prod-rev-${Date.now()}`
-    const createdIso = reviewData.createdAt || new Date().toISOString()
-    const payload = {
-      productId: String(reviewData.productId || '').trim(),
-      productName: String(reviewData.productName || 'Product').trim(),
-      author: String(reviewData.author || 'Anonymous').trim(),
-      email: String(reviewData.email || '').trim(),
-      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
-      title: String(reviewData.title || '').trim(),
-      comment: String(reviewData.comment || '').trim(),
-      badge: String(reviewData.badge || 'Verified Customer').trim(),
-      status: reviewData.status || 'approved', // 'approved' | 'pending' | 'hidden'
-      adminReply: String(reviewData.adminReply || '').trim(),
-      createdAt: createdIso,
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'product_reviews', finalId), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveProductReview warning:', err)
-      }
-    }
-    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
-    const idx = productReviews.value.findIndex((r) => r.id === finalId)
-    if (idx !== -1) {
-      productReviews.value[idx] = updated
-    } else {
-      productReviews.value.unshift(updated)
-    }
-    saveToCache('ystore_product_reviews_cache', productReviews.value)
-    return finalId
-  }
-
-  const deleteProductReview = async (id) => {
-    if (!id) return
-    const db = getDb()
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'product_reviews', id))
-      } catch (err) {
-        console.warn('Firestore deleteProductReview warning:', err)
-      }
-    }
-    productReviews.value = productReviews.value.filter((r) => r.id !== id)
-    saveToCache('ystore_product_reviews_cache', productReviews.value)
-  }
-
-  const getReviewsForProduct = (productId, productName = '') => {
-    return (productReviews.value || []).filter((r) => {
-      if (r.status === 'hidden' || r.status === 'pending') return false
-      if (productId && r.productId && String(r.productId) === String(productId)) return true
-      if (productName && r.productName && r.productName.toLowerCase() === String(productName).toLowerCase()) return true
-      return false
-    })
-  }
-
-  return { ...defaultGoogleReviewsConfig }
 }
 
 const getInitialProductReviews = () => {
@@ -2383,7 +1298,7 @@ const getInitialProductReviews = () => {
         const parsed = JSON.parse(cached)
         if (Array.isArray(parsed)) return parsed
       }
-    } catch {}
+    } catch { }
   }
   return []
 }
@@ -2396,7 +1311,7 @@ const getInitialCollectionBanners = () => {
         const parsed = JSON.parse(cached)
         if (Array.isArray(parsed) && parsed.length > 0) return parsed
       }
-    } catch {}
+    } catch { }
   }
   return [...defaultInitialCollectionBanners]
 }
@@ -2424,6 +1339,15 @@ const collectionBanners = ref(getInitialCollectionBanners())
 const storeReviews = ref(getInitialStoreReviews())
 const googleReviewsConfig = ref(getInitialGoogleReviewsConfig())
 const productReviews = ref(getInitialProductReviews())
+const subscriptionConfig = ref(getInitialSubscriptionConfig())
+const subscriptionMailbox = ref(getInitialSubscriptionMailbox())
+const newsletterSubscribers = ref(getInitialNewsletterSubscribers())
+const mailerCampaigns = ref([])
+const activeSessions = ref([])
+const sessionClockNow = ref(Date.now())
+let sessionHeartbeatTimer = null
+let sessionClockTimer = null
+let activeSessionsUnsub = null
 const activeStoreReviews = computed(() => {
   const cfg = googleReviewsConfig.value || defaultGoogleReviewsConfig
   const minRating = Number(cfg.minRating) || 1
@@ -2441,6 +1365,7 @@ const activeStoreReviews = computed(() => {
   return manualList.slice(0, maxReviews)
 })
 const paymentSettings = ref(getInitialPaymentSettings())
+const companyProfile = ref(getInitialCompanyProfile())
 const adminUsers = ref(getInitialAdminUsers())
 const contentLoading = ref(false)
 const contentError = ref('')
@@ -2582,6 +1507,17 @@ export const useStoreContent = () => {
               ...(data.gateways || {})
             },
             payouts: paymentSettings.value.payouts
+          }
+          if (data.companyProfile) {
+            const merged = { ...defaultCompanyProfile, ...data.companyProfile }
+            companyProfile.value = merged
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('ystore_company_profile', JSON.stringify(merged))
+              } catch {
+                // Ignore localStorage quota
+              }
+            }
           }
         }
       },
@@ -2761,6 +1697,34 @@ export const useStoreContent = () => {
       }
     )
 
+    // 19. Theme Subscription Config Listener
+    onSnapshot(
+      doc(db, 'config', 'subscription'),
+      (snap) => {
+        if (snap.exists()) {
+          subscriptionConfig.value = { ...defaultSubscriptionConfig, ...snap.data() }
+          saveToCache('ystore_subscription_config_cache', subscriptionConfig.value)
+        }
+      },
+      (err) => {
+        console.warn('Firestore subscription config listener warning:', err)
+      }
+    )
+
+    // 20. Newsletter Subscribers Listener
+    onSnapshot(
+      collection(db, 'newsletter_subscribers'),
+      (snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        newsletterSubscribers.value = list
+        saveToCache('ystore_newsletter_subscribers_cache', newsletterSubscribers.value)
+      },
+      (err) => {
+        console.warn('Firestore newsletter_subscribers listener warning:', err)
+      }
+    )
+
 
   }
 
@@ -2792,6 +1756,46 @@ export const useStoreContent = () => {
           id: d.id,
           ...d.data()
         }))
+      },
+      () => { }
+    )
+
+    // 3. Real-time Active Sessions Listener (Admin Only)
+    if (!activeSessionsUnsub) {
+      if (!sessionClockTimer) {
+        sessionClockTimer = setInterval(() => {
+          sessionClockNow.value = Date.now()
+        }, 10000)
+      }
+      activeSessionsUnsub = onSnapshot(
+        collection(db, 'active_sessions'),
+        (snap) => {
+          const now = Date.now()
+          sessionClockNow.value = now
+          const rows = []
+          snap.docs.forEach((d) => {
+            const data = d.data() || {}
+            const lastSeen = Number(data.lastSeenMs) || 0
+            // Auto-prune stale sessions older than 5 minutes
+            if (lastSeen > 0 && now - lastSeen > 300000) {
+              deleteDoc(doc(db, 'active_sessions', d.id)).catch(() => { })
+              return
+            }
+            rows.push({ id: d.id, ...data })
+          })
+          activeSessions.value = rows
+        },
+        () => { }
+      )
+    }
+
+    // 4. Marketing Mailer Campaigns Listener (Admin Only)
+    onSnapshot(
+      collection(db, 'mailer_campaigns'),
+      (snap) => {
+        mailerCampaigns.value = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')))
       },
       () => { }
     )
@@ -2915,14 +1919,28 @@ export const useStoreContent = () => {
       colors: Array.isArray(productData.colors)
         ? productData.colors.map((c) => String(c).trim()).filter(Boolean)
         : [],
+      colorVariants: Array.isArray(productData.colorVariants)
+        ? productData.colorVariants
+          .filter((v) => v && (String(v.name || '').trim() || String(v.color || '').trim()))
+          .map((v) => {
+            const color = String(v.color || '').trim()
+            const name = String(v.name || '').trim()
+            const parsedPrice = Number(v.price)
+            return {
+              color: color || name,
+              name: name || color,
+              price: !Number.isNaN(parsedPrice) && v.price !== '' && v.price !== null ? parsedPrice : (Number(productData.price) || 0)
+            }
+          })
+        : [],
       faqs: Array.isArray(productData.faqs)
         ? productData.faqs
-            .filter((f) => f && (f.question || f.answer))
-            .map((f) => ({
-              question: String(f.question || '').trim(),
-              answer: String(f.answer || '').trim()
-            }))
-            .filter((f) => f.question && f.answer)
+          .filter((f) => f && (f.question || f.answer))
+          .map((f) => ({
+            question: String(f.question || '').trim(),
+            answer: String(f.answer || '').trim()
+          }))
+          .filter((f) => f.question && f.answer)
         : [],
       disclosures: {
         material: productData.disclosures?.material || '',
@@ -3295,6 +2313,24 @@ export const useStoreContent = () => {
     }
 
     const refDoc = await addDoc(collection(db, 'orders'), payload)
+    if (typeof window !== 'undefined') {
+      try {
+        const now = Date.now()
+        const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000
+        const existing = JSON.parse(localStorage.getItem('ystore_recent_purchases') || '[]')
+        const active = (Array.isArray(existing) ? existing : []).filter(
+          (entry) => !entry.expiresAtMs || entry.expiresAtMs > now
+        )
+        active.unshift({
+          orderId: refDoc.id,
+          email: String(orderData.customerEmail || '').trim().toLowerCase(),
+          productIds: sanitizedItems.map((i) => String(i.id || i.name || '')),
+          createdAt: new Date(now).toISOString(),
+          expiresAtMs: now + ninetyDaysMs
+        })
+        localStorage.setItem('ystore_recent_purchases', JSON.stringify(active.slice(0, 20)))
+      } catch { }
+    }
     return refDoc.id
   }
 
@@ -3764,12 +2800,28 @@ export const useStoreContent = () => {
     const payload = {
       enabled: slidesData.enabled !== false,
       intervalSeconds: Math.max(1.5, Math.min(10, Number(slidesData.intervalSeconds) || 3.5)),
+      categoryPrefix: String(slidesData.categoryPrefix || defaultHeadingSlides.categoryPrefix).trim(),
+      categorySubtitle: String(slidesData.categorySubtitle || defaultHeadingSlides.categorySubtitle).trim(),
       categoryWords: cleanWords(slidesData.categoryWords).length > 0
         ? cleanWords(slidesData.categoryWords)
         : defaultHeadingSlides.categoryWords,
+      newPrefix: String(slidesData.newPrefix || defaultHeadingSlides.newPrefix).trim(),
+      newSubtitle: String(slidesData.newSubtitle || defaultHeadingSlides.newSubtitle).trim(),
       collectionWords: cleanWords(slidesData.collectionWords).length > 0
         ? cleanWords(slidesData.collectionWords)
         : defaultHeadingSlides.collectionWords,
+      shopCategoryPrefix: String(slidesData.shopCategoryPrefix || defaultHeadingSlides.shopCategoryPrefix).trim(),
+      shopCategoryHighlight: String(slidesData.shopCategoryHighlight || defaultHeadingSlides.shopCategoryHighlight).trim(),
+      shopCategorySubtitle: String(slidesData.shopCategorySubtitle || defaultHeadingSlides.shopCategorySubtitle).trim(),
+      shopCategoryButtonText: String(slidesData.shopCategoryButtonText || defaultHeadingSlides.shopCategoryButtonText).trim(),
+      featuredPrefix: String(slidesData.featuredPrefix || defaultHeadingSlides.featuredPrefix).trim(),
+      featuredSubtitle: String(slidesData.featuredSubtitle || defaultHeadingSlides.featuredSubtitle).trim(),
+      bestSellersPrefix: String(slidesData.bestSellersPrefix || defaultHeadingSlides.bestSellersPrefix).trim(),
+      bestSellersHighlight: String(slidesData.bestSellersHighlight || defaultHeadingSlides.bestSellersHighlight).trim(),
+      bestSellersSubtitle: String(slidesData.bestSellersSubtitle || defaultHeadingSlides.bestSellersSubtitle).trim(),
+      reviewsPrefix: String(slidesData.reviewsPrefix || defaultHeadingSlides.reviewsPrefix).trim(),
+      reviewsHighlight: String(slidesData.reviewsHighlight || defaultHeadingSlides.reviewsHighlight).trim(),
+      reviewsSubtitle: String(slidesData.reviewsSubtitle || defaultHeadingSlides.reviewsSubtitle).trim(),
       updatedAt: new Date().toISOString()
     }
 
@@ -4100,6 +3152,58 @@ export const useStoreContent = () => {
   }
 
   // ==========================================
+  // COMPANY PROFILE & CONTACT DETAILS CRUD
+  // ==========================================
+  const saveCompanyProfile = async (profileData = {}) => {
+    const db = getDb()
+    const clean = (val, fallback) => String(val ?? fallback ?? '').trim()
+    const payload = {
+      companyName: clean(profileData.companyName, defaultCompanyProfile.companyName),
+      domain: clean(profileData.domain, defaultCompanyProfile.domain),
+      streetAddress: clean(profileData.streetAddress, defaultCompanyProfile.streetAddress),
+      city: clean(profileData.city, defaultCompanyProfile.city),
+      province: clean(profileData.province, defaultCompanyProfile.province),
+      postalCode: clean(profileData.postalCode, defaultCompanyProfile.postalCode),
+      country: clean(profileData.country, defaultCompanyProfile.country),
+      timezone: clean(profileData.timezone, defaultCompanyProfile.timezone),
+      supportEmail: clean(profileData.supportEmail, defaultCompanyProfile.supportEmail),
+      infoEmail: clean(profileData.infoEmail, defaultCompanyProfile.infoEmail),
+      customEmail: clean(profileData.customEmail, defaultCompanyProfile.customEmail),
+      adminEmail: clean(profileData.adminEmail, defaultCompanyProfile.adminEmail),
+      primaryPhone: clean(profileData.primaryPhone, defaultCompanyProfile.primaryPhone),
+      secondaryPhone: clean(profileData.secondaryPhone, defaultCompanyProfile.secondaryPhone),
+      workingHoursWeekday: clean(profileData.workingHoursWeekday, defaultCompanyProfile.workingHoursWeekday),
+      workingHoursWeekend: clean(profileData.workingHoursWeekend, defaultCompanyProfile.workingHoursWeekend)
+    }
+
+    if (db) {
+      try {
+        await setDoc(
+          doc(db, 'settings', 'public_config'),
+          {
+            companyProfile: payload,
+            updatedAt: serverTimestamp()
+          },
+          { merge: true }
+        )
+      } catch (err) {
+        console.warn('Firestore setDoc failed for company profile:', err)
+        throw err
+      }
+    }
+
+    companyProfile.value = { ...payload }
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('ystore_company_profile', JSON.stringify(payload))
+      } catch {
+        // Ignore localStorage quota
+      }
+    }
+    return true
+  }
+
+  // ==========================================
   // ADMIN USERS & STAFF MANAGEMENT CRUD
   // ==========================================
   const saveAdminUser = async (userData, existingId = null) => {
@@ -4204,234 +3308,7 @@ export const useStoreContent = () => {
         const matchingProducts = publishedProducts.value.filter((p) => {
           return (p.category || '').trim().toLowerCase() === catName
         })
-        // ==========================================
-  // STORE / THEME CUSTOMER REVIEWS & GOOGLE REVIEWS API PREP
-  // ==========================================
-  const computeInitials = (name = '') => {
-    const parts = String(name).trim().split(/\s+/).filter(Boolean)
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    return (parts[0] || 'YB').slice(0, 2).toUpperCase()
-  }
-
-  const saveStoreReview = async (reviewData, existingId = null) => {
-    const db = getDb()
-    const finalId = existingId || reviewData.id || `store-rev-${Date.now()}`
-    const name = (reviewData.name || 'Happy Customer').trim()
-    const payload = {
-      name,
-      initials: (reviewData.initials || computeInitials(name)).trim().toUpperCase().slice(0, 3),
-      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
-      quote: (reviewData.quote || '').trim(),
-      badge: (reviewData.badge || 'Verified Buyer').trim(),
-      source: reviewData.source || 'manual',
-      order: Number(reviewData.order) || (storeReviews.value.length + 1),
-      enabled: reviewData.enabled !== false,
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'store_reviews', finalId), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveStoreReview warning:', err)
-      }
-    }
-    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
-    const idx = storeReviews.value.findIndex((r) => r.id === finalId)
-    if (idx !== -1) {
-      storeReviews.value[idx] = updated
-    } else {
-      storeReviews.value.push(updated)
-    }
-    storeReviews.value.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
-    saveToCache('ystore_store_reviews_cache', storeReviews.value)
-    return finalId
-  }
-
-  const deleteStoreReview = async (id) => {
-    if (!id) return
-    const db = getDb()
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'store_reviews', id))
-      } catch (err) {
-        console.warn('Firestore deleteStoreReview warning:', err)
-      }
-    }
-    storeReviews.value = storeReviews.value.filter((r) => r.id !== id)
-    saveToCache('ystore_store_reviews_cache', storeReviews.value)
-  }
-
-  const resetStoreReviewsToDefaults = async () => {
-    const db = getDb()
-    const defaults = JSON.parse(JSON.stringify(defaultInitialStoreReviews))
-    if (db) {
-      try {
-        for (const item of defaults) {
-          const { id, ...data } = item
-          await setDoc(doc(db, 'store_reviews', id), {
-            ...data,
-            updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-          }, { merge: true })
-        }
-      } catch (err) {
-        console.warn('Firestore resetStoreReviewsToDefaults warning:', err)
-      }
-    }
-    storeReviews.value = defaults
-    saveToCache('ystore_store_reviews_cache', defaults)
-    return defaults
-  }
-
-  const saveGoogleReviewsConfig = async (cfgData) => {
-    const db = getDb()
-    const payload = {
-      source: cfgData.source || 'manual',
-      googlePlaceId: (cfgData.googlePlaceId || '').trim(),
-      googleApiKey: (cfgData.googleApiKey || '').trim(),
-      minRating: Math.min(5, Math.max(1, Number(cfgData.minRating) || 4)),
-      maxReviews: Math.min(20, Math.max(1, Number(cfgData.maxReviews) || 6)),
-      lastSyncedAt: cfgData.lastSyncedAt ?? googleReviewsConfig.value.lastSyncedAt ?? null,
-      cachedGoogleReviews: Array.isArray(cfgData.cachedGoogleReviews)
-        ? cfgData.cachedGoogleReviews
-        : (googleReviewsConfig.value.cachedGoogleReviews || []),
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'config', 'google_reviews'), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveGoogleReviewsConfig warning:', err)
-      }
-    }
-    googleReviewsConfig.value = { ...defaultGoogleReviewsConfig, ...payload, updatedAt: new Date().toISOString() }
-    saveToCache('ystore_google_reviews_config_cache', googleReviewsConfig.value)
-    return googleReviewsConfig.value
-  }
-
-  /**
-   * Google Places API (New v1) integration helper.
-   * Prepped for live Google Business Profile / Place ID syncing once API key & Place ID are supplied.
-   */
-  const syncGoogleReviews = async (placeIdOverride = null, apiKeyOverride = null) => {
-    const placeId = (placeIdOverride ?? googleReviewsConfig.value.googlePlaceId ?? '').trim()
-    const apiKey = (apiKeyOverride ?? googleReviewsConfig.value.googleApiKey ?? '').trim()
-    if (!placeId || !apiKey) {
-      throw new Error('Please enter both a Google Place ID and a Google Places API Key first.')
-    }
-
-    const endpoint = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?fields=displayName,rating,userRatingCount,reviews&key=${encodeURIComponent(apiKey)}`
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json'
-      }
-    })
-
-    if (!response.ok) {
-      let errMsg = `Google Places API returned HTTP ${response.status}`
-      try {
-        const errJson = await response.json()
-        if (errJson?.error?.message) errMsg = errJson.error.message
-      } catch {}
-      throw new Error(errMsg)
-    }
-
-    const data = await response.json()
-    const rawReviews = Array.isArray(data.reviews) ? data.reviews : []
-    const normalized = rawReviews
-      .map((rev, idx) => {
-        const authorName = rev.authorAttribution?.displayName || 'Google Customer'
-        const quoteText = rev.text?.text || rev.originalText?.text || ''
         return {
-
-          id: `google-rev-${idx}-${Date.now()}`,
-          name: authorName,
-          initials: computeInitials(authorName),
-          rating: Number(rev.rating) || 5,
-          quote: quoteText,
-          badge: rev.relativePublishTimeDescription
-            ? `Google Review • ${rev.relativePublishTimeDescription}`
-            : 'Google Review',
-          source: 'google',
-          enabled: true
-        }
-      })
-      .filter((r) => Boolean(r.quote))
-
-    await saveGoogleReviewsConfig({
-      ...googleReviewsConfig.value,
-      googlePlaceId: placeId,
-      googleApiKey: apiKey,
-      lastSyncedAt: new Date().toISOString(),
-      cachedGoogleReviews: normalized
-    })
-
-    return normalized
-  }
-
-  // ==========================================
-  // PRODUCT-SPECIFIC CUSTOMER REVIEWS CRUD
-  // ==========================================
-  const saveProductReview = async (reviewData, existingId = null) => {
-    const db = getDb()
-    const finalId = existingId || reviewData.id || `prod-rev-${Date.now()}`
-    const createdIso = reviewData.createdAt || new Date().toISOString()
-    const payload = {
-      productId: String(reviewData.productId || '').trim(),
-      productName: String(reviewData.productName || 'Product').trim(),
-      author: String(reviewData.author || 'Anonymous').trim(),
-      email: String(reviewData.email || '').trim(),
-      rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
-      title: String(reviewData.title || '').trim(),
-      comment: String(reviewData.comment || '').trim(),
-      badge: String(reviewData.badge || 'Verified Customer').trim(),
-      status: reviewData.status || 'approved', // 'approved' | 'pending' | 'hidden'
-      adminReply: String(reviewData.adminReply || '').trim(),
-      createdAt: createdIso,
-      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
-    }
-    if (db) {
-      try {
-        await setDoc(doc(db, 'product_reviews', finalId), payload, { merge: true })
-      } catch (err) {
-        console.warn('Firestore saveProductReview warning:', err)
-      }
-    }
-    const updated = { id: finalId, ...payload, updatedAt: new Date().toISOString() }
-    const idx = productReviews.value.findIndex((r) => r.id === finalId)
-    if (idx !== -1) {
-      productReviews.value[idx] = updated
-    } else {
-      productReviews.value.unshift(updated)
-    }
-    saveToCache('ystore_product_reviews_cache', productReviews.value)
-    return finalId
-  }
-
-  const deleteProductReview = async (id) => {
-    if (!id) return
-    const db = getDb()
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'product_reviews', id))
-      } catch (err) {
-        console.warn('Firestore deleteProductReview warning:', err)
-      }
-    }
-    productReviews.value = productReviews.value.filter((r) => r.id !== id)
-    saveToCache('ystore_product_reviews_cache', productReviews.value)
-  }
-
-  const getReviewsForProduct = (productId, productName = '') => {
-    return (productReviews.value || []).filter((r) => {
-      if (r.status === 'hidden' || r.status === 'pending') return false
-      if (productId && r.productId && String(r.productId) === String(productId)) return true
-      if (productName && r.productName && r.productName.toLowerCase() === String(productName).toLowerCase()) return true
-      return false
-    })
-  }
-
-  return {
           ...cat,
           itemCount: matchingProducts.length,
           image: cat.image || matchingProducts[0]?.image || matchingProducts[0]?.images?.[0] || ''
@@ -4623,7 +3500,7 @@ export const useStoreContent = () => {
       try {
         const errJson = await response.json()
         if (errJson?.error?.message) errMsg = errJson.error.message
-      } catch {}
+      } catch { }
       throw new Error(errMsg)
     }
 
@@ -4662,18 +3539,61 @@ export const useStoreContent = () => {
   // ==========================================
   // PRODUCT-SPECIFIC CUSTOMER REVIEWS CRUD
   // ==========================================
+  const checkCustomerHasPurchased = async (uid = '') => {
+    if (typeof window !== 'undefined') {
+      try {
+        const now = Date.now()
+        const cached = JSON.parse(localStorage.getItem('ystore_recent_purchases') || '[]')
+        if (Array.isArray(cached)) {
+          const valid = cached.filter((entry) => !entry.expiresAtMs || entry.expiresAtMs > now)
+          if (valid.length !== cached.length) {
+            localStorage.setItem('ystore_recent_purchases', JSON.stringify(valid))
+          }
+          if (valid.length > 0) return true
+        }
+      } catch { }
+    }
+    const db = getDb()
+    if (!db || !uid) return false
+    try {
+      const q = query(collection(db, 'orders'), where('userId', '==', uid))
+      const snap = await getDocs(q)
+      return !snap.empty
+    } catch (err) {
+      console.warn('checkCustomerHasPurchased warning:', err)
+      return false
+    }
+  }
+
   const saveProductReview = async (reviewData, existingId = null) => {
     const db = getDb()
     const finalId = existingId || reviewData.id || `prod-rev-${Date.now()}`
     const createdIso = reviewData.createdAt || new Date().toISOString()
+    const cleanAuthor = String(reviewData.author || 'Anonymous').trim()
+    const cleanComment = String(reviewData.comment || '').trim()
+
+    // Server-side/composable spam guard for public customer submissions
+    if (reviewData.isCustomerSubmission) {
+      if (reviewData.honeypot) {
+        throw new Error('Unable to verify submission.')
+      }
+      if (cleanComment.length < 10 || cleanComment.split(/\s+/).filter(Boolean).length < 2) {
+        throw new Error('Please write at least 10 characters and 2 words in your review.')
+      }
+      if (/https?:\/\/|www\.|<a\s|\[url/i.test(cleanComment) || /(.)\1{6,}/.test(cleanComment)) {
+        throw new Error('Links and repetitive characters are not allowed in product reviews.')
+      }
+    }
+
     const payload = {
       productId: String(reviewData.productId || '').trim(),
       productName: String(reviewData.productName || 'Product').trim(),
-      author: String(reviewData.author || 'Anonymous').trim(),
+      author: cleanAuthor,
       email: String(reviewData.email || '').trim(),
+      userId: String(reviewData.userId || '').trim(),
       rating: Math.min(5, Math.max(1, Number(reviewData.rating) || 5)),
       title: String(reviewData.title || '').trim(),
-      comment: String(reviewData.comment || '').trim(),
+      comment: cleanComment,
       badge: String(reviewData.badge || 'Verified Customer').trim(),
       status: reviewData.status || 'approved', // 'approved' | 'pending' | 'hidden'
       adminReply: String(reviewData.adminReply || '').trim(),
@@ -4719,6 +3639,340 @@ export const useStoreContent = () => {
       if (productName && r.productName && r.productName.toLowerCase() === String(productName).toLowerCase()) return true
       return false
     })
+  }
+
+  // ==========================================
+  // THEME -> SUBSCRIPTION CONFIG & SUBSCRIBER ROUTING
+  // ==========================================
+  const saveSubscriptionConfig = async (cfgData) => {
+    const db = getDb()
+    const payload = {
+      enabled: cfgData.enabled !== false,
+      eyebrow: String(cfgData.eyebrow ?? defaultSubscriptionConfig.eyebrow).trim(),
+      heading: String(cfgData.heading ?? defaultSubscriptionConfig.heading).trim(),
+      description: String(cfgData.description ?? defaultSubscriptionConfig.description).trim(),
+      placeholder: String(cfgData.placeholder ?? defaultSubscriptionConfig.placeholder).trim(),
+      buttonText: String(cfgData.buttonText ?? defaultSubscriptionConfig.buttonText).trim(),
+      consentText: String(cfgData.consentText ?? defaultSubscriptionConfig.consentText).trim(),
+      successMessage: String(cfgData.successMessage ?? defaultSubscriptionConfig.successMessage).trim(),
+      routeToEmail: String(cfgData.routeToEmail || 'info@yberry.co.za').trim(),
+      deliveryMethod: ['webhook', 'mailbox', 'both'].includes(cfgData.deliveryMethod) ? cfgData.deliveryMethod : 'webhook',
+      webhookUrl: String(cfgData.webhookUrl || '').trim(),
+      mailboxEndpointUrl: String(cfgData.mailboxEndpointUrl || '/api/subscribe-mail.php').trim(),
+      mailboxFromName: String(cfgData.mailboxFromName || 'Ystore Newsletter').trim(),
+      mailboxFromEmail: String(cfgData.mailboxFromEmail || 'noreply@ystoreza.co.za').trim(),
+      mailboxSubject: String(cfgData.mailboxSubject || 'New Newsletter Subscriber: {{email}}').trim(),
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'config', 'subscription'), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveSubscriptionConfig warning:', err)
+      }
+    }
+    subscriptionConfig.value = { ...defaultSubscriptionConfig, ...payload, updatedAt: new Date().toISOString() }
+    saveToCache('ystore_subscription_config_cache', subscriptionConfig.value)
+    return subscriptionConfig.value
+  }
+
+  const loadSubscriptionMailbox = async () => {
+    const db = getDb()
+    if (!db) return subscriptionMailbox.value
+    try {
+      const snap = await getDoc(doc(db, 'settings', 'subscription_mailbox'))
+      if (snap.exists()) {
+        subscriptionMailbox.value = { ...defaultSubscriptionMailbox, ...snap.data() }
+        saveToCache('ystore_subscription_mailbox_cache', subscriptionMailbox.value)
+      }
+    } catch (err) {
+      console.warn('Firestore loadSubscriptionMailbox warning:', err)
+    }
+    return subscriptionMailbox.value
+  }
+
+  const saveSubscriptionMailbox = async (mailboxData) => {
+    const db = getDb()
+    const payload = {
+      host: String(mailboxData.host || '').trim(),
+      port: Number(mailboxData.port) || 465,
+      encryption: ['ssl', 'tls', 'none'].includes(mailboxData.encryption) ? mailboxData.encryption : 'ssl',
+      username: String(mailboxData.username || '').trim(),
+      password: String(mailboxData.password || ''),
+      fromName: String(mailboxData.fromName || 'Ystore Newsletter').trim(),
+      fromEmail: String(mailboxData.fromEmail || 'noreply@ystoreza.co.za').trim(),
+      subjectTemplate: String(mailboxData.subjectTemplate || 'New Newsletter Subscriber: {{email}}').trim(),
+      endpointUrl: String(mailboxData.endpointUrl || '/api/subscribe-mail.php').trim(),
+      updatedAt: serverTimestamp ? serverTimestamp() : new Date().toISOString()
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'settings', 'subscription_mailbox'), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveSubscriptionMailbox warning:', err)
+      }
+    }
+    subscriptionMailbox.value = { ...defaultSubscriptionMailbox, ...payload, updatedAt: new Date().toISOString() }
+    saveToCache('ystore_subscription_mailbox_cache', subscriptionMailbox.value)
+    // Also sync public-safe mailbox routing metadata to subscriptionConfig
+    await saveSubscriptionConfig({
+      ...(subscriptionConfig.value || defaultSubscriptionConfig),
+      mailboxEndpointUrl: payload.endpointUrl,
+      mailboxFromName: payload.fromName,
+      mailboxFromEmail: payload.fromEmail,
+      mailboxSubject: payload.subjectTemplate
+    })
+    return subscriptionMailbox.value
+  }
+
+  const testMailboxEndpoint = async (testEmail) => {
+    const cfg = subscriptionConfig.value || defaultSubscriptionConfig
+    const mb = subscriptionMailbox.value || defaultSubscriptionMailbox
+    const endpoint = (mb.endpointUrl || cfg.mailboxEndpointUrl || '/api/subscribe-mail.php').trim()
+    const routeToEmail = (cfg.routeToEmail || 'info@yberry.co.za').trim()
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        email: String(testEmail || routeToEmail).trim(),
+        routeToEmail,
+        sourcePage: 'cms-test',
+        fromName: mb.fromName || cfg.mailboxFromName || 'Ystore Newsletter',
+        fromEmail: mb.fromEmail || cfg.mailboxFromEmail || 'noreply@ystoreza.co.za',
+        subjectTemplate: mb.subjectTemplate || cfg.mailboxSubject || 'New Newsletter Subscriber: {{email}}',
+        isTest: true
+      })
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok || data.ok === false) {
+      throw new Error(data.error || `Mailbox endpoint returned HTTP ${res.status}`)
+    }
+    return data
+  }
+
+  const submitNewsletterSubscription = async (email, sourcePage = 'home') => {
+    const cleanEmail = String(email || '').trim().toLowerCase()
+    if (!cleanEmail) throw new Error('Please enter a valid email address.')
+
+    const cfg = subscriptionConfig.value || defaultSubscriptionConfig
+    const routeToEmail = (cfg.routeToEmail || 'info@yberry.co.za').trim()
+    const deliveryMethod = cfg.deliveryMethod || 'webhook'
+    const finalId = `sub-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const nowIso = new Date().toISOString()
+    const payload = {
+      email: cleanEmail,
+      routedToEmail: routeToEmail,
+      deliveryMethod,
+      sourcePage: String(sourcePage || 'home'),
+      createdAt: nowIso
+    }
+
+    const db = getDb()
+    if (db) {
+      try {
+        await setDoc(doc(db, 'newsletter_subscribers', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore submitNewsletterSubscription warning:', err)
+      }
+    }
+
+    // 1. Optional Webhook / Formspree / Zapier forwarding
+    if ((deliveryMethod === 'webhook' || deliveryMethod === 'both') && cfg.webhookUrl && typeof fetch !== 'undefined') {
+      try {
+        await fetch(cfg.webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            email: cleanEmail,
+            routeToEmail,
+            sourcePage,
+            subscribedAt: nowIso
+          })
+        })
+      } catch (err) {
+        console.warn('Subscription webhook forwarding warning:', err)
+      }
+    }
+
+    // 2. Alternative Mailbox / Domain Mail endpoint routing
+    if ((deliveryMethod === 'mailbox' || deliveryMethod === 'both') && cfg.mailboxEndpointUrl && typeof fetch !== 'undefined') {
+      try {
+        await fetch(cfg.mailboxEndpointUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            email: cleanEmail,
+            routeToEmail,
+            sourcePage,
+            fromName: cfg.mailboxFromName || 'Ystore Newsletter',
+            fromEmail: cfg.mailboxFromEmail || 'noreply@ystoreza.co.za',
+            subjectTemplate: cfg.mailboxSubject || 'New Newsletter Subscriber: {{email}}',
+            subscribedAt: nowIso
+          })
+        })
+      } catch (err) {
+        console.warn('Subscription mailbox forwarding warning:', err)
+      }
+    }
+
+    const record = { id: finalId, ...payload }
+    newsletterSubscribers.value.unshift(record)
+    saveToCache('ystore_newsletter_subscribers_cache', newsletterSubscribers.value)
+    return record
+  }
+
+  const deleteNewsletterSubscriber = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'newsletter_subscribers', id))
+      } catch (err) {
+        console.warn('Firestore deleteNewsletterSubscriber warning:', err)
+      }
+    }
+    newsletterSubscribers.value = newsletterSubscribers.value.filter((s) => s.id !== id)
+    saveToCache('ystore_newsletter_subscribers_cache', newsletterSubscribers.value)
+  }
+
+  // ==========================================
+  // MARKETING -> MAILERS CAMPAIGNS CRUD
+  // ==========================================
+  const saveMailerCampaign = async (campaignData, existingId = null) => {
+    const db = getDb()
+    const finalId = existingId || campaignData.id || `camp-${Date.now()}`
+    const nowIso = new Date().toISOString()
+    const payload = {
+      name: String(campaignData.name || 'Untitled Campaign').trim(),
+      subject: String(campaignData.subject || '').trim(),
+      preheader: String(campaignData.preheader || '').trim(),
+      audience: String(campaignData.audience || 'all-customers'),
+      customEmails: String(campaignData.customEmails || '').trim(),
+      headline: String(campaignData.headline || '').trim(),
+      body: String(campaignData.body || '').trim(),
+      ctaText: String(campaignData.ctaText || 'Shop Now').trim(),
+      ctaUrl: String(campaignData.ctaUrl || 'https://ystoreza.co.za/').trim(),
+      templatePreset: String(campaignData.templatePreset || 'custom'),
+      blocks: Array.isArray(campaignData.blocks) ? campaignData.blocks : [],
+      theme: campaignData.theme && typeof campaignData.theme === 'object' ? campaignData.theme : null,
+      htmlBody: String(campaignData.htmlBody || ''),
+      fromName: String(campaignData.fromName || 'Yellow Berry Store').trim(),
+      fromEmail: String(campaignData.fromEmail || 'noreply@ystoreza.co.za').trim(),
+      replyToEmail: String(campaignData.replyToEmail || 'info@yberry.co.za').trim(),
+      recipientCount: Number(campaignData.recipientCount) || 0,
+      status: campaignData.status || 'draft', // 'draft' | 'sent'
+      sentAt: campaignData.sentAt || null,
+      createdAt: campaignData.createdAt || nowIso,
+      updatedAt: nowIso
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'mailer_campaigns', finalId), payload, { merge: true })
+      } catch (err) {
+        console.warn('Firestore saveMailerCampaign warning:', err)
+      }
+    }
+    const updated = { id: finalId, ...payload }
+    const idx = mailerCampaigns.value.findIndex((c) => c.id === finalId)
+    if (idx !== -1) {
+      mailerCampaigns.value[idx] = updated
+    } else {
+      mailerCampaigns.value.unshift(updated)
+    }
+    return updated
+  }
+
+  const deleteMailerCampaign = async (id) => {
+    if (!id) return
+    const db = getDb()
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'mailer_campaigns', id))
+      } catch (err) {
+        console.warn('Firestore deleteMailerCampaign warning:', err)
+      }
+    }
+    mailerCampaigns.value = mailerCampaigns.value.filter((c) => c.id !== id)
+  }
+
+  // ==========================================
+  // REALTIME ACTIVE SESSIONS (ZERO-PII PRESENCE)
+  // ==========================================
+  const liveActiveSessions = computed(() => {
+    const cutoff = sessionClockNow.value - 90000 // Active within last 90 seconds
+    return (activeSessions.value || []).filter(
+      (s) => (Number(s.lastSeenMs) || 0) >= cutoff && s.view !== 'admin' && s.view !== 'cms-auth'
+    )
+  })
+
+  const activeVisitorCount = computed(() => liveActiveSessions.value.length)
+
+  const startSessionHeartbeat = (getCurrentViewFn) => {
+    if (typeof window === 'undefined') return () => { }
+    const db = getDb()
+    if (!db) return () => { }
+
+    let sid = ''
+    try {
+      sid = sessionStorage.getItem('ystore_live_sid') || ''
+      if (!sid) {
+        sid = `sess-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+        sessionStorage.setItem('ystore_live_sid', sid)
+      }
+    } catch {
+      sid = `sess-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    }
+
+    const startedAtMs = Date.now()
+
+    const ping = async (overrideView = null) => {
+      const view = String(overrideView ?? (typeof getCurrentViewFn === 'function' ? getCurrentViewFn() : 'home') ?? 'home')
+      if (view === 'admin' || view === 'cms-auth') return
+      try {
+        await setDoc(
+          doc(db, 'active_sessions', sid),
+          {
+            view,
+            startedAtMs,
+            lastSeenMs: Date.now()
+          },
+          { merge: true }
+        )
+      } catch { }
+    }
+
+    ping()
+    if (sessionHeartbeatTimer) clearInterval(sessionHeartbeatTimer)
+    sessionHeartbeatTimer = setInterval(() => {
+      if (document.visibilityState !== 'hidden') {
+        ping()
+      }
+    }, 25000)
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') ping()
+    }
+    const onUnload = () => {
+      deleteDoc(doc(db, 'active_sessions', sid)).catch(() => { })
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('pagehide', onUnload)
+    window.addEventListener('beforeunload', onUnload)
+
+    return {
+      ping,
+      stop: () => {
+        if (sessionHeartbeatTimer) {
+          clearInterval(sessionHeartbeatTimer)
+          sessionHeartbeatTimer = null
+        }
+        document.removeEventListener('visibilitychange', onVisibilityChange)
+        window.removeEventListener('pagehide', onUnload)
+        window.removeEventListener('beforeunload', onUnload)
+        onUnload()
+      }
+    }
   }
 
   return {
@@ -4830,8 +4084,30 @@ export const useStoreContent = () => {
     saveProductReview,
     deleteProductReview,
     getReviewsForProduct,
+    checkCustomerHasPurchased,
+    subscriptionConfig,
+    defaultSubscriptionConfig,
+    saveSubscriptionConfig,
+    subscriptionMailbox,
+    defaultSubscriptionMailbox,
+    loadSubscriptionMailbox,
+    saveSubscriptionMailbox,
+    testMailboxEndpoint,
+    newsletterSubscribers,
+    submitNewsletterSubscription,
+    deleteNewsletterSubscriber,
+    mailerCampaigns,
+    saveMailerCampaign,
+    deleteMailerCampaign,
+    activeSessions,
+    liveActiveSessions,
+    activeVisitorCount,
+    startSessionHeartbeat,
     showBadgePills,
-    isVideoFile
+    isVideoFile,
+    companyProfile,
+    defaultCompanyProfile,
+    saveCompanyProfile
   }
 }
 

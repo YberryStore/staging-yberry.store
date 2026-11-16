@@ -153,12 +153,12 @@
 
             <!-- Clickable Invisible Tap Zones for Mobile Navigation (tap left to go back, right to go forward) -->
             <div
-              class="absolute left-0 top-0 bottom-0 w-1/3 z-25 cursor-pointer select-none"
+              class="absolute left-0 top-0 bottom-0 w-1/3 z-20 cursor-pointer select-none"
               @click="prevSlide"
               aria-hidden="true"
             ></div>
             <div
-              class="absolute right-0 top-0 bottom-0 w-2/3 z-25 cursor-pointer select-none"
+              class="absolute right-0 top-0 bottom-0 w-2/3 z-20 cursor-pointer select-none"
               @click="nextSlide"
               aria-hidden="true"
             ></div>
@@ -189,8 +189,8 @@
                     >
                       {{ currentSlide.badge }}
                     </span>
-                    <h4 v-if="currentSlide.title" class="text-lg sm:text-2xl font-bold text-white tracking-tight leading-tight">
-                      {{ currentSlide.title }}
+                    <h4 v-if="currentSlide.title || currentSlide.caption" class="text-lg sm:text-2xl font-bold text-white tracking-tight leading-tight">
+                      {{ currentSlide.title || currentSlide.caption }}
                     </h4>
                     <p v-if="currentSlide.description" class="text-xs sm:text-sm text-neutral-300 mt-1 line-clamp-2 sm:line-clamp-3">
                       {{ currentSlide.description }}
@@ -201,7 +201,7 @@
                   <div v-if="currentSlide.ctaText" class="shrink-0">
                     <button
                       type="button"
-                      @click="handleCtaClick(currentSlide.ctaLink)"
+                      @click.stop="handleCtaClick(currentSlide.ctaLink)"
                       class="btn-primary text-xs sm:text-sm !py-2.5 sm:!py-3 !px-5 sm:!px-7 inline-flex items-center gap-2 shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer font-bold"
                     >
                       <span>{{ currentSlide.ctaText }}</span>

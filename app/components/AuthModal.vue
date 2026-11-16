@@ -234,15 +234,25 @@
                 <span>Want to save your cart & earn 150 points?</span>
               </div>
               <p class="text-xs text-neutral-600 leading-relaxed">
-                You're browsing with a temporary guest session. Sign up for a full account anytime to keep your order history.
+                You're browsing with a temporary guest session. Guest data is retained for up to <strong>90 days for remarketing purposes only</strong> before automatic deletion. Sign up for a permanent account anytime to keep your order history.
               </p>
-              <button
-                type="button"
-                @click="switchFromGuestToSignUp"
-                class="btn-pill-sm mt-1"
-              >
-                Create Permanent Account
-              </button>
+              <div class="flex flex-wrap items-center gap-2 mt-1">
+                <button
+                  type="button"
+                  @click="switchFromGuestToSignUp"
+                  class="btn-pill-sm"
+                >
+                  Create Permanent Account
+                </button>
+                <button
+                  type="button"
+                  :disabled="authLoading"
+                  @click="handleEraseGuestSession"
+                  class="px-3.5 py-1.5 rounded-full border border-neutral-300 text-neutral-700 hover:bg-neutral-100 text-xs font-medium transition-colors cursor-pointer disabled:opacity-60"
+                >
+                  Clear &amp; End Guest Session
+                </button>
+              </div>
             </div>
 
             <!-- Edit Display Name Section -->
@@ -357,18 +367,6 @@
                STATE 2: SIGN IN / SIGN UP / RESET FORMS
                ========================================== -->
           <div v-else class="space-y-6">
-            <!-- First-Layer Defense Perimeter Header -->
-            <div class="flex items-center justify-between px-3.5 py-2 rounded-xl bg-neutral-900 text-white shadow-xs">
-              <div class="flex items-center gap-2">
-                <span class="relative flex h-2 w-2">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <span class="text-xs font-medium tracking-wide">L1 Defense Shield Active</span>
-              </div>
-              <span class="text-[10px] text-neutral-400 font-mono">Anti-Bot & Rate Guard</span>
-            </div>
-
             <!-- Lockout Security Banner (Client-Side Progressive Rate Limiting) -->
             <div
               v-if="isLockedOut"
@@ -782,6 +780,16 @@
               </button>
 
               <!-- Guest / Anonymous Checkout -->
+              <label class="flex items-start gap-2 text-[11px] text-neutral-600 cursor-pointer px-2 pt-1">
+                <input
+                  v-model="guestRemarketingOptIn"
+                  type="checkbox"
+                  class="mt-0.5 rounded border-neutral-300 text-neutral-900 focus:ring-[#F4EB6A] shrink-0"
+                />
+                <span>
+                  Optional: Allow Ystore to keep my guest session data for <strong>90 days</strong> for <strong>remarketing purposes only</strong> before automatic deletion.
+                </span>
+              </label>
               <button
                 type="button"
                 :disabled="authLoading"
@@ -791,6 +799,16 @@
                 <FlowbiteIcon name="bag" size="15" stroke-width="1.5" />
                 <span>Continue as Guest Shopper (Fast Checkout)</span>
               </button>
+              <p class="text-[11px] text-neutral-500 text-center leading-relaxed px-2">
+                POPIA Notice: Temporary guest sessions expire automatically after 90 days. View our
+                <button
+                  type="button"
+                  @click="emit('navigate-privacy'); emit('close')"
+                  class="underline text-neutral-800 hover:text-neutral-950 font-medium cursor-pointer"
+                >
+                  Privacy Policy
+                </button>.
+              </p>
             </div>
           </div>
         </div>
@@ -820,7 +838,7 @@ defineProps({
   }
 })
 
-const emit = defineEmits(['close', 'auth-success', 'open-cart', 'open-admin', 'navigate-specials', 'navigate-contact'])
+const emit = defineEmits(['close', 'auth-success', 'open-cart', 'open-admin', 'navigate-specials', 'navigate-contact', 'navigate-privacy'])
 
 const {
   currentUser,
@@ -837,6 +855,7 @@ const {
   resetPassword,
   updateUserDisplayName,
   logout,
+  endAndEraseGuestSession,
   clearError
 } = useFirebaseAuth()
 
@@ -1080,13 +1099,15 @@ const handleGoogleSignIn = async () => {
   }
 }
 
+const guestRemarketingOptIn = ref(false)
+
 const handleGuestSignIn = async () => {
   statusMessage.value = ''
   if (isLockedOut.value) {
     authError.value = `Authentication cooldown active: ${lockoutRemaining.value}s remaining.`
     return
   }
-  const { user } = await signInAsGuest()
+  const { user } = await signInAsGuest(guestRemarketingOptIn.value)
   if (user) {
     resetFailedAttempts()
     emit('auth-success', {
@@ -1146,6 +1167,16 @@ const handleLogout = async () => {
   }
 }
 
+const handleEraseGuestSession = async () => {
+  const { success } = await endAndEraseGuestSession()
+  if (success) {
+    emit('auth-success', {
+      title: 'Guest Session Cleared',
+      message: 'Your temporary guest session and local browsing data have been erased.'
+    })
+  }
+}
+
 const handleStorageFileSelect = async (event) => {
   const files = event.target?.files
   if (!files || files.length === 0) return
@@ -1167,7 +1198,7 @@ const copyStorageUrl = (url) => {
     navigator.clipboard.writeText(url)
     emit('auth-success', {
       title: 'URL Copied',
-      message: 'Firebase Storage download URL copied to clipboard.'
+      message: 'Media download URL copied to clipboard.'
     })
   }
 }

@@ -1,43 +1,44 @@
 <template>
   <div class="w-full bg-white font-poppins min-h-screen">
-    <!-- Sub-header Bar: "All categories" & Breadcrumbs -->
+    <!-- Sub-header Bar: Related Products & Breadcrumbs -->
     <section class="w-full pt-6 pb-2">
       <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- "All categories" Button & Dropdown -->
-        <div class="relative inline-block">
-          <button
-            type="button"
-            @click="categoryMenuOpen = !categoryMenuOpen"
-            class="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-[#F4EB6A] hover:bg-[#FAF7BA] text-neutral-900 font-medium text-sm transition-all duration-200 shadow-xs cursor-pointer select-none active:scale-95"
-            aria-label="All categories"
+        <div v-if="relatedProducts.length > 0" class="flex items-center">
+          <!-- Related Products Circular Strip (Landing Page Story-Ring Look & Feel) -->
+          <div
+            class="flex-1 min-w-0 flex items-center gap-3.5 sm:gap-5 overflow-x-auto scrollbar-none py-1 px-1 snap-x"
+            aria-label="Related products"
           >
-            <FlowbiteIcon name="bars" size="18" stroke-width="2" />
-            <span>All categories</span>
-            <FlowbiteIcon
-              name="chevron-down"
-              size="14"
-              stroke-width="2"
-              :class="['transition-transform duration-200', categoryMenuOpen ? 'rotate-180' : '']"
-            />
-          </button>
-
-          <!-- Dropdown Menu -->
-          <transition name="dropdown">
-            <div
-              v-if="categoryMenuOpen"
-              class="absolute left-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-neutral-100 py-3 z-30 font-poppins"
+            <button
+              v-for="(item, idx) in relatedProducts"
+              :key="item.id || item.name || idx"
+              type="button"
+              @click="selectSimilarProduct(item)"
+              class="flex flex-col items-center shrink-0 group focus:outline-none cursor-pointer transition-transform duration-200 active:scale-95 snap-start"
+              :title="item.name"
             >
-              <a
-                v-for="cat in categoriesList"
-                :key="cat"
-                href="#categories"
-                @click="categoryMenuOpen = false; $emit('back-home')"
-                class="block px-4 py-2.5 text-sm text-neutral-700 hover:bg-[#FEFEEB] hover:text-neutral-900 transition-colors"
-              >
-                {{ cat }}
-              </a>
-            </div>
-          </transition>
+              <!-- Outer Gold/Yellow Ring matching Landing Page Story Circles -->
+              <div class="p-0.5 rounded-full transition-all duration-300 ring-2 ring-[#F4EB6A] shadow-[0_0_12px_rgba(244,235,106,0.35)] group-hover:ring-[#DEC02A] group-hover:scale-105">
+                <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-neutral-100 border-2 border-white flex items-center justify-center relative">
+                  <img
+                    v-if="item.image"
+                    :src="item.image"
+                    :alt="item.name"
+                    class="w-full h-full object-cover object-center group-hover:scale-110 transition-all duration-500 ease-out"
+                    loading="eager"
+                    decoding="async"
+                  />
+                  <div v-else class="w-full h-full flex items-center justify-center bg-neutral-900 text-[#F4EB6A] font-bold text-sm">
+                    {{ (item.name || 'P').charAt(0) }}
+                  </div>
+                  <span class="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full bg-[#F4EB6A] ring-2 ring-white animate-pulse"></span>
+                </div>
+              </div>
+              <span class="text-[11px] font-medium tracking-tight text-center truncate max-w-[72px] sm:max-w-[84px] mt-1.5 text-neutral-700 group-hover:text-neutral-900 transition-colors">
+                {{ item.name }}
+              </span>
+            </button>
+          </div>
         </div>
 
         <!-- Horizontal Divider -->
@@ -53,7 +54,7 @@
             Home
           </button>
           <span>&gt;</span>
-          <span class="hover:text-neutral-900 cursor-pointer" @click="$emit('back-home')">{{ product?.category || 'Products' }}</span>
+          <span class="hover:text-neutral-900 cursor-pointer" @click="$emit('select-category', product?.category || 'All')">{{ product?.category || 'Products' }}</span>
           <template v-if="product?.name">
             <span>&gt;</span>
             <span class="text-neutral-500 font-normal">{{ product.name }}</span>
@@ -200,7 +201,53 @@
               <span v-if="product.originalPrice" class="text-base text-neutral-400 line-through ml-2">R{{ product.originalPrice }}</span>
             </div>
 
-            <!-- Color Options (Only when colors have been added to the product) -->
+            <!-- Colour Variants (Custom Name & Separate Price) -->
+            <div v-if="productColorVariants.length > 0" class="mt-6">
+              <div class="flex items-center justify-between gap-2 mb-2.5">
+                <div class="text-sm font-medium text-neutral-900">
+                  Colour Variant:
+                  <span class="font-normal text-neutral-600">
+                    {{ selectedColorVariant ? (selectedColorVariant.name || selectedColorVariant.color) : 'Standard (Original)' }}
+                  </span>
+                </div>
+                <button
+                  v-if="selectedColorVariant"
+                  type="button"
+                  @click="selectedColorVariantKey = ''"
+                  class="text-[11px] font-medium text-neutral-500 hover:text-neutral-900 underline cursor-pointer"
+                >
+                  Reset to original
+                </button>
+              </div>
+              <div class="flex items-center gap-2.5 flex-wrap">
+                <button
+                  v-for="(variant, vIdx) in productColorVariants"
+                  :key="vIdx"
+                  type="button"
+                  @click="selectColorVariant(variant)"
+                  :class="[
+                    'px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer flex items-center gap-2',
+                    selectedColorVariantKey === `${variant.color}::${variant.name}`
+                      ? 'border-neutral-900 bg-neutral-900 text-white shadow-xs'
+                      : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400'
+                  ]"
+                >
+                  <span>{{ variant.name || variant.color }}</span>
+                  <span
+                    class="text-[11px] font-semibold px-1.5 py-0.5 rounded-full"
+                    :class="selectedColorVariantKey === `${variant.color}::${variant.name}` ? 'bg-[#F4EB6A] text-neutral-900' : 'bg-neutral-100 text-neutral-700'"
+                  >
+                    R{{ variant.price }}
+                  </span>
+                </button>
+              </div>
+              <div v-if="selectedColorVariant" class="mt-2.5 inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-[#FEFEEB] border border-[#F4EB6A] text-xs text-neutral-900">
+                <span class="font-medium">Variant Price:</span>
+                <span class="font-bold">R{{ selectedColorVariant.price }}</span>
+              </div>
+            </div>
+
+            <!-- Color Options (Only when simple colors have been added to the product) -->
             <div v-if="productColors.length > 0" class="mt-6">
               <div class="text-sm font-medium text-neutral-900 mb-2.5">
                 Color: <span class="font-normal text-neutral-600">{{ selectedColor }}</span>
@@ -432,7 +479,7 @@
         >
           <!-- Column 1: Product description -->
           <div>
-            <h2 class="text-xl sm:text-2xl font-bold text-neutral-900 mb-5 tracking-tight">
+            <h2 class="text-xl sm:text-2xl font-medium text-neutral-900 mb-5 tracking-tight">
               Product description
             </h2>
             <p class="text-xs sm:text-sm text-neutral-600 font-light leading-relaxed">
@@ -444,7 +491,7 @@
           <div class="flex flex-col">
             <div class="flex items-center justify-between gap-3 mb-5">
               <div>
-                <h2 class="text-xl sm:text-2xl font-bold text-neutral-900 tracking-tight">
+                <h2 class="text-xl sm:text-2xl font-medium text-neutral-900 tracking-tight">
                   Customer Reviews
                 </h2>
                 <p v-if="extendedReviews.length > 0" class="text-xs text-neutral-500 mt-0.5">
@@ -453,18 +500,86 @@
               </div>
               <button
                 type="button"
-                @click="showWriteReviewForm = !showWriteReviewForm"
+                @click="toggleWriteReviewForm"
                 class="px-4 py-2 rounded-full bg-neutral-900 hover:bg-neutral-800 text-[#F4EB6A] text-xs font-semibold transition-all cursor-pointer shrink-0 active:scale-95"
               >
                 {{ showWriteReviewForm ? 'Close Form' : 'Write a Review' }}
               </button>
             </div>
 
-            <!-- Inline Write a Review Form -->
+            <!-- Persistent Thank You Banner after Review Submission -->
+            <transition name="fade">
+              <div
+                v-if="reviewThankYouVisible"
+                class="mb-5 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-start justify-between gap-3"
+              >
+                <div class="flex items-start gap-2.5">
+                  <FlowbiteIcon name="check" size="18" stroke-width="2" class="text-emerald-600 shrink-0 mt-0.5" />
+                  <div class="text-xs leading-relaxed">
+                    <p class="font-bold text-emerald-950">Thank you for your review!</p>
+                    <p class="text-emerald-800 mt-0.5">Your feedback has been submitted and is now live below.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  @click="reviewThankYouVisible = false"
+                  class="text-emerald-700 hover:text-emerald-950 text-xs font-bold px-1.5 cursor-pointer"
+                  aria-label="Dismiss thank you message"
+                >
+                  ✕
+                </button>
+              </div>
+            </transition>
+
+            <!-- Gate Notice: Only Registered or Verified Purchasers -->
             <div
-              v-if="showWriteReviewForm"
+              v-if="showWriteReviewForm && !canWriteReview"
+              class="mb-6 p-5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-950 space-y-3"
+            >
+              <div class="flex items-start gap-2.5">
+                <FlowbiteIcon name="lock" size="18" stroke-width="1.8" class="text-amber-700 shrink-0 mt-0.5" />
+                <div class="text-xs leading-relaxed">
+                  <p class="font-bold">Verified Customers &amp; Registered Members Only</p>
+                  <p class="text-amber-800 mt-0.5">
+                    Please sign in or register an account (or complete a purchase) to share a product review.
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2.5 pt-1">
+                <button
+                  type="button"
+                  @click="emit('open-auth')"
+                  class="px-4 py-2 rounded-full bg-neutral-900 hover:bg-neutral-800 text-[#F4EB6A] text-xs font-semibold transition-all cursor-pointer"
+                >
+                  Sign In / Register
+                </button>
+                <button
+                  type="button"
+                  @click="showWriteReviewForm = false"
+                  class="px-3.5 py-2 rounded-full border border-amber-300 text-amber-900 text-xs font-medium hover:bg-amber-100 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+
+            <!-- Inline Write a Review Form -->
+            <form
+              v-else-if="showWriteReviewForm"
+              @submit.prevent="handleSubmitProductReview"
               class="mb-6 p-5 rounded-2xl bg-neutral-50 border border-neutral-200 space-y-3"
             >
+              <!-- Honeypot spam trap (hidden from real users) -->
+              <input
+                v-model="reviewForm.honeypot"
+                type="text"
+                tabindex="-1"
+                autocomplete="off"
+                aria-hidden="true"
+                class="hidden"
+                name="company_website"
+              />
+
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold uppercase tracking-wider text-neutral-700">Share your experience</span>
                 <div class="flex items-center gap-1">
@@ -490,6 +605,7 @@
                 <input
                   v-model="reviewForm.author"
                   type="text"
+                  required
                   placeholder="Your Name *"
                   class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 bg-white text-xs text-neutral-900 focus:outline-none focus:border-[#F4EB6A]"
                 />
@@ -504,25 +620,38 @@
               <textarea
                 v-model="reviewForm.comment"
                 rows="3"
+                required
                 placeholder="Tell other shoppers what you loved about this product *"
                 class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 bg-white text-xs text-neutral-900 focus:outline-none focus:border-[#F4EB6A]"
               ></textarea>
 
+              <!-- Verification Check -->
+              <div class="flex flex-wrap items-center gap-2.5 pt-0.5">
+                <label class="text-[11px] font-semibold text-neutral-600">
+                  Quick Verification: What is {{ spamChallenge.a }} + {{ spamChallenge.b }}? *
+                </label>
+                <input
+                  v-model="reviewForm.spamAnswer"
+                  type="number"
+                  required
+                  placeholder="Answer"
+                  class="w-24 px-3 py-1.5 rounded-xl border border-neutral-200 bg-white text-xs text-neutral-900 focus:outline-none focus:border-[#F4EB6A]"
+                />
+              </div>
+
               <div class="flex items-center justify-between gap-3 pt-1">
-                <span v-if="reviewFormMessage" class="text-xs font-medium text-emerald-700">{{ reviewFormMessage }}</span>
-                <span v-else-if="reviewFormError" class="text-xs font-medium text-red-600">{{ reviewFormError }}</span>
+                <span v-if="reviewFormError" class="text-xs font-medium text-red-600">{{ reviewFormError }}</span>
                 <span v-else class="text-[11px] text-neutral-400">Your review will appear below immediately.</span>
 
                 <button
-                  type="button"
+                  type="submit"
                   :disabled="reviewSubmitting"
-                  @click="handleSubmitProductReview"
                   class="px-5 py-2 rounded-full bg-[#F4EB6A] hover:bg-[#e8df56] text-neutral-950 font-semibold text-xs transition-all cursor-pointer disabled:opacity-50"
                 >
                   {{ reviewSubmitting ? 'Submitting...' : 'Submit Review' }}
                 </button>
               </div>
-            </div>
+            </form>
 
             <div v-if="customerReviews.length === 0" class="text-xs sm:text-sm text-neutral-500 font-light">
               No reviews yet for this product. Be the first to leave one!
@@ -583,7 +712,7 @@
 
           <!-- Column 3: Frequently Asked Questions (Only displayed when added to this product) -->
           <div v-if="productFaqs.length > 0" class="flex flex-col">
-            <h2 class="text-xl sm:text-2xl font-bold text-neutral-900 mb-5 tracking-tight">
+            <h2 class="text-xl sm:text-2xl font-medium text-neutral-900 mb-5 tracking-tight">
               Frequently Asked Questions
             </h2>
 
@@ -631,58 +760,44 @@
       </div>
     </section>
 
-    <!-- "Similar products" Section -->
+    <!-- "Similar products" Section (Associated by Tags) -->
     <section v-if="similarProducts.length > 0" class="my-16 sm:my-20">
       <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 class="text-3xl sm:text-4xl lg:text-[44px] font-bold text-neutral-900 tracking-tight mb-8">
+        <h2 class="text-3xl sm:text-4xl lg:text-[44px] font-medium text-neutral-900 tracking-tight mb-8">
           Similar <span class="font-serif italic font-normal text-neutral-600">products</span>
         </h2>
 
-        <!-- 4 Rounded Cards Matching Reference Wireframe / Ecommerce Catalog -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-          <div
-            v-for="(item, idx) in similarProducts"
-            :key="item.id || idx"
-            @click="selectSimilarProduct(item)"
-            class="group relative aspect-[3/4] rounded-3xl bg-[#D9D9D9] hover:bg-[#CECECE] transition-all duration-300 overflow-hidden cursor-pointer flex flex-col justify-end p-5 shadow-xs hover:shadow-xl hover:-translate-y-1.5"
-          >
-            <!-- Background Product Preview Image -->
-            <img
-              v-if="item.image"
-              :src="item.image"
-              :alt="item.name"
-              class="absolute inset-0 w-full h-full object-cover object-center opacity-40 group-hover:opacity-90 group-hover:scale-105 transition-all duration-300"
-              loading="lazy"
-            />
-
-            <!-- Hover Info Overlay Pill -->
-            <div class="relative z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white/95 backdrop-blur-xs p-3.5 rounded-2xl shadow-md border border-neutral-200/60">
-              <div class="font-semibold text-neutral-900 text-xs sm:text-sm truncate">{{ item.name }}</div>
-              <div class="text-xs text-neutral-600 font-medium mt-0.5">R{{ item.price }}</div>
-              <div class="text-[11px] text-neutral-900 font-semibold underline mt-1.5 flex items-center gap-1">
-                <span>View Product</span>
-                <span>&rarr;</span>
-              </div>
-            </div>
-          </div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+          <ProductCard
+            v-for="item in similarProducts"
+            :key="item.id"
+            :product="item"
+            @add-to-cart="$emit('add-to-cart', $event)"
+            @quick-view="$emit('quick-view', $event)"
+            @toggle-wishlist="$emit('toggle-wishlist', $event)"
+            @view-product="selectSimilarProduct($event)"
+          />
         </div>
       </div>
     </section>
 
+    <!-- Shop by Category (Landing Page Look & Feel) -->
+    <CategoryGrid @select-category="(cat) => $emit('select-category', cat)" />
+
     <!-- "Don't miss out and Subscribe" Newsletter Banner -->
-    <section class="my-16 sm:my-24">
+    <section v-if="subscriptionConfig.enabled !== false" class="my-16 sm:my-24">
       <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div class="rounded-3xl bg-[#D9D9D9] p-8 sm:p-12 lg:p-14 flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-12">
           <!-- Left Heading -->
           <div class="max-w-md text-left w-full">
-            <span class="text-sm sm:text-base text-neutral-800 font-normal block leading-tight">
-              Don't miss out and
+            <span v-if="subscriptionConfig.eyebrow" class="text-sm sm:text-base text-neutral-800 font-normal block leading-tight">
+              {{ subscriptionConfig.eyebrow }}
             </span>
-            <h2 class="text-4xl sm:text-5xl font-bold text-neutral-900 tracking-tight leading-none my-1.5">
-              Subscribe
+            <h2 class="text-4xl sm:text-5xl font-medium text-neutral-900 tracking-tight leading-none my-1.5">
+              {{ subscriptionConfig.heading || 'Subscribe' }}
             </h2>
-            <p class="text-xs sm:text-sm text-neutral-700 font-light mt-1">
-              to get updates on new arrivals and exclusive offers.
+            <p v-if="subscriptionConfig.description" class="text-xs sm:text-sm text-neutral-700 font-light mt-1">
+              {{ subscriptionConfig.description }}
             </p>
           </div>
 
@@ -695,14 +810,15 @@
                   v-model="newsletterEmail"
                   type="email"
                   required
-                  placeholder="Email"
+                  :placeholder="subscriptionConfig.placeholder || 'Email'"
                   class="w-full bg-transparent text-xs sm:text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none pr-3"
                 />
                 <button
                   type="submit"
-                  class="bg-[#F4EB6A] hover:bg-[#FAF7BA] text-neutral-900 font-medium px-7 sm:px-8 py-2.5 sm:py-3 rounded-full text-xs sm:text-sm transition-all shrink-0 cursor-pointer shadow-xs active:scale-95"
+                  :disabled="newsletterSubmitting"
+                  class="bg-[#F4EB6A] hover:bg-[#FAF7BA] text-neutral-900 font-medium px-7 sm:px-8 py-2.5 sm:py-3 rounded-full text-xs sm:text-sm transition-all shrink-0 cursor-pointer shadow-xs active:scale-95 disabled:opacity-60"
                 >
-                  Subscribe
+                  {{ newsletterSubmitting ? 'Sending...' : (subscriptionConfig.buttonText || 'Subscribe') }}
                 </button>
               </div>
 
@@ -715,7 +831,7 @@
                   class="mt-0.5 rounded text-[#F4EB6A] focus:ring-[#F4EB6A] border-neutral-400 shrink-0"
                 />
                 <span>
-                  I agree to receive marketing communications, including newsletters, promotions and product updates, and other marketing materials. I understand that I can unsubscribe at any time.
+                  {{ subscriptionConfig.consentText || 'I agree to receive marketing communications, including newsletters, promotions and product updates, and other marketing materials. I understand that I can unsubscribe at any time.' }}
                 </span>
               </label>
 
@@ -726,7 +842,7 @@
                   class="mt-3 p-3 rounded-xl bg-white/90 text-neutral-900 text-xs font-medium flex items-center gap-2 border border-neutral-300"
                 >
                   <FlowbiteIcon name="check" size="16" stroke-width="2" class="text-green-600 shrink-0" />
-                  <span>Thank you for subscribing! Check your inbox for updates.</span>
+                  <span>{{ subscriptionConfig.successMessage || 'Thank you for subscribing! Check your inbox for updates.' }}</span>
                 </div>
               </transition>
             </form>
@@ -830,12 +946,17 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import FlowbiteIcon from './FlowbiteIcon.vue'
+import CategoryGrid from './CategoryGrid.vue'
+import ProductCard from './ProductCard.vue'
 import { useStoreContent } from '../composables/useStoreContent'
+import { useFirebaseAuth } from '../composables/useFirebaseAuth'
 
-const { productReviews, saveProductReview, initContentListeners } = useStoreContent()
+const { publishedProducts, productReviews, saveProductReview, checkCustomerHasPurchased, subscriptionConfig, submitNewsletterSubscription, initContentListeners } = useStoreContent()
+const { currentUser, isAuthenticated, isGuest } = useFirebaseAuth()
 
-onMounted(() => {
+onMounted(async () => {
   initContentListeners()
+  hasCustomerPurchase.value = await checkCustomerHasPurchased(currentUser.value?.uid)
 })
 
 const props = defineProps({
@@ -845,9 +966,8 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['back-home', 'add-to-cart', 'buy-now', 'view-product'])
+const emit = defineEmits(['back-home', 'select-category', 'add-to-cart', 'buy-now', 'view-product', 'open-auth', 'quick-view', 'toggle-wishlist'])
 
-const categoryMenuOpen = ref(false)
 const quantity = ref(1)
 
 const productColors = computed(() => {
@@ -857,7 +977,45 @@ const productColors = computed(() => {
   return []
 })
 
+const productColorVariants = computed(() => {
+  const list = props.product?.colorVariants
+  if (!Array.isArray(list)) return []
+  return list
+    .filter((v) => v && (String(v.name || '').trim() || String(v.color || '').trim()))
+    .map((v) => {
+      const color = String(v.color || '').trim()
+      const name = String(v.name || '').trim()
+      const parsed = Number(v.price)
+      return {
+        color: color || name,
+        name: name || color,
+        price: !Number.isNaN(parsed) && v.price !== '' && v.price !== null ? parsed : (Number(props.product?.price) || 0)
+      }
+    })
+})
+
 const selectedColor = ref(props.product?.colors?.[0] || '')
+const selectedColorVariantKey = ref('')
+
+const selectedColorVariant = computed(() => {
+  if (!productColorVariants.value.length || !selectedColorVariantKey.value) return null
+  return (
+    productColorVariants.value.find((v) => `${v.color}::${v.name}` === selectedColorVariantKey.value) ||
+    null
+  )
+})
+
+const selectColorVariant = (variant) => {
+  const key = `${variant.color}::${variant.name}`
+  selectedColorVariantKey.value = selectedColorVariantKey.value === key ? '' : key
+}
+
+const displayedPrice = computed(() => {
+  if (selectedColorVariant.value) {
+    return selectedColorVariant.value.price
+  }
+  return props.product?.price ?? 0
+})
 
 // Out of stock handling: out of stock and backorders disabled
 const isOutOfStockAndBlocked = computed(() => {
@@ -947,6 +1105,7 @@ watch(
     mainImageLoading.value = true
     activeImage.value = newVal?.image || (newVal?.images?.[0] || '')
     selectedColor.value = newVal?.colors?.[0] || ''
+    selectedColorVariantKey.value = ''
     preloadProductGallery(newVal)
   },
   { immediate: true }
@@ -955,8 +1114,6 @@ watch(
 onMounted(() => {
   preloadProductGallery(props.product)
 })
-
-const categoriesList = []
 
 // 4 Feature proposition cards
 const features = [
@@ -1005,44 +1162,137 @@ const averageRating = computed(() => {
 
 const showWriteReviewForm = ref(false)
 const reviewSubmitting = ref(false)
-const reviewFormMessage = ref('')
+const reviewThankYouVisible = ref(false)
 const reviewFormError = ref('')
+const hasCustomerPurchase = ref(false)
+const formOpenedAt = ref(0)
+const spamChallenge = ref({ a: 3, b: 4 })
+
+const isRegisteredUser = computed(() => Boolean(isAuthenticated.value && !isGuest.value))
+const canWriteReview = computed(() => isRegisteredUser.value || hasCustomerPurchase.value)
+
+watch(currentUser, async (u) => {
+  hasCustomerPurchase.value = await checkCustomerHasPurchased(u?.uid)
+})
+
 const reviewForm = ref({
   author: '',
   rating: 5,
   title: '',
-  comment: ''
+  comment: '',
+  honeypot: '',
+  spamAnswer: ''
 })
+
+const refreshSpamChallenge = () => {
+  spamChallenge.value = {
+    a: Math.floor(Math.random() * 8) + 1,
+    b: Math.floor(Math.random() * 8) + 1
+  }
+}
+
+const toggleWriteReviewForm = () => {
+  showWriteReviewForm.value = !showWriteReviewForm.value
+  reviewFormError.value = ''
+  if (showWriteReviewForm.value) {
+    reviewThankYouVisible.value = false
+    formOpenedAt.value = Date.now()
+    refreshSpamChallenge()
+    if (!reviewForm.value.author && currentUser.value?.displayName) {
+      reviewForm.value.author = currentUser.value.displayName
+    }
+  }
+}
 
 const handleSubmitProductReview = async () => {
   reviewFormError.value = ''
-  reviewFormMessage.value = ''
+
+  if (!canWriteReview.value) {
+    reviewFormError.value = 'Only registered members or verified purchasers can submit a review.'
+    return
+  }
+
+  if (reviewForm.value.honeypot) {
+    reviewFormError.value = 'Unable to verify submission. Please try again.'
+    return
+  }
+
+  // Minimum interaction time (2.5s)
+  if (formOpenedAt.value && Date.now() - formOpenedAt.value < 2500) {
+    reviewFormError.value = 'Please take a moment to complete your review before submitting.'
+    return
+  }
+
+  // Math verification check
+  const expectedSum = spamChallenge.value.a + spamChallenge.value.b
+  if (Number(reviewForm.value.spamAnswer) !== expectedSum) {
+    reviewFormError.value = `Incorrect verification answer (${spamChallenge.value.a} + ${spamChallenge.value.b}).`
+    refreshSpamChallenge()
+    reviewForm.value.spamAnswer = ''
+    return
+  }
+
   if (!reviewForm.value.author?.trim()) {
     reviewFormError.value = 'Please enter your name.'
     return
   }
-  if (!reviewForm.value.comment?.trim()) {
-    reviewFormError.value = 'Please write a short review comment.'
+  const cleanComment = reviewForm.value.comment?.trim() || ''
+  if (cleanComment.length < 10 || cleanComment.split(/\s+/).filter(Boolean).length < 2) {
+    reviewFormError.value = 'Please write at least 10 characters and 2 words.'
     return
   }
+  if (/https?:\/\/|www\.|<a\s|\[url/i.test(cleanComment) || /(.)\1{6,}/.test(cleanComment)) {
+    reviewFormError.value = 'Links and repetitive characters are not allowed in reviews.'
+    return
+  }
+
+  // Spam protection 4: Rate limit per product (10 min) & hourly cap (3/hr)
+  const productKey = String(props.product?.id || props.product?.name || 'unknown')
+  if (typeof window !== 'undefined') {
+    try {
+      const rateLog = JSON.parse(localStorage.getItem('ystore_review_rate_limit') || '[]')
+      const now = Date.now()
+      const recentHour = rateLog.filter((entry) => now - entry.ts < 3600000)
+      if (recentHour.some((entry) => entry.productKey === productKey && now - entry.ts < 600000)) {
+        reviewFormError.value = 'You already submitted a review for this product recently. Please wait a few minutes.'
+        return
+      }
+      if (recentHour.length >= 3) {
+        reviewFormError.value = 'Review limit reached. Please try again later.'
+        return
+      }
+    } catch {}
+  }
+
   reviewSubmitting.value = true
   try {
     await saveProductReview({
-      productId: props.product?.id || props.product?.name || 'unknown',
+      productId: productKey,
       productName: props.product?.name || 'Product',
       author: reviewForm.value.author.trim(),
+      email: currentUser.value?.email || '',
+      userId: currentUser.value?.uid || '',
       rating: reviewForm.value.rating || 5,
       title: reviewForm.value.title.trim(),
-      comment: reviewForm.value.comment.trim(),
-      badge: 'Verified Customer',
-      status: 'approved'
+      comment: cleanComment,
+      badge: hasCustomerPurchase.value ? 'Verified Buyer' : 'Registered Member',
+      status: 'approved',
+      honeypot: reviewForm.value.honeypot,
+      isCustomerSubmission: true
     })
-    reviewForm.value = { author: '', rating: 5, title: '', comment: '' }
-    reviewFormMessage.value = 'Thank you! Your review has been published.'
-    setTimeout(() => {
-      showWriteReviewForm.value = false
-      reviewFormMessage.value = ''
-    }, 1800)
+
+    if (typeof window !== 'undefined') {
+      try {
+        const rateLog = JSON.parse(localStorage.getItem('ystore_review_rate_limit') || '[]')
+        const now = Date.now()
+        const updatedLog = [...rateLog.filter((e) => now - e.ts < 3600000), { productKey, ts: now }]
+        localStorage.setItem('ystore_review_rate_limit', JSON.stringify(updatedLog))
+      } catch {}
+    }
+
+    reviewForm.value = { author: '', rating: 5, title: '', comment: '', honeypot: '', spamAnswer: '' }
+    showWriteReviewForm.value = false
+    reviewThankYouVisible.value = true
   } catch (err) {
     reviewFormError.value = err?.message || 'Could not submit review. Please try again.'
   } finally {
@@ -1079,8 +1329,74 @@ const toggleFaq = (index) => {
   }
 }
 
-// Similar Products (populated from live catalog)
-const similarProducts = []
+const getNormalizedProductTags = (prod) => {
+  if (!prod) return []
+  const raw = []
+  if (Array.isArray(prod.tags)) raw.push(...prod.tags)
+  if (typeof prod.tag === 'string' && prod.tag.trim()) {
+    raw.push(...prod.tag.split(','))
+  }
+  return [...new Set(raw.map((t) => String(t).trim().toLowerCase()).filter(Boolean))]
+}
+
+// Related & Similar Products (strictly related to the product currently being viewed)
+const relatedProducts = computed(() => {
+  const current = props.product
+  if (!current) return []
+  const catalog = Array.isArray(publishedProducts.value) ? publishedProducts.value : []
+  const currentId = String(current.id || '').trim()
+  const currentName = String(current.name || '').trim().toLowerCase()
+  const currentCategory = String(current.category || '').trim().toLowerCase()
+  const currentTags = new Set(getNormalizedProductTags(current))
+
+  const others = catalog.filter((p) => {
+    if (!p) return false
+    if (currentId && String(p.id || '').trim() === currentId) return false
+    if (currentName && String(p.name || '').trim().toLowerCase() === currentName) return false
+    return true
+  })
+
+  const sameCategory = currentCategory
+    ? others.filter((p) => String(p.category || '').trim().toLowerCase() === currentCategory)
+    : []
+
+  const tagMatches = currentTags.size > 0
+    ? others.filter((p) => {
+        if (sameCategory.includes(p)) return false
+        return getNormalizedProductTags(p).some((t) => currentTags.has(t))
+      })
+    : []
+
+  return [...sameCategory, ...tagMatches]
+})
+
+// Similar Products associated by tags when the product is loaded (ranked by most shared tags)
+const similarProducts = computed(() => {
+  const current = props.product
+  if (!current) return []
+  const currentTags = new Set(getNormalizedProductTags(current))
+  if (currentTags.size === 0) return []
+
+  const catalog = Array.isArray(publishedProducts.value) ? publishedProducts.value : []
+  const currentId = String(current.id || '').trim()
+  const currentName = String(current.name || '').trim().toLowerCase()
+
+  return catalog
+    .filter((p) => {
+      if (!p) return false
+      if (currentId && String(p.id || '').trim() === currentId) return false
+      if (currentName && String(p.name || '').trim().toLowerCase() === currentName) return false
+      return true
+    })
+    .map((p) => {
+      const overlap = getNormalizedProductTags(p).filter((t) => currentTags.has(t)).length
+      return { product: p, overlap }
+    })
+    .filter((entry) => entry.overlap > 0)
+    .sort((a, b) => b.overlap - a.overlap)
+    .slice(0, 4)
+    .map((entry) => entry.product)
+})
 
 const selectSimilarProduct = (item) => {
   emit('view-product', item)
@@ -1088,16 +1404,22 @@ const selectSimilarProduct = (item) => {
 
 // Newsletter state
 const newsletterEmail = ref('')
-const newsletterAgreed = ref(true)
+const newsletterAgreed = ref(false)
 const newsletterSubmitted = ref(false)
+const newsletterSubmitting = ref(false)
 
-const handleNewsletterSubmit = () => {
-  if (newsletterEmail.value) {
+const handleNewsletterSubmit = async () => {
+  if (!newsletterEmail.value || newsletterSubmitting.value) return
+  newsletterSubmitting.value = true
+  try {
+    await submitNewsletterSubscription(newsletterEmail.value, 'product-detail')
     newsletterSubmitted.value = true
     newsletterEmail.value = ''
     setTimeout(() => {
       newsletterSubmitted.value = false
     }, 4000)
+  } finally {
+    newsletterSubmitting.value = false
   }
 }
 
@@ -1115,22 +1437,26 @@ const decrementQty = () => {
   }
 }
 
-const addToCartHandler = () => {
-  emit('add-to-cart', {
+const buildCartPayload = () => {
+  const variantLabel = selectedColorVariant.value
+    ? (selectedColorVariant.value.name || selectedColorVariant.value.color)
+    : (productColors.value.length ? selectedColor.value : null)
+  return {
     ...props.product,
+    price: displayedPrice.value,
     qty: quantity.value,
-    selectedColor: productColors.value.length ? selectedColor.value : null,
+    selectedColor: variantLabel,
+    variantKey: variantLabel ? `${props.product.id}::${variantLabel}` : props.product.id,
     image: activeImage.value
-  })
+  }
+}
+
+const addToCartHandler = () => {
+  emit('add-to-cart', buildCartPayload())
 }
 
 const buyNowHandler = () => {
-  emit('buy-now', {
-    ...props.product,
-    qty: quantity.value,
-    selectedColor: productColors.value.length ? selectedColor.value : null,
-    image: activeImage.value
-  })
+  emit('buy-now', buildCartPayload())
 }
 </script>
 

@@ -65,10 +65,12 @@
             The responsible party determining the lawful purpose and means of personal data processing for this e-commerce storefront is:
           </p>
           <div class="bg-neutral-50 p-5 rounded-2xl border border-neutral-200 text-xs sm:text-sm text-neutral-800 space-y-1">
-            <p class="font-bold text-neutral-900">Yellow Berry Store (Pty) Ltd</p>
-            <p class="text-neutral-600">Artisanal Toy &amp; Creative Studio</p>
-            <p>General Support: <a href="mailto:support@yellowberry.store" class="text-neutral-900 font-medium underline hover:text-amber-700">support@yellowberry.store</a></p>
-            <p>Information Officer: <a href="mailto:admin@yellowberry.store" class="text-neutral-900 font-medium underline hover:text-amber-700">admin@yellowberry.store</a></p>
+            <p class="font-bold text-neutral-900">{{ companyProfile.companyName }}</p>
+            <p v-if="companyProfile.streetAddress || companyProfile.city" class="text-neutral-600">
+              {{ [companyProfile.streetAddress, companyProfile.city, companyProfile.postalCode, companyProfile.country].filter(Boolean).join(', ') }}
+            </p>
+            <p>General Support: <a :href="`mailto:${companyProfile.supportEmail}`" class="text-neutral-900 font-medium underline hover:text-amber-700">{{ companyProfile.supportEmail }}</a></p>
+            <p>Information Officer: <a :href="`mailto:${companyProfile.adminEmail}`" class="text-neutral-900 font-medium underline hover:text-amber-700">{{ companyProfile.adminEmail }}</a></p>
           </div>
         </section>
 
@@ -118,7 +120,7 @@
             <li><strong>Right of Access &amp; Confirmation:</strong> You may request confirmation of what personal records Yellow Berry Store holds regarding your account and obtain a copy free of charge.</li>
             <li><strong>Right to Rectification:</strong> You may demand that inaccurate, outdated, or incomplete personal data be corrected or updated without unreasonable delay.</li>
             <li><strong>Right to Erasure &amp; Objection:</strong> You have the right to object to processing and request permanent deletion of your customer records where processing is no longer required for statutory tax retention.</li>
-            <li><strong>Transborder Information Flows (POPIA Section 72):</strong> Storefront infrastructure and database services hosted on Google Firebase/Firestore comply with Section 72 of POPIA, ensuring all cloud facilities maintain privacy protections equal to or exceeding South African law.</li>
+            <li><strong>Transborder Information Flows (POPIA Section 72):</strong> Storefront infrastructure and encrypted cloud database services comply with Section 72 of POPIA, ensuring all cloud facilities maintain privacy protections equal to or exceeding South African law.</li>
             <li><strong>Right to Lodge a Complaint:</strong> If you believe your personal data has been handled contrary to POPIA, you have the statutory right to lodge a formal complaint with the <strong>Information Regulator of South Africa</strong>:
               <div class="mt-2 p-3 bg-white rounded-xl border border-neutral-200 text-xs space-y-0.5">
                 <p><strong>Information Regulator (South Africa)</strong></p>
@@ -147,7 +149,7 @@
           <ul class="list-disc pl-5 text-sm text-neutral-700 space-y-1.5 leading-relaxed font-light">
             <li><strong>Couriers &amp; Freight:</strong> Reputable delivery companies across South Africa receive your recipient name, physical shipping address, and contact number strictly to complete parcel dispatch.</li>
             <li><strong>Payment Gateways:</strong> Payflex, Stripe, Visa, and Mastercard handle encrypted checkout without sharing raw card data with our servers.</li>
-            <li><strong>Cloud Infrastructure:</strong> Google Firebase provides certified ISO-27001, SOC-2 database infrastructure with encrypted data storage.</li>
+            <li><strong>Cloud Infrastructure:</strong> Enterprise cloud providers supply certified ISO-27001, SOC-2 database infrastructure with encrypted data storage.</li>
             <li><strong>Zero Commercial Brokerage:</strong> We never sell, lease, or monetize customer contact lists to marketing brokers or third-party advertisers.</li>
           </ul>
         </section>
@@ -182,9 +184,10 @@
             To submit a data access request, correct your personal details, or request account closure, contact our Information Officer:
           </p>
           <div class="text-sm text-neutral-800 space-y-1 pt-1 font-light">
-            <p><strong>Attention:</strong> Information Officer &bull; Yellow Berry Store Compliance</p>
-            <p><strong>Email:</strong> <a href="mailto:admin@yellowberry.store" class="text-neutral-900 font-medium underline">admin@yellowberry.store</a></p>
-            <p><strong>Customer Care:</strong> <a href="mailto:support@yellowberry.store" class="text-neutral-900 font-medium underline">support@yellowberry.store</a></p>
+            <p><strong>Attention:</strong> Information Officer &bull; {{ companyProfile.companyName }}</p>
+            <p><strong>Email:</strong> <a :href="`mailto:${companyProfile.adminEmail}`" class="text-neutral-900 font-medium underline">{{ companyProfile.adminEmail }}</a></p>
+            <p><strong>Customer Care:</strong> <a :href="`mailto:${companyProfile.supportEmail}`" class="text-neutral-900 font-medium underline">{{ companyProfile.supportEmail }}</a></p>
+            <p v-if="companyProfile.streetAddress || companyProfile.city"><strong>Address:</strong> {{ [companyProfile.streetAddress, companyProfile.city, companyProfile.postalCode, companyProfile.country].filter(Boolean).join(', ') }}</p>
             <p><strong>Response Commitment:</strong> Formal written acknowledgment within 48 hours; complete resolution within 30 days.</p>
           </div>
         </section>
@@ -195,6 +198,9 @@
 
 <script setup>
 import FlowbiteIcon from './FlowbiteIcon.vue'
+import { useStoreContent } from '../composables/useStoreContent'
+
+const { companyProfile } = useStoreContent()
 
 defineEmits(['back-home', 'navigate-cookies', 'navigate-terms'])
 </script>

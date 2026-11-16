@@ -9,9 +9,10 @@ import {
   signInAnonymously,
   sendPasswordResetEmail,
   updateProfile,
-  signOut
+  signOut,
+  deleteUser
 } from 'firebase/auth'
-import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
+import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp, Timestamp } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 import { ref, computed } from 'vue'
 
@@ -258,14 +259,22 @@ export const useFirebaseAuth = () => {
     }
   }
 
-  // 4. Guest / Anonymous Checkout Auth
-  const signInAsGuest = async () => {
+  // 4. Guest / Anonymous Checkout Auth (90-day retention + optional remarketing opt-in)
+  const signInAsGuest = async (remarketingOptIn = false) => {
     initFirebase()
     authLoading.value = true
     authError.value = ''
     try {
       const cred = await signInAnonymously(firebaseAuth)
-      await syncUserProfile(cred.user, { displayName: 'Guest Shopper' })
+      const expiresDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+      await syncUserProfile(cred.user, {
+        displayName: 'Guest Shopper',
+        retentionDays: 90,
+        remarketingOnly: Boolean(remarketingOptIn),
+        remarketingConsentAt: remarketingOptIn ? new Date().toISOString() : null,
+        expiresAt: Timestamp.fromDate(expiresDate),
+        expiresAtIso: expiresDate.toISOString()
+      })
       return { user: cred.user, error: null }
     } catch (err) {
       const msg = formatAuthError(err)
@@ -719,6 +728,42 @@ Yellow Berry Store Team`
     authError.value = ''
   }
 
+  // POPIA Section 24 Right to Erasure for temporary Guest sessions (permanent accounts untouched)
+  const endAndEraseGuestSession = async () => {
+    initFirebase()
+    authLoading.value = true
+    authError.value = ''
+    try {
+      const user = firebaseAuth?.currentUser
+      if (user?.isAnonymous) {
+        if (firestoreDb) {
+          try {
+            await deleteDoc(doc(firestoreDb, 'users', user.uid))
+          } catch {}
+        }
+        try {
+          await deleteUser(user)
+        } catch {
+          await signOut(firebaseAuth)
+        }
+      } else if (firebaseAuth?.currentUser) {
+        await signOut(firebaseAuth)
+      }
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem('ystore_recent_purchases')
+        } catch {}
+      }
+      currentUser.value = null
+      userProfile.value = null
+      return { success: true, error: null }
+    } catch (err) {
+      return { success: false, error: err?.message || 'Could not clear guest session.' }
+    } finally {
+      authLoading.value = false
+    }
+  }
+
   const isAuthenticated = computed(() => !!currentUser.value)
   const isGuest = computed(() => !!currentUser.value?.isAnonymous)
   const isAdmin = computed(() => {
@@ -756,6 +801,7 @@ Yellow Berry Store Team`
     signInCmsWithEmail,
     requestCmsAccessWithEmail,
     signInAsGuest,
+    endAndEraseGuestSession,
     resetPassword,
     updateUserDisplayName,
     sendTeamMemberInvite,

@@ -9,16 +9,17 @@
       >
         <!-- Modal Card -->
         <div
-          class="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl relative border border-neutral-100"
+          class="bg-white rounded-3xl max-w-2xl w-full max-h-[92vh] overflow-y-auto shadow-2xl relative border border-neutral-100"
           @click.stop
         >
-          <!-- Close Button -->
+          <!-- Close Button (Always visible on top RHS on mobile & desktop) -->
           <button
             type="button"
             @click="$emit('close')"
-            class="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-600 flex items-center justify-center transition-colors"
+            class="sticky md:absolute top-3 right-3 ml-auto mr-3 mt-3 md:m-0 z-30 w-9 h-9 rounded-full bg-white/95 hover:bg-neutral-200 text-neutral-800 border border-neutral-200 shadow-md flex items-center justify-center transition-colors cursor-pointer"
+            aria-label="Close quick view"
           >
-            <FlowbiteIcon name="close" size="18" stroke-width="1.5" />
+            <FlowbiteIcon name="close" size="18" stroke-width="2" />
           </button>
 
           <div class="grid grid-cols-1 md:grid-cols-2">
@@ -72,10 +73,10 @@
             </div>
 
             <!-- Details -->
-            <div class="p-6 md:p-8 flex flex-col justify-between">
+            <div class="p-4 sm:p-6 md:p-8 flex flex-col justify-between">
               <div>
                 <!-- Rating -->
-                <div class="flex items-center gap-1.5 mb-2 text-[#F4EB6A]">
+                <div class="flex items-center gap-1.5 mb-1.5 sm:mb-2 text-[#F4EB6A]">
                   <FlowbiteIcon
                     v-for="s in 5"
                     :key="s"
@@ -88,23 +89,23 @@
                   <span class="text-xs text-neutral-400 font-medium ml-1">({{ product.reviews || 30 }} reviews)</span>
                 </div>
 
-                <h3 class="text-xl sm:text-2xl font-medium text-neutral-900 mb-2">
+                <h3 class="text-lg sm:text-2xl font-medium text-neutral-900 mb-1 sm:mb-2">
                   {{ product.name }}
                 </h3>
 
-                <p class="text-xl font-bold text-neutral-900 mb-4">
+                <p class="text-lg sm:text-xl font-bold text-neutral-900 mb-3 sm:mb-4">
                   R{{ product.price }}
                   <span v-if="product.originalPrice" class="text-sm font-normal text-neutral-400 line-through ml-2">
                     R{{ product.originalPrice }}
                   </span>
                 </p>
 
-                <p v-if="product.description" class="text-sm text-neutral-600 leading-relaxed mb-6">
+                <p v-if="product.description" class="hidden sm:block text-sm text-neutral-600 leading-relaxed mb-6">
                   {{ product.description }}
                 </p>
 
                 <!-- Value Perks -->
-                <div class="space-y-2 py-3 border-y border-neutral-100 text-xs text-neutral-600 mb-6">
+                <div class="hidden sm:block space-y-2 py-3 border-y border-neutral-100 text-xs text-neutral-600 mb-6">
                   <div class="flex items-center gap-2">
                     <FlowbiteIcon name="truck" size="15" stroke-width="1.5" class="text-[#706747]" />
                     <span>Free delivery on orders over R500</span>

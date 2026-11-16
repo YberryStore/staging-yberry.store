@@ -14,9 +14,24 @@
             />
           </a>
 
-          <p class="text-sm text-neutral-400 max-w-sm leading-relaxed mb-6 font-light">
+          <p class="text-sm text-neutral-400 max-w-sm leading-relaxed mb-4 font-light">
             We bring ideas to life with high-quality, thoughtfully designed products. Crafted with precision and durable materials to brighten your everyday life.
           </p>
+
+          <div class="text-xs text-neutral-400 font-light space-y-1 mb-6 max-w-sm">
+            <p v-if="companyProfile.streetAddress || companyProfile.city" class="text-neutral-300">
+              {{ [companyProfile.streetAddress, companyProfile.city, companyProfile.postalCode, companyProfile.country].filter(Boolean).join(', ') }}
+            </p>
+            <p class="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <a v-if="companyProfile.primaryPhone" :href="`tel:${companyProfile.primaryPhone}`" class="hover:text-[#F4EB6A] transition-colors">
+                {{ companyProfile.primaryPhone }}
+              </a>
+              <span v-if="companyProfile.primaryPhone && companyProfile.supportEmail" class="text-neutral-600">&bull;</span>
+              <a v-if="companyProfile.supportEmail" :href="`mailto:${companyProfile.supportEmail}`" class="hover:text-[#F4EB6A] transition-colors">
+                {{ companyProfile.supportEmail }}
+              </a>
+            </p>
+          </div>
 
           <!-- Social Media Icons (Using provided SVGs) -->
           <div class="flex items-center gap-3">
@@ -128,8 +143,10 @@
 
 <script setup>
 import { useCookieConsent } from '../composables/useCookieConsent'
+import { useStoreContent } from '../composables/useStoreContent'
 
 const { openPreferencesModal } = useCookieConsent()
+const { companyProfile } = useStoreContent()
 
 defineEmits([
   'navigate-home',

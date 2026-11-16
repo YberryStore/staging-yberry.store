@@ -1,22 +1,22 @@
 <template>
-  <section class="py-14 sm:py-20 bg-neutral-50/60 font-poppins">
+  <section v-if="activeStoreReviews.length > 0" class="py-14 sm:py-20 bg-neutral-50/60 font-poppins">
     <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Section Title -->
       <div class="text-center max-w-xl mx-auto mb-12">
         <h2 class="text-3xl sm:text-[40px] font-medium text-neutral-900 tracking-tight leading-tight">
-          What our <span class="italic font-light text-neutral-700">customers say</span>
+          {{ headingSlides?.reviewsPrefix || 'What our' }} <span class="italic font-light text-neutral-700 font-serif">{{ headingSlides?.reviewsHighlight || 'customers say' }}</span>
         </h2>
         <p class="text-sm sm:text-base text-neutral-500 mt-2">
-          Real stories from happy parents, educators, and little adventurers.
+          {{ headingSlides?.reviewsSubtitle || 'Real stories from happy parents, educators, and little adventurers.' }}
         </p>
       </div>
 
-      <!-- Testimonial Cards Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+      <!-- Testimonial Cards: Horizontal Scroll on Mobile, 3-Col Grid on Desktop -->
+      <div class="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none md:grid md:grid-cols-3 md:gap-8 md:overflow-visible">
         <div
           v-for="(item, idx) in activeStoreReviews"
           :key="item.id || item.name || idx"
-          class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm hover:shadow-lg border border-neutral-100 hover:border-[#F4EB6A] transition-all duration-300 flex flex-col justify-between"
+          class="shrink-0 w-[84vw] sm:w-[340px] md:w-auto snap-start bg-white rounded-2xl p-6 sm:p-8 shadow-sm hover:shadow-lg border border-neutral-100 hover:border-[#F4EB6A] transition-all duration-300 flex flex-col justify-between"
         >
           <div>
             <!-- Stars -->
@@ -72,7 +72,7 @@ import { onMounted } from 'vue'
 import FlowbiteIcon from './FlowbiteIcon.vue'
 import { useStoreContent } from '../composables/useStoreContent'
 
-const { activeStoreReviews, initContentListeners } = useStoreContent()
+const { activeStoreReviews, headingSlides, initContentListeners } = useStoreContent()
 
 onMounted(() => {
   initContentListeners()

@@ -154,7 +154,7 @@
                 Essential for core storefront operations: shopping cart continuity, session tokens, secure payment gateway handshakes (Stripe, Payflex), rate-limiting defenses, and authentication.
               </p>
               <div class="text-[10px] font-mono text-neutral-500">
-                Examples: Cart contents, checkout tokens, Firebase Auth sessions, security verification.
+                Examples: Cart contents, checkout tokens, authentication sessions, security verification.
               </div>
             </div>
 

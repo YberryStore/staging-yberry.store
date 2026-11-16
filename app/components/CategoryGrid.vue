@@ -5,10 +5,10 @@
       <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 sm:mb-12">
         <div>
           <h2 class="text-3xl sm:text-[40px] font-medium text-neutral-900 tracking-tight leading-tight">
-            Shop by <span class="italic font-light text-neutral-700">category</span>
+            {{ headingSlides?.shopCategoryPrefix || 'Shop by' }} <span class="italic font-light text-neutral-700 font-serif">{{ headingSlides?.shopCategoryHighlight || 'category' }}</span>
           </h2>
           <p class="text-sm sm:text-base text-neutral-500 mt-1">
-            Discover curated worlds of wonder, learning, and playful exploration.
+            {{ headingSlides?.shopCategorySubtitle || 'Discover curated worlds of wonder, learning, and playful exploration.' }}
           </p>
         </div>
 
@@ -17,17 +17,17 @@
           @click="$emit('select-category', 'All')"
           class="btn-primary self-start sm:self-auto text-sm !py-2.5 !px-5 inline-flex items-center gap-2 group shrink-0 cursor-pointer"
         >
-          <span>View all categories</span>
+          <span>{{ headingSlides?.shopCategoryButtonText || 'View all categories' }}</span>
           <FlowbiteIcon name="chevron-right" size="16" stroke-width="2" class="group-hover:translate-x-1 transition-transform" />
         </button>
       </div>
 
       <!-- Categories Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <div
           v-for="cat in categories"
           :key="cat.name"
-          class="group relative rounded-2xl sm:rounded-3xl overflow-hidden bg-neutral-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer border border-neutral-100 hover:border-[#F4EB6A]"
+          class="group relative min-w-0 rounded-2xl sm:rounded-3xl overflow-hidden bg-neutral-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer border border-neutral-100 hover:border-[#F4EB6A]"
           @click="$emit('select-category', cat.name)"
         >
           <!-- Category Image Container -->
@@ -72,7 +72,7 @@ import { useStoreContent } from '../composables/useStoreContent'
 
 defineEmits(['select-category'])
 
-const { categoriesWithProducts: categories, initContentListeners } = useStoreContent()
+const { categoriesWithProducts: categories, headingSlides, initContentListeners } = useStoreContent()
 
 onMounted(() => {
   initContentListeners()

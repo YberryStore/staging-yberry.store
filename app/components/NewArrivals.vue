@@ -2,24 +2,24 @@
   <section v-if="newArrivals.length > 0" id="new-arrivals" class="py-14 sm:py-20 font-poppins">
     <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Section Header Centered -->
-      <div class="text-center max-w-2xl mx-auto mb-10">
-        <h2 class="text-3xl sm:text-[40px] font-medium text-neutral-900 tracking-tight leading-tight flex items-baseline justify-center flex-wrap">
-          <span>New</span>
+      <div class="mb-6 sm:mb-8">
+        <h2 class="text-2xl sm:text-3xl lg:text-[32px] font-medium text-neutral-900 tracking-tight leading-tight flex items-baseline flex-wrap">
+          <span>{{ headingSlides?.newPrefix || 'New' }}</span>
           <span class="inline-block relative overflow-hidden align-baseline ml-2 min-h-[1.25em]">
             <transition name="heading-slide" mode="out-in">
-              <span :key="currentCollectionWord" class="inline-block italic font-light text-neutral-700 font-serif">
+              <span :key="currentCollectionWord" class="inline-block italic font-light text-neutral-600 font-serif">
                 {{ currentCollectionWord }}
               </span>
             </transition>
           </span>
         </h2>
         <p class="text-sm sm:text-base text-neutral-500 mt-2">
-          Discover the latest innovative toys and lovable companions just added to our collection.
+          {{ headingSlides?.newSubtitle || 'Discover the latest innovative toys and lovable companions just added to our collection.' }}
         </p>
       </div>
 
       <!-- Product Cards Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
         <ProductCard
           v-for="product in newArrivals"
           :key="product.id"

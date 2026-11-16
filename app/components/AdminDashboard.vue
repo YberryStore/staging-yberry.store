@@ -79,7 +79,7 @@
               @click="handleNavClick(item.id)"
               :class="[
                 'w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm transition-all cursor-pointer group',
-                (activeSection === item.id || (item.id === 'media' && (activeSection === 'banners' || activeSection === 'story-categories' || activeSection === 'category-banners' || activeSection === 'collections-banners')) || (item.id === 'products' && (activeSection === 'categories' || activeSection === 'collections' || activeSection === 'purchase-orders' || activeSection === 'banner-categories' || activeSection === 'product-reviews')) || (item.id === 'customers' && activeSection === 'customer-segments') || (item.id === 'theme' && (activeSection === 'guarantee-stats' || activeSection === 'theme-badges' || activeSection === 'heading-slides' || activeSection === 'theme-reviews')))
+                (activeSection === item.id || (item.id === 'media' && (activeSection === 'banners' || activeSection === 'story-categories' || activeSection === 'category-banners' || activeSection === 'collections-banners')) || (item.id === 'products' && (activeSection === 'categories' || activeSection === 'collections' || activeSection === 'purchase-orders' || activeSection === 'banner-categories' || activeSection === 'product-reviews')) || (item.id === 'customers' && activeSection === 'customer-segments') || (item.id === 'theme' && (activeSection === 'guarantee-stats' || activeSection === 'theme-badges' || activeSection === 'heading-slides' || activeSection === 'theme-reviews' || activeSection === 'theme-subscription')) || (item.id === 'marketing' && activeSection === 'marketing-mailers'))
                   ? 'text-white font-medium bg-neutral-900/80'
                   : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900/40 font-normal',
                 isSidebarCollapsed ? 'justify-center px-2' : ''
@@ -92,7 +92,7 @@
                 :alt="item.label"
                 :class="[
                   'w-5 h-5 object-contain shrink-0 transition-opacity',
-                  (activeSection === item.id || (item.id === 'media' && (activeSection === 'banners' || activeSection === 'story-categories' || activeSection === 'category-banners' || activeSection === 'collections-banners')) || (item.id === 'products' && (activeSection === 'categories' || activeSection === 'collections' || activeSection === 'purchase-orders' || activeSection === 'banner-categories' || activeSection === 'product-reviews')) || (item.id === 'customers' && activeSection === 'customer-segments') || (item.id === 'theme' && (activeSection === 'guarantee-stats' || activeSection === 'theme-badges' || activeSection === 'heading-slides' || activeSection === 'theme-reviews'))) ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'
+                  (activeSection === item.id || (item.id === 'media' && (activeSection === 'banners' || activeSection === 'story-categories' || activeSection === 'category-banners' || activeSection === 'collections-banners')) || (item.id === 'products' && (activeSection === 'categories' || activeSection === 'collections' || activeSection === 'purchase-orders' || activeSection === 'banner-categories' || activeSection === 'product-reviews')) || (item.id === 'customers' && activeSection === 'customer-segments') || (item.id === 'theme' && (activeSection === 'guarantee-stats' || activeSection === 'theme-badges' || activeSection === 'heading-slides' || activeSection === 'theme-reviews' || activeSection === 'theme-subscription')) || (item.id === 'marketing' && activeSection === 'marketing-mailers')) ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'
                 ]"
               />
               <FlowbiteIcon
@@ -102,7 +102,7 @@
                 stroke-width="1.5"
                 :class="[
                   'shrink-0 transition-colors',
-                  (activeSection === item.id || (item.id === 'media' && (activeSection === 'banners' || activeSection === 'story-categories' || activeSection === 'category-banners' || activeSection === 'collections-banners')) || (item.id === 'products' && (activeSection === 'categories' || activeSection === 'collections' || activeSection === 'purchase-orders' || activeSection === 'banner-categories' || activeSection === 'product-reviews')) || (item.id === 'customers' && activeSection === 'customer-segments') || (item.id === 'theme' && (activeSection === 'guarantee-stats' || activeSection === 'theme-badges' || activeSection === 'heading-slides' || activeSection === 'theme-reviews'))) ? 'text-white' : 'text-neutral-400 group-hover:text-neutral-200'
+                  (activeSection === item.id || (item.id === 'media' && (activeSection === 'banners' || activeSection === 'story-categories' || activeSection === 'category-banners' || activeSection === 'collections-banners')) || (item.id === 'products' && (activeSection === 'categories' || activeSection === 'collections' || activeSection === 'purchase-orders' || activeSection === 'banner-categories' || activeSection === 'product-reviews')) || (item.id === 'customers' && activeSection === 'customer-segments') || (item.id === 'theme' && (activeSection === 'guarantee-stats' || activeSection === 'theme-badges' || activeSection === 'heading-slides' || activeSection === 'theme-reviews' || activeSection === 'theme-subscription')) || (item.id === 'marketing' && activeSection === 'marketing-mailers')) ? 'text-white' : 'text-neutral-400 group-hover:text-neutral-200'
                 ]"
               />
               <span v-if="!isSidebarCollapsed" class="truncate">{{ item.label }}</span>
@@ -140,6 +140,13 @@
                 size="14"
                 class="ml-auto text-neutral-500 group-hover:text-neutral-300 shrink-0 transition-transform duration-300"
                 :class="{ 'rotate-180 !text-white': themeSubmenuOpen }"
+              />
+              <FlowbiteIcon
+                v-else-if="item.id === 'marketing' && !isSidebarCollapsed"
+                name="chevron-down"
+                size="14"
+                class="ml-auto text-neutral-500 group-hover:text-neutral-300 shrink-0 transition-transform duration-300"
+                :class="{ 'rotate-180 !text-white': marketingSubmenuOpen }"
               />
             </button>
 
@@ -651,6 +658,69 @@
                   {{ (storeReviews && storeReviews.length) || 0 }}
                 </span>
               </button>
+
+              <!-- Sub-menu Item: Subscription -->
+              <button
+                type="button"
+                @click="activeSection = 'theme-subscription'"
+                :class="[
+                  'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer group',
+                  activeSection === 'theme-subscription'
+                    ? 'text-[#F4EB6A] font-semibold bg-neutral-900'
+                    : 'text-neutral-400 hover:text-white hover:bg-neutral-900/50 font-normal'
+                ]"
+                title="Newsletter Subscription Copy & Email Routing"
+              >
+                <span class="flex items-center gap-2 truncate">
+                  <span
+                    class="w-1.5 h-1.5 rounded-full shrink-0 transition-colors"
+                    :class="activeSection === 'theme-subscription' ? 'bg-[#F4EB6A]' : 'bg-neutral-600 group-hover:bg-neutral-400'"
+                  ></span>
+                  <span class="truncate">Subscription</span>
+                </span>
+                <span
+                  class="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                  :class="activeSection === 'theme-subscription' ? 'bg-[#F4EB6A]/20 text-[#F4EB6A]' : 'bg-neutral-800 text-neutral-400'"
+                >
+                  {{ (newsletterSubscribers && newsletterSubscribers.length) || 0 }}
+                </span>
+              </button>
+              </div>
+            </div>
+
+            <!-- Marketing Sub-menu: "Mailers" -->
+            <div
+              v-if="item.id === 'marketing' && !isSidebarCollapsed"
+              class="submenu-accordion"
+              :class="{ 'is-open': marketingSubmenuOpen }"
+            >
+              <div class="submenu-accordion-inner pl-6 pr-1 space-y-1 py-1">
+              <!-- Sub-menu Item: Mailers -->
+              <button
+                type="button"
+                @click="activeSection = 'marketing-mailers'"
+                :class="[
+                  'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer group',
+                  activeSection === 'marketing-mailers'
+                    ? 'text-[#F4EB6A] font-semibold bg-neutral-900'
+                    : 'text-neutral-400 hover:text-white hover:bg-neutral-900/50 font-normal'
+                ]"
+                title="This will handle marketing to our customer base"
+              >
+                <span class="flex items-center gap-2 truncate">
+                  <span
+                    class="w-1.5 h-1.5 rounded-full shrink-0 transition-colors"
+                    :class="activeSection === 'marketing-mailers' ? 'bg-[#F4EB6A]' : 'bg-neutral-600 group-hover:bg-neutral-400'"
+                  ></span>
+                  <span class="truncate">Mailers</span>
+                </span>
+                <span
+                  class="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                  :class="activeSection === 'marketing-mailers' ? 'bg-[#F4EB6A]/20 text-[#F4EB6A]' : 'bg-neutral-800 text-neutral-400'"
+                >
+                  {{ (mailerCampaigns && mailerCampaigns.length) || 0 }}
+                </span>
+              </button>
               </div>
             </div>
           </template>
@@ -807,12 +877,18 @@
           </p>
         </div>
 
-        <!-- Center: Current Live Visitors -->
-        <div class="flex flex-col md:items-center justify-center">
-          <span class="text-xs sm:text-sm font-medium text-neutral-800">Current Live Visitors</span>
+        <!-- Center: Realtime Active Sessions -->
+        <div
+          class="flex flex-col md:items-center justify-center relative group"
+          :title="activeSessionsSummary"
+        >
+          <span class="text-xs sm:text-sm font-medium text-neutral-800">Realtime Active Sessions</span>
           <div class="flex items-center gap-2 mt-0.5">
-            <span class="text-xs sm:text-sm text-neutral-500 font-medium">{{ liveVisitorsCount }}</span>
+            <span class="text-xs sm:text-sm text-neutral-700 font-semibold font-mono">{{ liveVisitorsCount }}</span>
             <span class="w-2.5 h-2.5 rounded-full bg-[#84CC16] inline-block shadow-[0_0_8px_#84CC16] animate-pulse"></span>
+            <span v-if="activeSessionsSummary" class="hidden xl:inline text-[11px] text-neutral-400">
+              ({{ activeSessionsSummary }})
+            </span>
           </div>
         </div>
 
@@ -1380,6 +1456,14 @@
                       <p class="text-[11px] text-neutral-500 mt-0.5">
                         Upload up to 7 photos. Choose which one serves as the Main Product Image on catalog cards and the primary storefront view.
                       </p>
+                      <div class="flex flex-wrap items-center gap-2 mt-1.5">
+                        <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-neutral-800 bg-[#FAF7BA] border border-[#F4EB6A] px-2.5 py-0.5 rounded-full">
+                          Recommended size: 800 × 800px
+                        </span>
+                        <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-900 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                          Images should be in WebP format (.webp)
+                        </span>
+                      </div>
                     </div>
 
                     <!-- Counter Badge & Upload Trigger -->
@@ -2080,6 +2164,105 @@
                 </span>
               </div>
               <p v-else class="text-[11px] text-neutral-400 italic">No color choices added. Product page will not display a color picker.</p>
+
+              <!-- Colour Variants with Custom Name & Price -->
+              <div class="pt-4 border-t border-neutral-100 space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <h5 class="text-xs font-bold text-neutral-900">Colour Variants (Custom Name &amp; Price)</h5>
+                  <span class="text-[10px] text-neutral-500">Separate custom name &amp; price per colour variant (independent of the product's original price)</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+                  <div class="sm:col-span-4">
+                    <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Colour</label>
+                    <input
+                      v-model="colorVariantInput.color"
+                      type="text"
+                      placeholder="e.g. Sage Green or #4A5D4E"
+                      @keydown.enter.prevent="addColorVariant"
+                      class="w-full px-3 py-1.5 rounded-lg border border-neutral-300 text-xs focus:outline-none focus:border-neutral-900"
+                    />
+                  </div>
+                  <div class="sm:col-span-4">
+                    <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Custom Variant Name</label>
+                    <input
+                      v-model="colorVariantInput.name"
+                      type="text"
+                      placeholder="e.g. Sage Green – Deluxe"
+                      @keydown.enter.prevent="addColorVariant"
+                      class="w-full px-3 py-1.5 rounded-lg border border-neutral-300 text-xs focus:outline-none focus:border-neutral-900"
+                    />
+                  </div>
+                  <div class="sm:col-span-2">
+                    <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Price (R)</label>
+                    <input
+                      v-model="colorVariantInput.price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="499"
+                      @keydown.enter.prevent="addColorVariant"
+                      class="w-full px-3 py-1.5 rounded-lg border border-neutral-300 text-xs focus:outline-none focus:border-neutral-900"
+                    />
+                  </div>
+                  <div class="sm:col-span-2">
+                    <button
+                      type="button"
+                      @click="addColorVariant"
+                      class="w-full btn-primary !py-1.5 !px-3 !text-xs cursor-pointer"
+                    >
+                      + Add Variant
+                    </button>
+                  </div>
+                </div>
+
+                <div v-if="productForm.colorVariants && productForm.colorVariants.length" class="space-y-2 pt-1">
+                  <div
+                    v-for="(variant, vIdx) in productForm.colorVariants"
+                    :key="vIdx"
+                    class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center p-2.5 rounded-xl bg-neutral-50 border border-neutral-200"
+                  >
+                    <div class="sm:col-span-4">
+                      <input
+                        v-model="variant.color"
+                        type="text"
+                        placeholder="Colour"
+                        class="w-full px-2.5 py-1 rounded-lg border border-neutral-200 bg-white text-xs focus:outline-none focus:border-neutral-900"
+                      />
+                    </div>
+                    <div class="sm:col-span-4">
+                      <input
+                        v-model="variant.name"
+                        type="text"
+                        placeholder="Custom Name"
+                        class="w-full px-2.5 py-1 rounded-lg border border-neutral-200 bg-white text-xs font-medium focus:outline-none focus:border-neutral-900"
+                      />
+                    </div>
+                    <div class="sm:col-span-3 flex items-center gap-1.5">
+                      <span class="text-xs font-semibold text-neutral-500">R</span>
+                      <input
+                        v-model="variant.price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Price"
+                        class="w-full px-2.5 py-1 rounded-lg border border-neutral-200 bg-white text-xs font-semibold focus:outline-none focus:border-neutral-900"
+                      />
+                    </div>
+                    <div class="sm:col-span-1 flex justify-end">
+                      <button
+                        type="button"
+                        @click="removeColorVariant(vIdx)"
+                        class="p-1.5 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 cursor-pointer font-bold"
+                        title="Remove colour variant"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <p v-else class="text-[11px] text-neutral-400 italic">No colour variants with custom names/prices added yet.</p>
+              </div>
             </div>
 
             <!-- 7C. Product FAQs (Questions & Answers) -->
@@ -4985,45 +5168,201 @@
           </div>
         </div>
 
-        <!-- Store Identity & Regional Details -->
-        <div class="p-6 rounded-2xl border border-neutral-200 bg-neutral-50/50 space-y-4">
-          <div class="pb-3 border-b border-neutral-200 flex items-center justify-between">
+        <!-- Store Identity, Company Address & Contact Details -->
+        <form @submit.prevent="handleSaveCompanyProfile" class="p-6 rounded-2xl border border-neutral-200 bg-neutral-50/50 space-y-5">
+          <div class="pb-3 border-b border-neutral-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 class="text-sm font-bold text-neutral-900">Store Profile &amp; Operational Details</h3>
-              <p class="text-xs text-neutral-500">Public store identification and business contact information.</p>
+              <h3 class="text-sm font-bold text-neutral-900">Company Address &amp; Contact Details</h3>
+              <p class="text-xs text-neutral-500">Update your business address, support emails, phone numbers, and hours shown across the storefront.</p>
             </div>
-            <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-neutral-900 text-[#F4EB6A]">
-              Yellow Berry Store (Pty) Ltd
-            </span>
+            <div class="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                @click="handleResetCompanyProfile"
+                class="px-3 py-1.5 rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:text-neutral-900 text-xs font-semibold cursor-pointer transition-colors"
+              >
+                Reset Defaults
+              </button>
+              <button
+                type="submit"
+                :disabled="savingCompanyProfile"
+                class="px-4 py-1.5 rounded-xl bg-neutral-900 text-[#F4EB6A] hover:bg-neutral-800 disabled:opacity-60 text-xs font-bold cursor-pointer transition-colors shadow-sm"
+              >
+                {{ savingCompanyProfile ? 'Saving...' : 'Save Company Details' }}
+              </button>
+            </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-            <div class="p-3.5 rounded-xl bg-white border border-neutral-200">
-              <span class="text-neutral-400 block text-[11px]">Storefront Domain</span>
-              <span class="font-semibold text-neutral-900">yellowberry.store</span>
+          <!-- Operational Summary Strip -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div class="p-3 rounded-xl bg-white border border-neutral-200 flex items-center justify-between">
+              <span class="text-neutral-400">Legal Entity</span>
+              <span class="font-semibold text-neutral-900 truncate ml-2">{{ localCompanyProfile.companyName || 'Yellow Berry Store (Pty) Ltd' }}</span>
             </div>
-            <div class="p-3.5 rounded-xl bg-white border border-neutral-200">
-              <span class="text-neutral-400 block text-[11px]">Primary Currency</span>
+            <div class="p-3 rounded-xl bg-white border border-neutral-200 flex items-center justify-between">
+              <span class="text-neutral-400">Primary Currency</span>
               <span class="font-semibold text-neutral-900">{{ localPaymentSettings.general.currency }} ({{ localPaymentSettings.general.currencySymbol }})</span>
             </div>
-            <div class="p-3.5 rounded-xl bg-white border border-neutral-200">
-              <span class="text-neutral-400 block text-[11px]">Standard VAT Rate</span>
+            <div class="p-3 rounded-xl bg-white border border-neutral-200 flex items-center justify-between">
+              <span class="text-neutral-400">Standard VAT Rate</span>
               <span class="font-semibold text-neutral-900">{{ localPaymentSettings.general.vatRate }}% (South Africa)</span>
             </div>
-            <div class="p-3.5 rounded-xl bg-white border border-neutral-200">
-              <span class="text-neutral-400 block text-[11px]">Timezone</span>
-              <span class="font-semibold text-neutral-900">Africa/Johannesburg (GMT+2)</span>
+          </div>
+
+          <!-- Company Identity & Physical Address -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Company / Legal Name</label>
+              <input
+                v-model="localCompanyProfile.companyName"
+                type="text"
+                placeholder="Yellow Berry Store (Pty) Ltd"
+                class="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900"
+              />
             </div>
-            <div class="p-3.5 rounded-xl bg-white border border-neutral-200">
-              <span class="text-neutral-400 block text-[11px]">Headquarters</span>
-              <span class="font-semibold text-neutral-900">Cape Town, South Africa</span>
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Storefront Domain</label>
+              <input
+                v-model="localCompanyProfile.domain"
+                type="text"
+                placeholder="ystoreza.co.za"
+                class="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900"
+              />
             </div>
-            <div class="p-3.5 rounded-xl bg-white border border-neutral-200">
-              <span class="text-neutral-400 block text-[11px]">Customer Support Email</span>
-              <span class="font-semibold text-neutral-900">support@yellowberry.store</span>
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Timezone</label>
+              <input
+                v-model="localCompanyProfile.timezone"
+                type="text"
+                placeholder="Africa/Johannesburg (GMT+2)"
+                class="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <div class="sm:col-span-2 lg:col-span-3">
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Street Address</label>
+              <input
+                v-model="localCompanyProfile.streetAddress"
+                type="text"
+                placeholder="Studio 4, The Palms Centre, 145 Sir Lowry Rd, Woodstock"
+                class="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">City</label>
+              <input
+                v-model="localCompanyProfile.city"
+                type="text"
+                placeholder="Cape Town"
+                class="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Province / Region</label>
+              <input
+                v-model="localCompanyProfile.province"
+                type="text"
+                placeholder="Western Cape"
+                class="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Postal Code</label>
+                <input
+                  v-model="localCompanyProfile.postalCode"
+                  type="text"
+                  placeholder="7925"
+                  class="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900"
+                />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Country</label>
+                <input
+                  v-model="localCompanyProfile.country"
+                  type="text"
+                  placeholder="South Africa"
+                  class="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900"
+                />
+              </div>
             </div>
           </div>
-        </div>
+
+          <!-- Contact Channels & Hours -->
+          <div class="pt-3 border-t border-neutral-200/80 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Customer Support Email</label>
+              <input
+                v-model="localCompanyProfile.supportEmail"
+                type="email"
+                placeholder="support@yellowberry.store"
+                class="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">General Inquiries Email</label>
+              <input
+                v-model="localCompanyProfile.infoEmail"
+                type="email"
+                placeholder="info@ystore.co.za"
+                class="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Custom Orders Email</label>
+              <input
+                v-model="localCompanyProfile.customEmail"
+                type="email"
+                placeholder="custom@ystore.co.za"
+                class="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Admin / POPIA Officer Email</label>
+              <input
+                v-model="localCompanyProfile.adminEmail"
+                type="email"
+                placeholder="admin@yellowberry.store"
+                class="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Primary Phone / WhatsApp</label>
+              <input
+                v-model="localCompanyProfile.primaryPhone"
+                type="text"
+                placeholder="+27 71 234 5678"
+                class="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Secondary Phone / WhatsApp</label>
+              <input
+                v-model="localCompanyProfile.secondaryPhone"
+                type="text"
+                placeholder="+27 82 987 6543"
+                class="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Weekday Hours</label>
+              <input
+                v-model="localCompanyProfile.workingHoursWeekday"
+                type="text"
+                placeholder="Daily: 8am - 5pm"
+                class="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Weekend / Sunday Hours</label>
+              <input
+                v-model="localCompanyProfile.workingHoursWeekend"
+                type="text"
+                placeholder="Sundays: Closed"
+                class="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-900 focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+          </div>
+        </form>
 
         <!-- Firebase Cloud Environment Details -->
         <div class="p-6 rounded-2xl border border-neutral-200 bg-white space-y-4 shadow-2xs">
@@ -7244,29 +7583,56 @@
           </div>
 
           <!-- Preview Stage -->
-          <div class="bg-white/5 border border-white/10 p-6 sm:p-8 rounded-2xl backdrop-blur-md">
-            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF7BA]/60 text-neutral-900 text-xs font-semibold mb-3 shadow-2xs">
-              <span class="w-1.5 h-1.5 rounded-full bg-[#F4EB6A]"></span>
-              <span>Our Boxes</span>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="bg-white/5 border border-white/10 p-6 rounded-2xl backdrop-blur-md">
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF7BA]/60 text-neutral-900 text-xs font-semibold mb-3 shadow-2xs">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#F4EB6A]"></span>
+                <span>Category Showcase</span>
+              </div>
+
+              <h3 class="text-xl sm:text-2xl font-bold text-white tracking-tight leading-tight flex items-baseline flex-wrap">
+                <span>{{ headingSlidesForm.categoryPrefix || 'The Perfect Gift for' }}</span>
+                <span class="inline-block relative overflow-hidden align-baseline ml-2 min-h-[1.25em]">
+                  <transition name="preview-slide" mode="out-in">
+                    <span
+                      :key="previewCategoryWord"
+                      class="inline-block italic font-light text-[#F4EB6A] font-serif"
+                    >
+                      {{ previewCategoryWord }}
+                    </span>
+                  </transition>
+                </span>
+              </h3>
+
+              <p class="text-xs text-neutral-400 mt-1 font-light">
+                {{ headingSlidesForm.categorySubtitle || "There's Always Something to Unwrap" }}
+              </p>
             </div>
 
-            <h3 class="text-2xl sm:text-4xl font-bold text-white tracking-tight leading-tight flex items-baseline flex-wrap">
-              <span>The Perfect Gift Box for</span>
-              <span class="inline-block relative overflow-hidden align-baseline ml-2 min-h-[1.25em]">
-                <transition name="preview-slide" mode="out-in">
-                  <span
-                    :key="previewCategoryWord"
-                    class="inline-block italic font-light text-[#F4EB6A] font-serif"
-                  >
-                    {{ previewCategoryWord }}
-                  </span>
-                </transition>
-              </span>
-            </h3>
+            <div class="bg-white/5 border border-white/10 p-6 rounded-2xl backdrop-blur-md">
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF7BA]/60 text-neutral-900 text-xs font-semibold mb-3 shadow-2xs">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#F4EB6A]"></span>
+                <span>New Section</span>
+              </div>
 
-            <p class="text-xs sm:text-sm text-neutral-400 mt-1 font-light">
-              There's Always Something to Unwrap
-            </p>
+              <h3 class="text-xl sm:text-2xl font-bold text-white tracking-tight leading-tight flex items-baseline flex-wrap">
+                <span>{{ headingSlidesForm.newPrefix || 'New' }}</span>
+                <span class="inline-block relative overflow-hidden align-baseline ml-2 min-h-[1.25em]">
+                  <transition name="preview-slide" mode="out-in">
+                    <span
+                      :key="previewCollectionWord"
+                      class="inline-block italic font-light text-[#F4EB6A] font-serif"
+                    >
+                      {{ previewCollectionWord }}
+                    </span>
+                  </transition>
+                </span>
+              </h3>
+
+              <p class="text-xs text-neutral-400 mt-1 font-light">
+                {{ headingSlidesForm.newSubtitle || 'Discover the latest innovative toys and lovable companions just added to our collection.' }}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -7334,12 +7700,33 @@
                 <h3 class="text-sm font-bold text-neutral-900">Category Heading Rotating Words (Up to 5)</h3>
               </div>
               <p class="text-xs text-neutral-500 mt-0.5">
-                These words rotate in italic style for category showcase headings (e.g. "The Perfect Gift Box for <em>Readers</em>").
+                Edit the heading prefix, subtitle, and up to 5 rotating italic words for the Category Showcase.
               </p>
             </div>
             <span class="text-xs font-bold text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-full">
               {{ headingSlidesForm.categoryWords.filter(w => w && w.trim()).length }} of 5 Active
             </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2">
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Category Heading Prefix</label>
+              <input
+                v-model="headingSlidesForm.categoryPrefix"
+                type="text"
+                placeholder="The Perfect Gift for"
+                class="w-full px-3.5 py-2 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 focus:bg-white focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Category Subtitle</label>
+              <input
+                v-model="headingSlidesForm.categorySubtitle"
+                type="text"
+                placeholder="There's Always Something to Unwrap"
+                class="w-full px-3.5 py-2 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 focus:bg-white focus:outline-none focus:border-neutral-900"
+              />
+            </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
@@ -7374,15 +7761,36 @@
             <div>
               <div class="flex items-center gap-2">
                 <FlowbiteIcon name="tag" size="16" class="text-neutral-700" />
-                <h3 class="text-sm font-bold text-neutral-900">Collection Heading Rotating Words (Up to 5)</h3>
+                <h3 class="text-sm font-bold text-neutral-900">"New" Section Heading &amp; Rotating Words (Up to 5)</h3>
               </div>
               <p class="text-xs text-neutral-500 mt-0.5">
-                These words rotate in italic style for collections and featured showcase headings (e.g. "Feature <em>Collections</em>").
+                Edit the "New" section prefix, subtitle, and rotating words (e.g. "New <em>Models</em>", "New <em>Treasures</em>").
               </p>
             </div>
             <span class="text-xs font-bold text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-full">
               {{ headingSlidesForm.collectionWords.filter(w => w && w.trim()).length }} of 5 Active
             </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2">
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">"New" Section Prefix</label>
+              <input
+                v-model="headingSlidesForm.newPrefix"
+                type="text"
+                placeholder="New"
+                class="w-full px-3.5 py-2 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 focus:bg-white focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-neutral-600 mb-1">"New" Section Subtitle</label>
+              <input
+                v-model="headingSlidesForm.newSubtitle"
+                type="text"
+                placeholder="Discover the latest innovative toys and lovable companions just added to our collection."
+                class="w-full px-3.5 py-2 text-xs rounded-xl border border-neutral-200 bg-neutral-50/50 focus:bg-white focus:outline-none focus:border-neutral-900"
+              />
+            </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
@@ -7408,6 +7816,936 @@
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- All Storefront Section Headings & Subtitles -->
+        <div class="bg-white p-6 sm:p-7 rounded-3xl border border-neutral-200/80 shadow-xs space-y-5">
+          <div class="pb-4 border-b border-neutral-100">
+            <h3 class="text-sm font-bold text-neutral-900">Storefront Section Headings &amp; Subtitles</h3>
+            <p class="text-xs text-neutral-500 mt-0.5">
+              Customize headings and subtitles for Shop by Category, Featured Products, Best Sellers, and Customer Reviews.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 text-xs">
+            <!-- Shop by Category -->
+            <div class="p-4 rounded-2xl bg-neutral-50/70 border border-neutral-200/70 space-y-3">
+              <div class="font-bold text-neutral-900">Shop by Category Section</div>
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Heading Prefix</label>
+                  <input v-model="headingSlidesForm.shopCategoryPrefix" type="text" placeholder="Shop by" class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 bg-white" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Italic Highlight</label>
+                  <input v-model="headingSlidesForm.shopCategoryHighlight" type="text" placeholder="category" class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 bg-white italic" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Subtitle</label>
+                <input v-model="headingSlidesForm.shopCategorySubtitle" type="text" placeholder="Discover curated worlds of wonder..." class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 bg-white" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Button Text</label>
+                <input v-model="headingSlidesForm.shopCategoryButtonText" type="text" placeholder="View all categories" class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 bg-white" />
+              </div>
+            </div>
+
+            <!-- Featured Products -->
+            <div class="p-4 rounded-2xl bg-neutral-50/70 border border-neutral-200/70 space-y-3">
+              <div class="font-bold text-neutral-900">Featured Products Section</div>
+              <div>
+                <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Heading Prefix (rotates with Collection words)</label>
+                <input v-model="headingSlidesForm.featuredPrefix" type="text" placeholder="Feature" class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 bg-white" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Subtitle</label>
+                <input v-model="headingSlidesForm.featuredSubtitle" type="text" placeholder="Discover our handpicked selection..." class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 bg-white" />
+              </div>
+            </div>
+
+            <!-- Best Sellers -->
+            <div class="p-4 rounded-2xl bg-neutral-50/70 border border-neutral-200/70 space-y-3">
+              <div class="font-bold text-neutral-900">Best Sellers Section</div>
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Heading Prefix</label>
+                  <input v-model="headingSlidesForm.bestSellersPrefix" type="text" placeholder="Best" class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 bg-white" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Italic Highlight</label>
+                  <input v-model="headingSlidesForm.bestSellersHighlight" type="text" placeholder="sellers" class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 bg-white italic" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Subtitle</label>
+                <input v-model="headingSlidesForm.bestSellersSubtitle" type="text" placeholder="The community favorites..." class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 bg-white" />
+              </div>
+            </div>
+
+            <!-- Customer Reviews / Testimonials -->
+            <div class="p-4 rounded-2xl bg-neutral-50/70 border border-neutral-200/70 space-y-3">
+              <div class="font-bold text-neutral-900">Customer Reviews Section</div>
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Heading Prefix</label>
+                  <input v-model="headingSlidesForm.reviewsPrefix" type="text" placeholder="What our" class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 bg-white" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Italic Highlight</label>
+                  <input v-model="headingSlidesForm.reviewsHighlight" type="text" placeholder="customers say" class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 bg-white italic" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Subtitle</label>
+                <input v-model="headingSlidesForm.reviewsSubtitle" type="text" placeholder="Real stories from happy parents..." class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 bg-white" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           MARKETING -> MAILERS (CUSTOMER BASE CAMPAIGNS)
+           ========================================== -->
+      <div v-else-if="activeSection === 'marketing-mailers'" class="space-y-6">
+        <!-- Header Banner -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-neutral-200/80 shadow-xs">
+          <div class="space-y-1">
+            <nav class="flex items-center gap-2 text-xs text-neutral-400">
+              <span>Marketing</span>
+              <FlowbiteIcon name="chevron-right" size="12" />
+              <span class="text-neutral-900 font-medium">Mailers</span>
+            </nav>
+            <h1 class="text-2xl sm:text-3xl font-bold text-neutral-900 tracking-tight">
+              Customer Mailers &amp; Campaigns
+            </h1>
+            <p class="text-xs sm:text-sm text-neutral-500">
+              Handle email marketing campaigns to your customer base, segments, and newsletter subscribers.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              @click="resetMailerForm"
+              class="px-4 py-2.5 rounded-xl border border-neutral-200 text-xs font-medium text-neutral-600 hover:bg-neutral-50 transition-colors cursor-pointer"
+            >
+              New Campaign
+            </button>
+            <button
+              type="button"
+              @click="handleSaveMailerDraft"
+              :disabled="mailerSending"
+              class="px-4 py-2.5 rounded-xl border border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+            >
+              Save Draft
+            </button>
+            <button
+              type="button"
+              @click="handleSendMailerCampaign"
+              :disabled="mailerSending || resolvedMailerRecipients.length === 0"
+              class="px-5 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-[#F4EB6A] text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
+            >
+              <FlowbiteIcon name="mail" size="14" />
+              <span>{{ mailerSending ? 'Dispatching...' : `Send Mailer (${resolvedMailerRecipients.length})` }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Left: Audience & Campaign Composer -->
+          <div class="lg:col-span-7 space-y-6">
+            <!-- Audience Targeting -->
+            <div class="bg-white p-6 rounded-3xl border border-neutral-200/80 shadow-xs space-y-4">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 class="text-base font-bold text-neutral-900">1. Target Customer Base</h2>
+                  <p class="text-xs text-neutral-500">Choose who receives this marketing mailer.</p>
+                </div>
+                <span class="px-3 py-1 rounded-full bg-[#FEFEEB] border border-[#F4EB6A] text-xs font-bold text-neutral-900">
+                  {{ resolvedMailerRecipients.length }} Recipient{{ resolvedMailerRecipients.length === 1 ? '' : 's' }}
+                </span>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">Audience Group</label>
+                <select
+                  v-model="mailerForm.audience"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm bg-white focus:outline-none focus:border-neutral-900"
+                >
+                  <option value="all-customers">All Customers &amp; Subscribers (Combined Customer Base)</option>
+                  <option value="registered-customers">Registered Customers Only</option>
+                  <option value="newsletter-subscribers">Newsletter Subscribers Only</option>
+                  <option
+                    v-for="seg in allComputedSegments"
+                    :key="seg.id"
+                    :value="`segment:${seg.id}`"
+                  >
+                    Segment: {{ seg.name }}
+                  </option>
+                  <option value="custom-emails">Custom Email List</option>
+                </select>
+              </div>
+
+              <div v-if="mailerForm.audience === 'custom-emails'">
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">Recipient Emails (comma or newline separated)</label>
+                <textarea
+                  v-model="mailerForm.customEmails"
+                  rows="3"
+                  placeholder="customer1@example.com, customer2@example.com"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-xs focus:outline-none focus:border-neutral-900"
+                ></textarea>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  @click="copyMailerRecipients"
+                  :disabled="resolvedMailerRecipients.length === 0"
+                  class="px-3.5 py-1.5 rounded-xl border border-neutral-200 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  Copy Recipient Emails
+                </button>
+                <button
+                  type="button"
+                  @click="handleOpenMailClientBcc"
+                  :disabled="resolvedMailerRecipients.length === 0"
+                  class="px-3.5 py-1.5 rounded-xl border border-neutral-200 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  Open in Mail App (BCC)
+                </button>
+              </div>
+            </div>
+
+            <!-- Campaign Content -> Visual Template Builder -->
+            <div class="bg-white p-6 rounded-3xl border border-neutral-200/80 shadow-xs space-y-5">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 class="text-base font-bold text-neutral-900">2. Email Template Builder</h2>
+                  <p class="text-xs text-neutral-500">Pick a starter layout, then add, edit, or reorder email blocks.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    @click="applyMailerPreset('new-arrivals')"
+                    class="px-2.5 py-1 rounded-lg border border-neutral-200 text-[11px] font-medium hover:bg-neutral-50 cursor-pointer"
+                  >
+                    New Arrivals
+                  </button>
+                  <button
+                    type="button"
+                    @click="applyMailerPreset('flash-sale')"
+                    class="px-2.5 py-1 rounded-lg border border-neutral-200 text-[11px] font-medium hover:bg-neutral-50 cursor-pointer"
+                  >
+                    Flash Sale
+                  </button>
+                  <button
+                    type="button"
+                    @click="applyMailerPreset('newsletter')"
+                    class="px-2.5 py-1 rounded-lg border border-neutral-200 text-[11px] font-medium hover:bg-neutral-50 cursor-pointer"
+                  >
+                    Monthly Dispatch
+                  </button>
+                  <button
+                    type="button"
+                    @click="applyMailerPreset('blank')"
+                    class="px-2.5 py-1 rounded-lg border border-neutral-200 text-[11px] font-medium hover:bg-neutral-50 cursor-pointer"
+                  >
+                    Blank
+                  </button>
+                </div>
+              </div>
+
+              <!-- Campaign Metadata & Sender -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1">Campaign Name (Internal)</label>
+                  <input
+                    v-model="mailerForm.name"
+                    type="text"
+                    placeholder="e.g. November Toy Drop"
+                    class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 text-xs focus:outline-none focus:border-neutral-900"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1">Email Subject Line *</label>
+                  <input
+                    v-model="mailerForm.subject"
+                    type="text"
+                    placeholder="New arrivals &amp; 15% off this weekend!"
+                    class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 text-xs focus:outline-none focus:border-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1">From Name</label>
+                  <input
+                    v-model="mailerForm.fromName"
+                    type="text"
+                    placeholder="Yellow Berry Store"
+                    class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs focus:outline-none focus:border-neutral-900"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1">From Email</label>
+                  <input
+                    v-model="mailerForm.fromEmail"
+                    type="email"
+                    placeholder="noreply@ystoreza.co.za"
+                    class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs focus:outline-none focus:border-neutral-900"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1">Reply-To Email</label>
+                  <input
+                    v-model="mailerForm.replyToEmail"
+                    type="email"
+                    placeholder="info@yberry.co.za"
+                    class="w-full px-3 py-2 rounded-xl border border-neutral-200 text-xs focus:outline-none focus:border-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <!-- Theme Colors -->
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200/80">
+                <div>
+                  <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Accent Color</label>
+                  <div class="flex items-center gap-2">
+                    <input v-model="mailerTheme.accentColor" type="color" class="w-8 h-8 rounded cursor-pointer border-0 bg-transparent" />
+                    <span class="text-[11px] font-mono text-neutral-600">{{ mailerTheme.accentColor }}</span>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Dark Color</label>
+                  <div class="flex items-center gap-2">
+                    <input v-model="mailerTheme.darkColor" type="color" class="w-8 h-8 rounded cursor-pointer border-0 bg-transparent" />
+                    <span class="text-[11px] font-mono text-neutral-600">{{ mailerTheme.darkColor }}</span>
+                  </div>
+                </div>
+                <div class="col-span-2 sm:col-span-1">
+                  <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Button Style</label>
+                  <select
+                    v-model="mailerTheme.buttonRadius"
+                    class="w-full px-2.5 py-1.5 rounded-xl border border-neutral-200 text-xs bg-white"
+                  >
+                    <option value="999px">Pill</option>
+                    <option value="10px">Rounded</option>
+                    <option value="4px">Sharp</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Add Block Toolbar -->
+              <div class="space-y-2">
+                <span class="block text-xs font-semibold text-neutral-700">Add Template Block</span>
+                <div class="flex flex-wrap gap-1.5">
+                  <button type="button" @click="addMailerBlock('header')" class="px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-[11px] font-semibold text-neutral-800 cursor-pointer">+ Header</button>
+                  <button type="button" @click="addMailerBlock('hero')" class="px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-[11px] font-semibold text-neutral-800 cursor-pointer">+ Hero Banner</button>
+                  <button type="button" @click="addMailerBlock('text')" class="px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-[11px] font-semibold text-neutral-800 cursor-pointer">+ Text Block</button>
+                  <button type="button" @click="addMailerBlock('product')" class="px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-[11px] font-semibold text-neutral-800 cursor-pointer">+ Product Spotlight</button>
+                  <button type="button" @click="addMailerBlock('promo')" class="px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-[11px] font-semibold text-neutral-800 cursor-pointer">+ Promo Code</button>
+                  <button type="button" @click="addMailerBlock('button')" class="px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-[11px] font-semibold text-neutral-800 cursor-pointer">+ CTA Button</button>
+                  <button type="button" @click="addMailerBlock('divider')" class="px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-[11px] font-semibold text-neutral-800 cursor-pointer">+ Divider</button>
+                </div>
+              </div>
+
+              <!-- Blocks Stack -->
+              <div class="space-y-3">
+                <div
+                  v-for="(block, bIdx) in mailerBlocks"
+                  :key="block.id"
+                  class="p-4 rounded-2xl border border-neutral-200 bg-neutral-50/60 space-y-3"
+                >
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-neutral-700">
+                      {{ bIdx + 1 }}. {{ block.type }} Block
+                    </span>
+                    <div class="flex items-center gap-1.5 text-xs">
+                      <button
+                        type="button"
+                        @click="moveMailerBlock(bIdx, -1)"
+                        :disabled="bIdx === 0"
+                        class="px-2 py-0.5 rounded border border-neutral-200 bg-white text-neutral-600 disabled:opacity-30 cursor-pointer"
+                        title="Move Up"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        @click="moveMailerBlock(bIdx, 1)"
+                        :disabled="bIdx === mailerBlocks.length - 1"
+                        class="px-2 py-0.5 rounded border border-neutral-200 bg-white text-neutral-600 disabled:opacity-30 cursor-pointer"
+                        title="Move Down"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        @click="removeMailerBlock(bIdx)"
+                        class="px-2 py-0.5 rounded border border-red-200 bg-white text-red-600 hover:bg-red-50 cursor-pointer"
+                        title="Remove Block"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Header Block Fields -->
+                  <div v-if="block.type === 'header'" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <input v-model="block.brandName" type="text" placeholder="Brand Name (e.g. Yellow Berry Store)" class="px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs" />
+                    <input v-model="block.badgeText" type="text" placeholder="Top Badge (e.g. Curated Toy Drops)" class="px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs" />
+                  </div>
+
+                  <!-- Hero Block Fields -->
+                  <div v-else-if="block.type === 'hero'" class="space-y-2">
+                    <input v-model="block.headline" type="text" placeholder="Hero Headline" class="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs font-semibold" />
+                    <input v-model="block.subheadline" type="text" placeholder="Hero Subheadline" class="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs" />
+                    <input v-model="block.imageUrl" type="url" placeholder="Optional Banner Image URL (https://...)" class="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs" />
+                  </div>
+
+                  <!-- Text Block Fields -->
+                  <div v-else-if="block.type === 'text'" class="space-y-2">
+                    <input v-model="block.title" type="text" placeholder="Section Heading (optional)" class="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs font-semibold" />
+                    <textarea v-model="block.content" rows="3" placeholder="Paragraph copy..." class="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs"></textarea>
+                  </div>
+
+                  <!-- Product Spotlight Block Fields -->
+                  <div v-else-if="block.type === 'product'" class="space-y-2">
+                    <select
+                      @change="applyProductToBlock(block, $event.target.value)"
+                      class="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs"
+                    >
+                      <option value="">-- Autofill from Store Product --</option>
+                      <option v-for="p in products" :key="p.id" :value="p.id">
+                        {{ p.name }} (R{{ p.price }})
+                      </option>
+                    </select>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input v-model="block.productName" type="text" placeholder="Product Name" class="px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs" />
+                      <input v-model="block.productPrice" type="text" placeholder="Price (e.g. R499)" class="px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs" />
+                    </div>
+                    <input v-model="block.productImage" type="url" placeholder="Product Image URL" class="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs" />
+                    <input v-model="block.productUrl" type="url" placeholder="Product Link URL (https://ystoreza.co.za/)" class="w-full px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs" />
+                  </div>
+
+                  <!-- Promo Code Block Fields -->
+                  <div v-else-if="block.type === 'promo'" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input v-model="block.code" type="text" placeholder="Discount Code (e.g. YELLOW15)" class="px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs font-mono font-bold uppercase" />
+                    <input v-model="block.note" type="text" placeholder="Offer Details (e.g. 15% off orders over R500)" class="px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs" />
+                  </div>
+
+                  <!-- CTA Button Block Fields -->
+                  <div v-else-if="block.type === 'button'" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input v-model="block.label" type="text" placeholder="Button Label (e.g. Shop Collection)" class="px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs" />
+                    <input v-model="block.url" type="url" placeholder="Destination URL (https://ystoreza.co.za/)" class="px-3 py-2 rounded-xl border border-neutral-200 bg-white text-xs" />
+                  </div>
+
+                  <!-- Divider Info -->
+                  <div v-else-if="block.type === 'divider'" class="text-[11px] text-neutral-400">
+                    Horizontal spacer divider line.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Live HTML Template Preview -->
+          <div class="lg:col-span-5 space-y-6">
+            <div class="bg-white p-6 rounded-3xl border border-neutral-200/80 shadow-xs space-y-4 sticky top-6">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h2 class="text-base font-bold text-neutral-900">Live Template Preview</h2>
+                <div class="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    @click="mailerPreviewMode = 'desktop'"
+                    :class="mailerPreviewMode === 'desktop' ? 'bg-neutral-900 text-[#F4EB6A]' : 'bg-neutral-100 text-neutral-600'"
+                    class="px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer"
+                  >
+                    Desktop
+                  </button>
+                  <button
+                    type="button"
+                    @click="mailerPreviewMode = 'mobile'"
+                    :class="mailerPreviewMode === 'mobile' ? 'bg-neutral-900 text-[#F4EB6A]' : 'bg-neutral-100 text-neutral-600'"
+                    class="px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer"
+                  >
+                    Mobile
+                  </button>
+                  <button
+                    type="button"
+                    @click="copyGeneratedMailerHtml"
+                    class="px-2.5 py-1 rounded-lg border border-neutral-200 text-[11px] font-semibold text-neutral-700 hover:bg-neutral-50 cursor-pointer"
+                  >
+                    Copy HTML
+                  </button>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-neutral-200 overflow-hidden bg-neutral-100 p-3">
+                <div class="px-3 py-2 mb-2 rounded-xl bg-white border border-neutral-200 text-[11px] space-y-0.5">
+                  <p class="text-neutral-500 truncate">
+                    <span class="font-semibold text-neutral-700">From:</span> {{ mailerForm.fromName || 'Yellow Berry Store' }} &lt;{{ mailerForm.fromEmail || 'noreply@ystoreza.co.za' }}&gt;
+                  </p>
+                  <p class="text-neutral-900 font-semibold truncate">
+                    {{ mailerForm.subject || 'Your email subject line appears here' }}
+                  </p>
+                </div>
+
+                <div
+                  class="mx-auto transition-all duration-300 overflow-hidden rounded-xl border border-neutral-200 bg-white"
+                  :style="{ maxWidth: mailerPreviewMode === 'mobile' ? '360px' : '100%' }"
+                  v-html="generatedMailerHtml"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Campaign History -->
+        <div class="bg-white p-6 rounded-3xl border border-neutral-200/80 shadow-xs space-y-4">
+          <h2 class="text-base font-bold text-neutral-900">
+            Campaign History ({{ (mailerCampaigns && mailerCampaigns.length) || 0 }})
+          </h2>
+
+          <div v-if="!mailerCampaigns || mailerCampaigns.length === 0" class="py-8 text-center text-xs text-neutral-400">
+            No marketing mailers saved or sent yet.
+          </div>
+
+          <div v-else class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-neutral-200 text-neutral-500 uppercase tracking-wider text-[10px]">
+                  <th class="py-3 px-3">Campaign</th>
+                  <th class="py-3 px-3">Subject</th>
+                  <th class="py-3 px-3">Recipients</th>
+                  <th class="py-3 px-3">Status</th>
+                  <th class="py-3 px-3">Updated</th>
+                  <th class="py-3 px-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-neutral-100">
+                <tr v-for="camp in mailerCampaigns" :key="camp.id" class="hover:bg-neutral-50/70">
+                  <td class="py-3 px-3 font-semibold text-neutral-900">{{ camp.name }}</td>
+                  <td class="py-3 px-3 text-neutral-600">{{ camp.subject || '—' }}</td>
+                  <td class="py-3 px-3 font-mono">{{ camp.recipientCount || 0 }}</td>
+                  <td class="py-3 px-3">
+                    <span
+                      class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase"
+                      :class="camp.status === 'sent' ? 'bg-emerald-100 text-emerald-800' : 'bg-neutral-100 text-neutral-600'"
+                    >
+                      {{ camp.status || 'draft' }}
+                    </span>
+                  </td>
+                  <td class="py-3 px-3 text-neutral-500">
+                    {{ camp.updatedAt ? new Date(camp.updatedAt).toLocaleString() : '—' }}
+                  </td>
+                  <td class="py-3 px-3 text-right space-x-3">
+                    <button
+                      type="button"
+                      @click="loadCampaignIntoEditor(camp)"
+                      class="text-neutral-900 hover:underline font-medium cursor-pointer"
+                    >
+                      Load
+                    </button>
+                    <button
+                      type="button"
+                      @click="handleDeleteMailerCampaign(camp.id)"
+                      class="text-red-500 hover:text-red-700 font-medium cursor-pointer"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           THEME -> SUBSCRIPTION CONFIG & EMAIL ROUTING
+           ========================================== -->
+      <div v-else-if="activeSection === 'theme-subscription'" class="space-y-6">
+        <!-- Header Banner -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-neutral-200/80 shadow-xs">
+          <div class="space-y-1">
+            <nav class="flex items-center gap-2 text-xs text-neutral-400">
+              <span>Theme</span>
+              <FlowbiteIcon name="chevron-right" size="12" />
+              <span class="text-neutral-900 font-medium">Subscription</span>
+            </nav>
+            <h1 class="text-2xl sm:text-3xl font-bold text-neutral-900 tracking-tight flex items-center gap-2.5">
+              Subscription &amp; Email Routing
+            </h1>
+            <p class="text-xs sm:text-sm text-neutral-500">
+              Customize newsletter copy across the storefront, set the destination routing email, and manage captured subscribers.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              @click="handleResetSubscriptionConfig"
+              class="px-4 py-2.5 rounded-xl border border-neutral-200 text-xs font-medium text-neutral-600 hover:bg-neutral-50 transition-colors cursor-pointer"
+            >
+              Reset Defaults
+            </button>
+            <button
+              type="button"
+              @click="handleSaveSubscriptionConfig"
+              :disabled="subscriptionSaving"
+              class="px-5 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-[#F4EB6A] text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
+            >
+              <FlowbiteIcon name="check" size="14" />
+              <span>{{ subscriptionSaving ? 'Saving...' : 'Save Subscription Settings' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Left: Email Routing & Visibility -->
+          <div class="lg:col-span-5 space-y-6">
+            <div class="bg-white p-6 rounded-3xl border border-neutral-200/80 shadow-xs space-y-4">
+              <div class="flex items-center justify-between">
+                <h2 class="text-base font-bold text-neutral-900">Email Routing</h2>
+                <label class="inline-flex items-center gap-2 text-xs font-medium text-neutral-700 cursor-pointer">
+                  <input v-model="subscriptionForm.enabled" type="checkbox" class="rounded border-neutral-300 text-neutral-900" />
+                  <span>Show on Storefront</span>
+                </label>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">Route Subscriptions To Email *</label>
+                <input
+                  v-model="subscriptionForm.routeToEmail"
+                  type="email"
+                  placeholder="hello@ystoreza.co.za"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+                />
+                <p class="text-[11px] text-neutral-400 mt-1">
+                  Every subscriber record is tagged with this destination address for routing and inbox follow-up.
+                </p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">Delivery Method</label>
+                <div class="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    @click="subscriptionForm.deliveryMethod = 'webhook'"
+                    :class="[
+                      'px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer',
+                      subscriptionForm.deliveryMethod === 'webhook'
+                        ? 'bg-neutral-900 text-[#F4EB6A] border-neutral-900'
+                        : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
+                    ]"
+                  >
+                    Webhook
+                  </button>
+                  <button
+                    type="button"
+                    @click="subscriptionForm.deliveryMethod = 'mailbox'"
+                    :class="[
+                      'px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer',
+                      subscriptionForm.deliveryMethod === 'mailbox'
+                        ? 'bg-neutral-900 text-[#F4EB6A] border-neutral-900'
+                        : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
+                    ]"
+                  >
+                    Mailbox
+                  </button>
+                  <button
+                    type="button"
+                    @click="subscriptionForm.deliveryMethod = 'both'"
+                    :class="[
+                      'px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer',
+                      subscriptionForm.deliveryMethod === 'both'
+                        ? 'bg-neutral-900 text-[#F4EB6A] border-neutral-900'
+                        : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
+                    ]"
+                  >
+                    Both
+                  </button>
+                </div>
+              </div>
+
+              <div v-if="subscriptionForm.deliveryMethod === 'webhook' || subscriptionForm.deliveryMethod === 'both'">
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">Optional Webhook / Mail Endpoint URL</label>
+                <input
+                  v-model="subscriptionForm.webhookUrl"
+                  type="url"
+                  placeholder="https://formspree.io/f/... or Zapier/Make webhook"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+                />
+                <p class="text-[11px] text-neutral-400 mt-1">
+                  If provided, submissions also POST JSON (email, routeToEmail, sourcePage) to trigger automated email forwarding.
+                </p>
+              </div>
+            </div>
+
+            <!-- Mailbox Settings Card (Alternative Delivery) -->
+            <div v-if="subscriptionForm.deliveryMethod === 'mailbox' || subscriptionForm.deliveryMethod === 'both'" class="bg-white p-6 rounded-3xl border border-neutral-200/80 shadow-xs space-y-4">
+              <div class="flex items-center justify-between gap-2">
+                <div>
+                  <h2 class="text-base font-bold text-neutral-900">Mailbox Settings</h2>
+                  <p class="text-[11px] text-neutral-400">Admin-only SMTP credentials + domain mailer endpoint.</p>
+                </div>
+                <button
+                  type="button"
+                  @click="handleTestMailbox"
+                  :disabled="mailboxTesting"
+                  class="px-3 py-1.5 rounded-xl border border-neutral-200 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {{ mailboxTesting ? 'Testing...' : 'Send Test Email' }}
+                </button>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="sm:col-span-2">
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1">SMTP Host</label>
+                  <input
+                    v-model="mailboxForm.host"
+                    type="text"
+                    placeholder="mail.ystoreza.co.za"
+                    class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1">SMTP Port</label>
+                  <input
+                    v-model.number="mailboxForm.port"
+                    type="number"
+                    placeholder="465"
+                    class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1">Encryption</label>
+                  <select
+                    v-model="mailboxForm.encryption"
+                    class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 text-sm bg-white focus:outline-none focus:border-neutral-900"
+                  >
+                    <option value="ssl">SSL / TLS (Port 465)</option>
+                    <option value="tls">STARTTLS (Port 587)</option>
+                    <option value="none">None (Port 25)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1">Mailbox Username</label>
+                  <input
+                    v-model="mailboxForm.username"
+                    type="text"
+                    placeholder="info@ystoreza.co.za"
+                    class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1">Mailbox Password</label>
+                <div class="relative">
+                  <input
+                    v-model="mailboxForm.password"
+                    :type="showMailboxPassword ? 'text' : 'password'"
+                    placeholder="••••••••••••"
+                    class="w-full px-3.5 py-2 pr-16 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+                  />
+                  <button
+                    type="button"
+                    @click="showMailboxPassword = !showMailboxPassword"
+                    class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-neutral-500 hover:text-neutral-900 cursor-pointer"
+                  >
+                    {{ showMailboxPassword ? 'Hide' : 'Show' }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1">From Name</label>
+                  <input
+                    v-model="mailboxForm.fromName"
+                    type="text"
+                    placeholder="Ystore Newsletter"
+                    class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-neutral-700 mb-1">From Email</label>
+                  <input
+                    v-model="mailboxForm.fromEmail"
+                    type="email"
+                    placeholder="noreply@ystoreza.co.za"
+                    class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1">Subject Template</label>
+                <input
+                  v-model="mailboxForm.subjectTemplate"
+                  type="text"
+                  placeholder="New Newsletter Subscriber: {{email}}"
+                  class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1">Domain Mailer Endpoint URL</label>
+                <input
+                  v-model="mailboxForm.endpointUrl"
+                  type="text"
+                  placeholder="/api/subscribe-mail.php"
+                  class="w-full px-3.5 py-2 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+                />
+                <p class="text-[11px] text-neutral-400 mt-1">
+                  Defaults to <code class="text-neutral-600">/api/subscribe-mail.php</code> included in your deployment.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Editable Storefront Content -->
+          <div class="lg:col-span-7 bg-white p-6 rounded-3xl border border-neutral-200/80 shadow-xs space-y-4">
+            <h2 class="text-base font-bold text-neutral-900">Storefront Information &amp; Copy</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">Eyebrow / Kicker</label>
+                <input
+                  v-model="subscriptionForm.eyebrow"
+                  type="text"
+                  placeholder="Never miss our deals"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">Heading</label>
+                <input
+                  v-model="subscriptionForm.heading"
+                  type="text"
+                  placeholder="Subscribe"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-neutral-700 mb-1.5">Description</label>
+              <textarea
+                v-model="subscriptionForm.description"
+                rows="2"
+                placeholder="Get exclusive product drops, member-only discounts..."
+                class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+              ></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">Input Placeholder</label>
+                <input
+                  v-model="subscriptionForm.placeholder"
+                  type="text"
+                  placeholder="Enter your email address..."
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1.5">Submit Button Label</label>
+                <input
+                  v-model="subscriptionForm.buttonText"
+                  type="text"
+                  placeholder="Subscribe"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-neutral-700 mb-1.5">Consent Checkbox Text</label>
+              <input
+                v-model="subscriptionForm.consentText"
+                type="text"
+                placeholder="I agree to receive promotional updates and news from Ystore."
+                class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-neutral-700 mb-1.5">Success Confirmation Message</label>
+              <input
+                v-model="subscriptionForm.successMessage"
+                type="text"
+                placeholder="Thank you for subscribing! Check your inbox for a 10% welcome coupon."
+                class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Subscriber Routing Log -->
+        <div class="bg-white p-6 rounded-3xl border border-neutral-200/80 shadow-xs space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 class="text-base font-bold text-neutral-900">
+                Subscriber Routing Log ({{ (newsletterSubscribers && newsletterSubscribers.length) || 0 }})
+              </h2>
+              <p class="text-xs text-neutral-500">Live sign-ups captured from Home, Product Detail, Specials, and Blog banners.</p>
+            </div>
+            <button
+              type="button"
+              @click="exportSubscribersCsv"
+              :disabled="!newsletterSubscribers || newsletterSubscribers.length === 0"
+              class="px-4 py-2 rounded-xl border border-neutral-200 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer disabled:opacity-40"
+            >
+              Export CSV
+            </button>
+          </div>
+
+          <div v-if="!newsletterSubscribers || newsletterSubscribers.length === 0" class="py-10 text-center text-xs text-neutral-400">
+            No newsletter subscribers captured yet.
+          </div>
+
+          <div v-else class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-neutral-200 text-neutral-500 uppercase tracking-wider text-[10px]">
+                  <th class="py-3 px-3">Subscriber Email</th>
+                  <th class="py-3 px-3">Routed To</th>
+                  <th class="py-3 px-3">Source Page</th>
+                  <th class="py-3 px-3">Date</th>
+                  <th class="py-3 px-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-neutral-100">
+                <tr v-for="sub in newsletterSubscribers" :key="sub.id" class="hover:bg-neutral-50/70">
+                  <td class="py-3 px-3 font-medium text-neutral-900">{{ sub.email }}</td>
+                  <td class="py-3 px-3 text-neutral-600">{{ sub.routedToEmail || subscriptionForm.routeToEmail }}</td>
+                  <td class="py-3 px-3">
+                    <span class="px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 font-medium capitalize">
+                      {{ sub.sourcePage || 'home' }}
+                    </span>
+                  </td>
+                  <td class="py-3 px-3 text-neutral-500">
+                    {{ sub.createdAt ? new Date(sub.createdAt).toLocaleString() : '—' }}
+                  </td>
+                  <td class="py-3 px-3 text-right">
+                    <button
+                      type="button"
+                      @click="handleDeleteSubscriber(sub.id)"
+                      class="text-red-500 hover:text-red-700 font-medium cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -8778,18 +10116,13 @@
           <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-neutral-200 space-y-6 animate-scale-up max-h-[90vh] overflow-y-auto">
             <!-- Modal Header -->
             <div class="flex items-start justify-between pb-4 border-b border-neutral-100">
-              <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-2xl bg-neutral-900 text-[#F4EB6A] flex items-center justify-center shadow-md">
-                  <FlowbiteIcon name="sparkles" size="22" />
-                </div>
-                <div>
-                  <h3 class="text-base font-bold text-neutral-900">
-                    {{ editingStory ? 'Edit Story Highlight' : 'New Story Highlight' }}
-                  </h3>
-                  <p class="text-xs text-neutral-500">
-                    Circular story track above hero banner + swipeable lightbox gallery.
-                  </p>
-                </div>
+              <div>
+                <h3 class="text-base font-bold text-neutral-900">
+                  {{ editingStory ? 'Edit Story Highlight' : 'New Story Highlight' }}
+                </h3>
+                <p class="text-xs text-neutral-500">
+                  Circular story track above hero banner + swipeable lightbox gallery.
+                </p>
               </div>
               <button
                 type="button"
@@ -8888,54 +10221,233 @@
                   <div
                     v-for="(slide, sIdx) in storyForm.slides"
                     :key="sIdx"
-                    class="p-3 rounded-xl border border-neutral-200 bg-neutral-50 flex items-center justify-between gap-3 text-xs"
+                    class="p-3 rounded-xl border border-neutral-200 bg-neutral-50 space-y-3 text-xs"
                   >
-                    <div class="flex items-center gap-3 min-w-0">
-                      <div class="w-12 h-12 rounded-lg overflow-hidden bg-neutral-200 shrink-0">
-                        <img :src="useAsset(slide.image)" class="w-full h-full object-cover" />
-                      </div>
-                      <div class="min-w-0">
-                        <div class="font-bold text-neutral-900 truncate">{{ slide.caption || 'Slide #' + (sIdx + 1) }}</div>
-                        <div class="text-[11px] text-neutral-500 truncate">
-                          CTA: <span class="font-semibold text-neutral-800">{{ slide.ctaText || 'Shop Now' }}</span> &rarr; {{ slide.ctaLink || 'All' }}
+                    <div class="flex items-center justify-between gap-3">
+                      <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-12 h-12 rounded-lg overflow-hidden bg-neutral-200 shrink-0">
+                          <img :src="useAsset(slide.image)" class="w-full h-full object-cover" />
                         </div>
+                        <div class="min-w-0">
+                          <div class="font-bold text-neutral-900 truncate">{{ slide.caption || 'Slide #' + (sIdx + 1) }}</div>
+                          <div class="text-[11px] text-neutral-500 truncate">
+                            CTA: <span class="font-semibold text-neutral-800">{{ slide.ctaText || 'Shop Now' }}</span> &rarr; {{ slide.ctaLink || 'All' }}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          @click="toggleEditSlide(sIdx)"
+                          class="px-2 py-1 rounded-lg border text-[11px] font-semibold transition-colors cursor-pointer"
+                          :class="editingSlideIdx === sIdx ? 'bg-neutral-900 text-[#F4EB6A] border-neutral-900' : 'bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-100'"
+                          :title="editingSlideIdx === sIdx ? 'Finish editing slide' : 'Edit slide'"
+                        >
+                          {{ editingSlideIdx === sIdx ? 'Done' : 'Edit' }}
+                        </button>
+                        <button
+                          type="button"
+                          @click="moveSlide(sIdx, -1)"
+                          :disabled="sIdx === 0"
+                          class="p-1.5 rounded text-neutral-500 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
+                          title="Move Up"
+                        >
+                          &uarr;
+                        </button>
+                        <button
+                          type="button"
+                          @click="moveSlide(sIdx, 1)"
+                          :disabled="sIdx === storyForm.slides.length - 1"
+                          class="p-1.5 rounded text-neutral-500 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
+                          title="Move Down"
+                        >
+                          &darr;
+                        </button>
+                        <button
+                          type="button"
+                          @click="removeSlideFromStory(sIdx)"
+                          class="p-1.5 rounded text-red-500 hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                          title="Remove Slide"
+                        >
+                          <FlowbiteIcon name="trash" size="13" />
+                        </button>
                       </div>
                     </div>
 
-                    <div class="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        @click="moveSlide(sIdx, -1)"
-                        :disabled="sIdx === 0"
-                        class="p-1.5 rounded text-neutral-500 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
-                        title="Move Up"
-                      >
-                        &uarr;
-                      </button>
-                      <button
-                        type="button"
-                        @click="moveSlide(sIdx, 1)"
-                        :disabled="sIdx === storyForm.slides.length - 1"
-                        class="p-1.5 rounded text-neutral-500 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
-                        title="Move Down"
-                      >
-                        &darr;
-                      </button>
-                      <button
-                        type="button"
-                        @click="removeSlideFromStory(sIdx)"
-                        class="p-1.5 rounded text-red-500 hover:text-red-700 hover:bg-red-50 cursor-pointer"
-                        title="Remove Slide"
-                      >
-                        <FlowbiteIcon name="trash" size="13" />
-                      </button>
+                    <!-- Inline Slide Editor -->
+                    <div
+                      v-if="editingSlideIdx === sIdx"
+                      class="pt-3 border-t border-neutral-200 space-y-2.5 bg-white p-3 rounded-xl"
+                    >
+                      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <span class="text-[11px] font-bold text-neutral-800">Edit Slide #{{ sIdx + 1 }}</span>
+                        <select
+                          @change="applyProductToExistingSlide(sIdx, $event.target.value); $event.target.value = ''"
+                          class="sm:w-64 px-2.5 py-1 rounded-lg border border-neutral-200 bg-neutral-50 text-[11px] text-neutral-800 focus:outline-none focus:border-neutral-900"
+                          aria-label="Replace slide details with product"
+                        >
+                          <option value="">Link to a product (optional)...</option>
+                          <option v-for="p in products" :key="p.id" :value="p.id">
+                            {{ p.name }} (R{{ p.price }})
+                          </option>
+                        </select>
+                      </div>
+
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Slide Image *</label>
+                          <div class="flex items-center gap-2">
+                            <input
+                              v-model="slide.image"
+                              type="text"
+                              placeholder="Image URL or upload..."
+                              class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 text-xs font-mono"
+                            />
+                            <label
+                              class="px-2.5 py-1.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-100 text-xs font-semibold text-neutral-700 shrink-0 cursor-pointer transition-colors flex items-center gap-1"
+                              :class="{ 'opacity-60 pointer-events-none': storyUploading }"
+                            >
+                              <FlowbiteIcon name="upload" size="12" />
+                              <span>{{ storyUploading ? 'Uploading...' : 'Upload' }}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                :disabled="storyUploading"
+                                @change="handleExistingSlideImageUpload($event, sIdx)"
+                                class="hidden"
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label class="block text-[11px] font-semibold text-neutral-600 mb-1">Slide Caption / Headline</label>
+                          <input
+                            v-model="slide.caption"
+                            type="text"
+                            placeholder="e.g. Handmade wooden blocks collection"
+                            class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label class="block text-[11px] font-semibold text-neutral-600 mb-1">CTA Button Text</label>
+                          <input
+                            v-model="slide.ctaText"
+                            type="text"
+                            placeholder="Shop Now"
+                            class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-[11px] font-semibold text-neutral-600 mb-1">CTA Destination (Category or View)</label>
+                          <input
+                            v-model="slide.ctaLink"
+                            type="text"
+                            placeholder="All, New Arrivals, product:id..."
+                            class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 text-xs"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <!-- Add New Slide Mini-Form -->
                 <div class="p-3.5 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/70 space-y-3">
-                  <span class="text-xs font-bold text-neutral-800 block">+ Add Slide to this Gallery</span>
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <span class="text-xs font-bold text-neutral-800 block">+ Add Slide to this Gallery</span>
+                    <div class="flex items-center gap-2 sm:w-72">
+                      <select
+                        v-model="selectedSlideProductId"
+                        @change="applyProductToStorySlide(selectedSlideProductId)"
+                        class="w-full px-3 py-1.5 rounded-xl border border-neutral-200 bg-white text-xs text-neutral-800 focus:outline-none focus:border-neutral-900"
+                        aria-label="Select a product for this slide"
+                      >
+                        <option value="">Select a product (optional)...</option>
+                        <option v-for="p in products" :key="p.id" :value="p.id">
+                          {{ p.name }} (R{{ p.price }})
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Product Images Picker (when a product is selected) -->
+                  <div
+                    v-if="selectedSlideProductId && selectedProductGalleryImages.length > 0"
+                    class="p-3 rounded-xl bg-white border border-neutral-200 space-y-2.5"
+                  >
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                      <span class="text-[11px] font-bold text-neutral-800">
+                        Product Images ({{ selectedStoryProductImages.length }} / {{ selectedProductGalleryImages.length }} selected)
+                      </span>
+                      <div class="flex flex-wrap items-center gap-1">
+                        <span class="text-[10px] font-semibold text-neutral-500 mr-1">Limit:</span>
+                        <button
+                          v-for="count in [1, 2, 3, 4].filter(n => n <= selectedProductGalleryImages.length)"
+                          :key="count"
+                          type="button"
+                          @click="setStoryProductImageLimit(count)"
+                          class="px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-colors"
+                          :class="selectedStoryProductImages.length === count ? 'bg-neutral-900 text-[#F4EB6A] border-neutral-900' : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:bg-neutral-100'"
+                        >
+                          {{ count }}
+                        </button>
+                        <button
+                          type="button"
+                          @click="setStoryProductImageLimit('all')"
+                          class="px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-colors"
+                          :class="selectedStoryProductImages.length === selectedProductGalleryImages.length ? 'bg-neutral-900 text-[#F4EB6A] border-neutral-900' : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:bg-neutral-100'"
+                        >
+                          All
+                        </button>
+                        <button
+                          type="button"
+                          @click="setStoryProductImageLimit(0)"
+                          class="px-2 py-0.5 rounded-lg text-[10px] font-semibold border border-neutral-200 bg-white text-neutral-500 hover:text-red-600 hover:border-red-200 transition-colors"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                      <button
+                        v-for="(imgUrl, imgIdx) in selectedProductGalleryImages"
+                        :key="imgIdx"
+                        type="button"
+                        @click="toggleStoryProductImage(imgUrl)"
+                        class="relative aspect-square rounded-lg overflow-hidden border-2 transition-all bg-neutral-100 group"
+                        :class="selectedStoryProductImages.includes(imgUrl) ? 'border-neutral-900 ring-2 ring-[#F4EB6A]' : 'border-neutral-200 opacity-55 hover:opacity-90'"
+                        :title="selectedStoryProductImages.includes(imgUrl) ? 'Click to exclude from story' : 'Click to include in story'"
+                      >
+                        <img :src="imgUrl" class="w-full h-full object-cover" />
+                        <span
+                          class="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold shadow"
+                          :class="selectedStoryProductImages.includes(imgUrl) ? 'bg-neutral-900 text-[#F4EB6A]' : 'bg-white/90 text-neutral-400 border border-neutral-300'"
+                        >
+                          {{ selectedStoryProductImages.includes(imgUrl) ? '✓' : '' }}
+                        </span>
+                      </button>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-2 pt-1">
+                      <p class="text-[10px] text-neutral-500">
+                        Click images to toggle which ones are added as lightbox slides.
+                      </p>
+                      <button
+                        type="button"
+                        @click="addSelectedProductSlidesToStory"
+                        :disabled="selectedStoryProductImages.length === 0"
+                        class="px-3 py-1.5 rounded-xl bg-neutral-900 text-[#F4EB6A] text-[11px] font-bold hover:bg-neutral-800 disabled:opacity-40 transition-colors shrink-0"
+                      >
+                        + Add {{ selectedStoryProductImages.length }} Slide{{ selectedStoryProductImages.length === 1 ? '' : 's' }} to Gallery
+                      </button>
+                    </div>
+                  </div>
 
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div>
@@ -9848,6 +11360,24 @@ const {
   productReviews,
   saveProductReview,
   deleteProductReview,
+  subscriptionConfig,
+  defaultSubscriptionConfig,
+  saveSubscriptionConfig,
+  subscriptionMailbox,
+  defaultSubscriptionMailbox,
+  companyProfile,
+  defaultCompanyProfile,
+  saveCompanyProfile,
+  loadSubscriptionMailbox,
+  saveSubscriptionMailbox,
+  testMailboxEndpoint,
+  newsletterSubscribers,
+  deleteNewsletterSubscriber,
+  mailerCampaigns,
+  saveMailerCampaign,
+  deleteMailerCampaign,
+  liveActiveSessions,
+  activeVisitorCount,
   showBadgePills,
   isVideoFile
 } = storeContent
@@ -10036,8 +11566,24 @@ const savingHeadingSlides = ref(false)
 const headingSlidesForm = ref({
   enabled: true,
   intervalSeconds: 3.5,
+  categoryPrefix: 'The Perfect Gift for',
+  categorySubtitle: "There's Always Something to Unwrap",
   categoryWords: ['Readers', 'Categories', 'Builders', 'Creators', 'Explorers'],
-  collectionWords: ['Collections', 'Gift Boxes', 'Treasures', 'Bundles', 'Editions']
+  newPrefix: 'New',
+  newSubtitle: 'Discover the latest innovative toys and lovable companions just added to our collection.',
+  collectionWords: ['Models', 'Treasures', 'Bundles', 'Gift Boxes', 'Editions'],
+  shopCategoryPrefix: 'Shop by',
+  shopCategoryHighlight: 'category',
+  shopCategorySubtitle: 'Discover curated worlds of wonder, learning, and playful exploration.',
+  shopCategoryButtonText: 'View all categories',
+  featuredPrefix: 'Feature',
+  featuredSubtitle: 'Discover our handpicked selection of top-rated products designed to spark joy, imagination, and endless creative play.',
+  bestSellersPrefix: 'Best',
+  bestSellersHighlight: 'sellers',
+  bestSellersSubtitle: 'The community favorites loved by children and parents across South Africa.',
+  reviewsPrefix: 'What our',
+  reviewsHighlight: 'customers say',
+  reviewsSubtitle: 'Real stories from happy parents, educators, and little adventurers.'
 })
 
 watch(
@@ -10046,14 +11592,30 @@ watch(
     if (val) {
       const catWords = [...(val.categoryWords || defaultHeadingSlides?.categoryWords || ['Readers', 'Categories'])]
       while (catWords.length < 5) catWords.push('')
-      const colWords = [...(val.collectionWords || defaultHeadingSlides?.collectionWords || ['Collections', 'Gift Boxes'])]
+      const colWords = [...(val.collectionWords || defaultHeadingSlides?.collectionWords || ['Models', 'Treasures'])]
       while (colWords.length < 5) colWords.push('')
 
       headingSlidesForm.value = {
         enabled: val.enabled !== false,
         intervalSeconds: Number(val.intervalSeconds) || 3.5,
+        categoryPrefix: val.categoryPrefix || defaultHeadingSlides?.categoryPrefix || 'The Perfect Gift for',
+        categorySubtitle: val.categorySubtitle || defaultHeadingSlides?.categorySubtitle || "There's Always Something to Unwrap",
         categoryWords: catWords.slice(0, 5),
-        collectionWords: colWords.slice(0, 5)
+        newPrefix: val.newPrefix || defaultHeadingSlides?.newPrefix || 'New',
+        newSubtitle: val.newSubtitle || defaultHeadingSlides?.newSubtitle || 'Discover the latest innovative toys and lovable companions just added to our collection.',
+        collectionWords: colWords.slice(0, 5),
+        shopCategoryPrefix: val.shopCategoryPrefix || defaultHeadingSlides?.shopCategoryPrefix || 'Shop by',
+        shopCategoryHighlight: val.shopCategoryHighlight || defaultHeadingSlides?.shopCategoryHighlight || 'category',
+        shopCategorySubtitle: val.shopCategorySubtitle || defaultHeadingSlides?.shopCategorySubtitle || 'Discover curated worlds of wonder, learning, and playful exploration.',
+        shopCategoryButtonText: val.shopCategoryButtonText || defaultHeadingSlides?.shopCategoryButtonText || 'View all categories',
+        featuredPrefix: val.featuredPrefix || defaultHeadingSlides?.featuredPrefix || 'Feature',
+        featuredSubtitle: val.featuredSubtitle || defaultHeadingSlides?.featuredSubtitle || 'Discover our handpicked selection of top-rated products designed to spark joy, imagination, and endless creative play.',
+        bestSellersPrefix: val.bestSellersPrefix || defaultHeadingSlides?.bestSellersPrefix || 'Best',
+        bestSellersHighlight: val.bestSellersHighlight || defaultHeadingSlides?.bestSellersHighlight || 'sellers',
+        bestSellersSubtitle: val.bestSellersSubtitle || defaultHeadingSlides?.bestSellersSubtitle || 'The community favorites loved by children and parents across South Africa.',
+        reviewsPrefix: val.reviewsPrefix || defaultHeadingSlides?.reviewsPrefix || 'What our',
+        reviewsHighlight: val.reviewsHighlight || defaultHeadingSlides?.reviewsHighlight || 'customers say',
+        reviewsSubtitle: val.reviewsSubtitle || defaultHeadingSlides?.reviewsSubtitle || 'Real stories from happy parents, educators, and little adventurers.'
       }
     }
   },
@@ -10071,6 +11633,16 @@ const activePreviewCategoryWords = computed(() => {
 
 const previewCategoryWord = computed(() => {
   const words = activePreviewCategoryWords.value
+  return words[previewWordIndex.value % words.length]
+})
+
+const activePreviewCollectionWords = computed(() => {
+  const words = headingSlidesForm.value.collectionWords.map(w => (w || '').trim()).filter(Boolean)
+  return words.length > 0 ? words : ['Models', 'Treasures']
+})
+
+const previewCollectionWord = computed(() => {
+  const words = activePreviewCollectionWords.value
   return words[previewWordIndex.value % words.length]
 })
 
@@ -10131,6 +11703,10 @@ const showStoryModal = ref(false)
 const editingStory = ref(null)
 const storySaving = ref(false)
 const storyUploading = ref(false)
+const editingSlideIdx = ref(null)
+const selectedSlideProductId = ref('')
+const selectedProductGalleryImages = ref([])
+const selectedStoryProductImages = ref([])
 const newSlideForm = ref({
   image: '',
   caption: '',
@@ -10165,6 +11741,10 @@ const openCreateStoryModal = () => {
       }
     ]
   }
+  selectedSlideProductId.value = ''
+  selectedProductGalleryImages.value = []
+  selectedStoryProductImages.value = []
+  editingSlideIdx.value = null
   newSlideForm.value = { image: '', caption: '', ctaText: 'Shop Now', ctaLink: 'All' }
   showStoryModal.value = true
 }
@@ -10181,6 +11761,10 @@ const openEditStoryModal = (story) => {
     enabled: story.enabled !== false,
     slides: Array.isArray(story.slides) ? JSON.parse(JSON.stringify(story.slides)) : []
   }
+  selectedSlideProductId.value = ''
+  selectedProductGalleryImages.value = []
+  selectedStoryProductImages.value = []
+  editingSlideIdx.value = null
   newSlideForm.value = { image: '', caption: '', ctaText: 'Shop Now', ctaLink: 'All' }
   showStoryModal.value = true
 }
@@ -10225,6 +11809,88 @@ const handleSlideImageUpload = async (e) => {
   }
 }
 
+const applyProductToStorySlide = (productId) => {
+  if (!productId) {
+    selectedProductGalleryImages.value = []
+    selectedStoryProductImages.value = []
+    return
+  }
+  const matched = (products.value || []).find((p) => String(p.id) === String(productId))
+  if (!matched) {
+    selectedProductGalleryImages.value = []
+    selectedStoryProductImages.value = []
+    return
+  }
+  const rawImgs = [
+    matched.image,
+    ...(Array.isArray(matched.gallery) ? matched.gallery : []),
+    ...(Array.isArray(matched.images) ? matched.images : [])
+  ].filter((u) => typeof u === 'string' && u.trim())
+  const uniqueImgs = [...new Set(rawImgs)]
+  selectedProductGalleryImages.value = uniqueImgs
+  selectedStoryProductImages.value = [...uniqueImgs]
+
+  newSlideForm.value.ctaLink = `product:${matched.id}`
+  if (uniqueImgs[0]) {
+    newSlideForm.value.image = uniqueImgs[0]
+  }
+  if (!newSlideForm.value.caption?.trim() && matched.name) {
+    newSlideForm.value.caption = matched.name
+  }
+  if (!newSlideForm.value.ctaText?.trim() || newSlideForm.value.ctaText === 'Shop Now') {
+    newSlideForm.value.ctaText = 'View Product'
+  }
+}
+
+const toggleStoryProductImage = (imgUrl) => {
+  const idx = selectedStoryProductImages.value.indexOf(imgUrl)
+  if (idx >= 0) {
+    selectedStoryProductImages.value.splice(idx, 1)
+  } else {
+    selectedStoryProductImages.value.push(imgUrl)
+  }
+  if (selectedStoryProductImages.value.length > 0) {
+    newSlideForm.value.image = selectedStoryProductImages.value[0]
+  }
+}
+
+const setStoryProductImageLimit = (limit) => {
+  if (limit === 'all') {
+    selectedStoryProductImages.value = [...selectedProductGalleryImages.value]
+  } else if (limit === 0) {
+    selectedStoryProductImages.value = []
+  } else {
+    selectedStoryProductImages.value = selectedProductGalleryImages.value.slice(0, limit)
+  }
+  if (selectedStoryProductImages.value.length > 0) {
+    newSlideForm.value.image = selectedStoryProductImages.value[0]
+  }
+}
+
+const addSelectedProductSlidesToStory = () => {
+  if (!selectedStoryProductImages.value.length) {
+    notify('Please select at least one product image.', 'warning')
+    return
+  }
+  const caption = newSlideForm.value.caption?.trim() || ''
+  const ctaText = newSlideForm.value.ctaText?.trim() || 'View Product'
+  const ctaLink = newSlideForm.value.ctaLink?.trim() || 'All'
+  const count = selectedStoryProductImages.value.length
+  for (const imgUrl of selectedStoryProductImages.value) {
+    storyForm.value.slides.push({
+      image: imgUrl,
+      caption,
+      ctaText,
+      ctaLink
+    })
+  }
+  newSlideForm.value = { image: '', caption: '', ctaText: 'Shop Now', ctaLink: 'All' }
+  selectedSlideProductId.value = ''
+  selectedProductGalleryImages.value = []
+  selectedStoryProductImages.value = []
+  notify(`${count} slide${count === 1 ? '' : 's'} added to story gallery!`)
+}
+
 const addSlideToStory = () => {
   if (!newSlideForm.value.image?.trim()) {
     notify('Please provide or upload a slide image first.', 'warning')
@@ -10232,11 +11898,56 @@ const addSlideToStory = () => {
   }
   storyForm.value.slides.push({ ...newSlideForm.value })
   newSlideForm.value = { image: '', caption: '', ctaText: 'Shop Now', ctaLink: 'All' }
+  selectedSlideProductId.value = ''
+  selectedProductGalleryImages.value = []
+  selectedStoryProductImages.value = []
   notify('Slide added to story gallery!')
+}
+
+const toggleEditSlide = (index) => {
+  editingSlideIdx.value = editingSlideIdx.value === index ? null : index
+}
+
+const handleExistingSlideImageUpload = async (e, index) => {
+  const file = e.target.files?.[0]
+  if (!file || !storyForm.value.slides[index]) return
+  storyUploading.value = true
+  try {
+    const res = await uploadFile(file, 'story-slides')
+    const downloadUrl = (typeof res === 'object' && res?.url) ? res.url : res
+    if (downloadUrl) {
+      storyForm.value.slides[index].image = downloadUrl
+      notify('Slide image updated!')
+    }
+  } catch (err) {
+    console.error('Failed to upload slide image:', err)
+    notify(err?.message || 'Failed to upload slide image', 'error')
+  } finally {
+    storyUploading.value = false
+    if (e.target) e.target.value = ''
+  }
+}
+
+const applyProductToExistingSlide = (index, productId) => {
+  if (!productId || !storyForm.value.slides[index]) return
+  const matched = (products.value || []).find((p) => String(p.id) === String(productId))
+  if (!matched) return
+  const slide = storyForm.value.slides[index]
+  slide.ctaLink = `product:${matched.id}`
+  if (matched.image) slide.image = matched.image
+  if (matched.name) slide.caption = matched.name
+  if (!slide.ctaText?.trim() || slide.ctaText === 'Shop Now') {
+    slide.ctaText = 'View Product'
+  }
 }
 
 const removeSlideFromStory = (index) => {
   storyForm.value.slides.splice(index, 1)
+  if (editingSlideIdx.value === index) {
+    editingSlideIdx.value = null
+  } else if (editingSlideIdx.value !== null && editingSlideIdx.value > index) {
+    editingSlideIdx.value -= 1
+  }
 }
 
 const moveSlide = (index, direction) => {
@@ -10245,6 +11956,11 @@ const moveSlide = (index, direction) => {
   const temp = storyForm.value.slides[index]
   storyForm.value.slides[index] = storyForm.value.slides[targetIndex]
   storyForm.value.slides[targetIndex] = temp
+  if (editingSlideIdx.value === index) {
+    editingSlideIdx.value = targetIndex
+  } else if (editingSlideIdx.value === targetIndex) {
+    editingSlideIdx.value = index
+  }
 }
 
 const handleSaveStory = async () => {
@@ -10716,6 +12432,36 @@ const handleResetCollectionBanners = async () => {
 const settingsSubmenuOpen = ref(false)
 const localPaymentSettings = ref(JSON.parse(JSON.stringify(paymentSettings.value || defaultPaymentSettings)))
 const savingPayments = ref(false)
+
+// Company Address & Contact Details State
+const localCompanyProfile = ref({ ...defaultCompanyProfile, ...(companyProfile.value || {}) })
+const savingCompanyProfile = ref(false)
+watch(
+  companyProfile,
+  (val) => {
+    if (val) {
+      localCompanyProfile.value = { ...defaultCompanyProfile, ...val }
+    }
+  },
+  { deep: true }
+)
+
+const handleSaveCompanyProfile = async () => {
+  if (savingCompanyProfile.value) return
+  savingCompanyProfile.value = true
+  try {
+    await saveCompanyProfile(localCompanyProfile.value)
+    notify('Company address & contact details saved and published to storefront.', 'success')
+  } catch (err) {
+    notify(err?.message || 'Failed to save company details', 'error')
+  } finally {
+    savingCompanyProfile.value = false
+  }
+}
+
+const handleResetCompanyProfile = () => {
+  localCompanyProfile.value = { ...defaultCompanyProfile }
+}
 const showBankAccount = ref(false)
 const showSecretKey = ref({
   payfastPassphrase: false,
@@ -10791,16 +12537,30 @@ const productsSubmenuOpen = ref(false)
 const mediaSubmenuOpen = ref(false)
 const customersSubmenuOpen = ref(false)
 const themeSubmenuOpen = ref(false)
+const marketingSubmenuOpen = ref(false)
 const globalSearch = ref('')
 const profileDropdownOpen = ref(false)
 const showDashboardWidgets = ref(true)
-const liveVisitorsCount = ref(12)
+const liveVisitorsCount = computed(() => activeVisitorCount?.value ?? 0)
+const activeSessionsSummary = computed(() => {
+  const list = liveActiveSessions?.value || []
+  if (!list.length) return ''
+  const counts = {}
+  list.forEach((s) => {
+    const label = s.view || 'home'
+    counts[label] = (counts[label] || 0) + 1
+  })
+  return Object.entries(counts)
+    .map(([v, c]) => `${v}: ${c}`)
+    .join(', ')
+})
 
 const closeAllSubmenus = () => {
   productsSubmenuOpen.value = false
   mediaSubmenuOpen.value = false
   customersSubmenuOpen.value = false
   themeSubmenuOpen.value = false
+  marketingSubmenuOpen.value = false
   settingsSubmenuOpen.value = false
 }
 
@@ -10830,8 +12590,15 @@ const handleNavClick = (id) => {
     const wasOpen = themeSubmenuOpen.value
     closeAllSubmenus()
     themeSubmenuOpen.value = !wasOpen
-    if (themeSubmenuOpen.value && activeSection.value !== 'guarantee-stats' && activeSection.value !== 'theme-badges' && activeSection.value !== 'heading-slides' && activeSection.value !== 'theme-reviews') {
+    if (themeSubmenuOpen.value && activeSection.value !== 'guarantee-stats' && activeSection.value !== 'theme-badges' && activeSection.value !== 'heading-slides' && activeSection.value !== 'theme-reviews' && activeSection.value !== 'theme-subscription') {
       activeSection.value = 'heading-slides'
+    }
+  } else if (id === 'marketing') {
+    const wasOpen = marketingSubmenuOpen.value
+    closeAllSubmenus()
+    marketingSubmenuOpen.value = !wasOpen
+    if (marketingSubmenuOpen.value && activeSection.value !== 'marketing-mailers') {
+      activeSection.value = 'marketing-mailers'
     }
   } else if (id === 'settings') {
     handleSettingsNavClick()
@@ -10849,6 +12616,514 @@ const notify = (message, type = 'success') => {
       statusBanner.value.message = ''
     }
   }, 4000)
+}
+
+// ==========================================
+// THEME -> SUBSCRIPTION CONFIG & EMAIL ROUTING
+// ==========================================
+const subscriptionForm = ref({
+  enabled: subscriptionConfig.value?.enabled !== false,
+  eyebrow: subscriptionConfig.value?.eyebrow || defaultSubscriptionConfig.eyebrow,
+  heading: subscriptionConfig.value?.heading || defaultSubscriptionConfig.heading,
+  description: subscriptionConfig.value?.description || defaultSubscriptionConfig.description,
+  placeholder: subscriptionConfig.value?.placeholder || defaultSubscriptionConfig.placeholder,
+  buttonText: subscriptionConfig.value?.buttonText || defaultSubscriptionConfig.buttonText,
+  consentText: subscriptionConfig.value?.consentText || defaultSubscriptionConfig.consentText,
+  successMessage: subscriptionConfig.value?.successMessage || defaultSubscriptionConfig.successMessage,
+  routeToEmail: subscriptionConfig.value?.routeToEmail || defaultSubscriptionConfig.routeToEmail,
+  deliveryMethod: subscriptionConfig.value?.deliveryMethod || defaultSubscriptionConfig.deliveryMethod,
+  webhookUrl: subscriptionConfig.value?.webhookUrl || '',
+  mailboxEndpointUrl: subscriptionConfig.value?.mailboxEndpointUrl || defaultSubscriptionConfig.mailboxEndpointUrl,
+  mailboxFromName: subscriptionConfig.value?.mailboxFromName || defaultSubscriptionConfig.mailboxFromName,
+  mailboxFromEmail: subscriptionConfig.value?.mailboxFromEmail || defaultSubscriptionConfig.mailboxFromEmail,
+  mailboxSubject: subscriptionConfig.value?.mailboxSubject || defaultSubscriptionConfig.mailboxSubject
+})
+const mailboxForm = ref({
+  host: subscriptionMailbox.value?.host || '',
+  port: subscriptionMailbox.value?.port || 465,
+  encryption: subscriptionMailbox.value?.encryption || 'ssl',
+  username: subscriptionMailbox.value?.username || '',
+  password: subscriptionMailbox.value?.password || '',
+  fromName: subscriptionMailbox.value?.fromName || defaultSubscriptionMailbox.fromName,
+  fromEmail: subscriptionMailbox.value?.fromEmail || defaultSubscriptionMailbox.fromEmail,
+  subjectTemplate: subscriptionMailbox.value?.subjectTemplate || defaultSubscriptionMailbox.subjectTemplate,
+  endpointUrl: subscriptionMailbox.value?.endpointUrl || defaultSubscriptionMailbox.endpointUrl
+})
+const showMailboxPassword = ref(false)
+const mailboxTesting = ref(false)
+const subscriptionSaving = ref(false)
+
+watch(subscriptionConfig, (cfg) => {
+  if (!cfg) return
+  subscriptionForm.value = {
+    enabled: cfg.enabled !== false,
+    eyebrow: cfg.eyebrow ?? defaultSubscriptionConfig.eyebrow,
+    heading: cfg.heading ?? defaultSubscriptionConfig.heading,
+    description: cfg.description ?? defaultSubscriptionConfig.description,
+    placeholder: cfg.placeholder ?? defaultSubscriptionConfig.placeholder,
+    buttonText: cfg.buttonText ?? defaultSubscriptionConfig.buttonText,
+    consentText: cfg.consentText ?? defaultSubscriptionConfig.consentText,
+    successMessage: cfg.successMessage ?? defaultSubscriptionConfig.successMessage,
+    routeToEmail: cfg.routeToEmail ?? defaultSubscriptionConfig.routeToEmail,
+    deliveryMethod: cfg.deliveryMethod || defaultSubscriptionConfig.deliveryMethod,
+    webhookUrl: cfg.webhookUrl || '',
+    mailboxEndpointUrl: cfg.mailboxEndpointUrl || defaultSubscriptionConfig.mailboxEndpointUrl,
+    mailboxFromName: cfg.mailboxFromName || defaultSubscriptionConfig.mailboxFromName,
+    mailboxFromEmail: cfg.mailboxFromEmail || defaultSubscriptionConfig.mailboxFromEmail,
+    mailboxSubject: cfg.mailboxSubject || defaultSubscriptionConfig.mailboxSubject
+  }
+}, { deep: true })
+
+watch(subscriptionMailbox, (mb) => {
+  if (!mb) return
+  mailboxForm.value = {
+    host: mb.host || '',
+    port: mb.port || 465,
+    encryption: mb.encryption || 'ssl',
+    username: mb.username || '',
+    password: mb.password || '',
+    fromName: mb.fromName || defaultSubscriptionMailbox.fromName,
+    fromEmail: mb.fromEmail || defaultSubscriptionMailbox.fromEmail,
+    subjectTemplate: mb.subjectTemplate || defaultSubscriptionMailbox.subjectTemplate,
+    endpointUrl: mb.endpointUrl || defaultSubscriptionMailbox.endpointUrl
+  }
+}, { deep: true })
+
+watch(activeSection, (sec) => {
+  if (sec === 'theme-subscription') {
+    loadSubscriptionMailbox()
+  }
+})
+
+const handleSaveSubscriptionConfig = async () => {
+  if (!subscriptionForm.value.routeToEmail?.trim()) {
+    notify('Please enter a destination routing email.', 'error')
+    return
+  }
+  subscriptionSaving.value = true
+  try {
+    await saveSubscriptionConfig({
+      ...subscriptionForm.value,
+      mailboxEndpointUrl: mailboxForm.value.endpointUrl,
+      mailboxFromName: mailboxForm.value.fromName,
+      mailboxFromEmail: mailboxForm.value.fromEmail,
+      mailboxSubject: mailboxForm.value.subjectTemplate
+    })
+    await saveSubscriptionMailbox(mailboxForm.value)
+    notify('Subscription & mailbox settings saved!')
+  } catch (err) {
+    notify(err?.message || 'Failed to save subscription settings.', 'error')
+  } finally {
+    subscriptionSaving.value = false
+  }
+}
+
+const handleTestMailbox = async () => {
+  mailboxTesting.value = true
+  try {
+    await saveSubscriptionMailbox(mailboxForm.value)
+    const res = await testMailboxEndpoint(subscriptionForm.value.routeToEmail)
+    notify(res?.message || `Test email routed to ${subscriptionForm.value.routeToEmail}!`)
+  } catch (err) {
+    notify(err?.message || 'Mailbox test failed.', 'error')
+  } finally {
+    mailboxTesting.value = false
+  }
+}
+
+const handleResetSubscriptionConfig = async () => {
+  if (!confirm('Reset Subscription copy and routing settings to defaults?')) return
+  subscriptionSaving.value = true
+  try {
+    await saveSubscriptionConfig({ ...defaultSubscriptionConfig })
+    notify('Subscription settings reset to defaults.')
+  } finally {
+    subscriptionSaving.value = false
+  }
+}
+
+const handleDeleteSubscriber = async (id) => {
+  if (!confirm('Remove this subscriber record?')) return
+  await deleteNewsletterSubscriber(id)
+  notify('Subscriber removed.')
+}
+
+const exportSubscribersCsv = () => {
+  const rows = newsletterSubscribers.value || []
+  if (rows.length === 0) return
+  const header = ['Email', 'RoutedToEmail', 'SourcePage', 'CreatedAt']
+  const lines = [
+    header.join(','),
+    ...rows.map(r => [
+      JSON.stringify(r.email || ''),
+      JSON.stringify(r.routedToEmail || ''),
+      JSON.stringify(r.sourcePage || ''),
+      JSON.stringify(r.createdAt || '')
+    ].join(','))
+  ]
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'ystore-subscribers.csv'
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+// ==========================================
+// MARKETING -> MAILERS (TEMPLATE BUILDER)
+// ==========================================
+const editingCampaignId = ref(null)
+const mailerSending = ref(false)
+const mailerPreviewMode = ref('desktop')
+const mailerTheme = ref({
+  accentColor: '#F4EB6A',
+  darkColor: '#171717',
+  buttonRadius: '999px'
+})
+const createDefaultBlocks = (preset = 'new-arrivals') => {
+  const uid = () => `blk-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+  if (preset === 'flash-sale') {
+    return [
+      { id: uid(), type: 'header', brandName: 'Yellow Berry Store', badgeText: 'Weekend Flash Sale' },
+      { id: uid(), type: 'hero', headline: 'Save 15% on Curated Favorites', subheadline: 'Limited-time offer for our valued Yellow Berry community.', imageUrl: '' },
+      { id: uid(), type: 'promo', code: 'YELLOW15', note: 'Use code at checkout • Valid this weekend only' },
+      { id: uid(), type: 'text', title: 'Why Shop With Us', content: 'Handpicked educational toys and collectibles delivered fast across South Africa.' },
+      { id: uid(), type: 'button', label: 'Claim 15% Off Now', url: 'https://ystoreza.co.za/?view=specials' }
+    ]
+  }
+  if (preset === 'newsletter') {
+    return [
+      { id: uid(), type: 'header', brandName: 'Yellow Berry Store', badgeText: 'Monthly Dispatch' },
+      { id: uid(), type: 'hero', headline: 'Playroom Ideas & Fresh Arrivals', subheadline: 'Stories, Montessori tips, and our favorite picks this month.', imageUrl: '' },
+      { id: uid(), type: 'text', title: 'This Month at Ystore', content: 'Explore thoughtful wooden and creative toys designed to spark curiosity.' },
+      { id: uid(), type: 'button', label: 'Read & Shop', url: 'https://ystoreza.co.za/' }
+    ]
+  }
+  if (preset === 'blank') {
+    return [
+      { id: uid(), type: 'header', brandName: 'Yellow Berry Store', badgeText: 'Store Update' },
+      { id: uid(), type: 'text', title: '', content: 'Write your message to customers here...' }
+    ]
+  }
+  // default: 'new-arrivals'
+  return [
+    { id: uid(), type: 'header', brandName: 'Yellow Berry Store', badgeText: 'New Arrivals' },
+    { id: uid(), type: 'hero', headline: 'Just Landed in Store', subheadline: 'Discover our newest handcrafted toys & collectibles.', imageUrl: '' },
+    { id: uid(), type: 'text', title: 'Handpicked For Little Explorers', content: 'Our latest collection is live! Quantities are limited on first-drop pieces.' },
+    { id: uid(), type: 'button', label: 'Shop New Arrivals', url: 'https://ystoreza.co.za/' }
+  ]
+}
+const mailerBlocks = ref(createDefaultBlocks('new-arrivals'))
+const mailerForm = ref({
+  name: '',
+  subject: '',
+  preheader: '',
+  audience: 'all-customers',
+  customEmails: '',
+  templatePreset: 'new-arrivals',
+  headline: '',
+  body: '',
+  ctaText: 'Shop Now',
+  ctaUrl: 'https://ystoreza.co.za/',
+  fromName: 'Yellow Berry Store',
+  fromEmail: 'noreply@ystoreza.co.za',
+  replyToEmail: 'info@yberry.co.za'
+})
+
+const applyMailerPreset = (preset) => {
+  mailerForm.value.templatePreset = preset
+  mailerBlocks.value = createDefaultBlocks(preset)
+}
+
+const addMailerBlock = (type) => {
+  const id = `blk-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+  const defaults = {
+    header: { id, type: 'header', brandName: 'Yellow Berry Store', badgeText: 'Exclusive Update' },
+    hero: { id, type: 'hero', headline: 'Featured Headline', subheadline: 'Short supporting subtitle', imageUrl: '' },
+    text: { id, type: 'text', title: 'Section Title', content: 'Write your paragraph copy here...' },
+    product: { id, type: 'product', productName: 'Featured Product', productPrice: 'R499', productImage: '', productUrl: 'https://ystoreza.co.za/' },
+    promo: { id, type: 'promo', code: 'YELLOW15', note: 'Apply at checkout for 15% off' },
+    button: { id, type: 'button', label: 'Shop Now', url: 'https://ystoreza.co.za/' },
+    divider: { id, type: 'divider' }
+  }
+  if (defaults[type]) mailerBlocks.value.push(defaults[type])
+}
+
+const moveMailerBlock = (idx, dir) => {
+  const next = idx + dir
+  if (next < 0 || next >= mailerBlocks.value.length) return
+  const arr = [...mailerBlocks.value]
+  const [item] = arr.splice(idx, 1)
+  arr.splice(next, 0, item)
+  mailerBlocks.value = arr
+}
+
+const removeMailerBlock = (idx) => {
+  mailerBlocks.value.splice(idx, 1)
+}
+
+const applyProductToBlock = (block, productId) => {
+  const found = (products.value || []).find((p) => String(p.id) === String(productId))
+  if (!found) return
+  block.productName = found.name || ''
+  block.productPrice = `R${found.price || 0}`
+  block.productImage = found.image || found.images?.[0] || ''
+  block.productUrl = 'https://ystoreza.co.za/'
+}
+
+const escapeEmailHtml = (str = '') =>
+  String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+
+const generatedMailerHtml = computed(() => {
+  const accent = mailerTheme.value.accentColor || '#F4EB6A'
+  const dark = mailerTheme.value.darkColor || '#171717'
+  const radius = mailerTheme.value.buttonRadius || '999px'
+  const replyTo = escapeEmailHtml(mailerForm.value.replyToEmail || 'info@yberry.co.za')
+
+  const blocksHtml = (mailerBlocks.value || []).map((b) => {
+    if (b.type === 'header') {
+      return `<div style="background:${dark};padding:20px 24px;text-align:center;">
+        <div style="display:inline-block;padding:4px 12px;border-radius:999px;background:${accent};color:${dark};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">${escapeEmailHtml(b.badgeText || 'Update')}</div>
+        <div style="color:#ffffff;font-size:20px;font-weight:700;margin-top:8px;">${escapeEmailHtml(b.brandName || 'Yellow Berry Store')}</div>
+      </div>`
+    }
+    if (b.type === 'hero') {
+      const img = b.imageUrl ? `<img src="${escapeEmailHtml(b.imageUrl)}" alt="" style="width:100%;max-height:240px;object-fit:cover;border-radius:12px;margin-bottom:16px;" />` : ''
+      return `<div style="padding:24px 24px 12px 24px;text-align:center;">
+        ${img}
+        <h1 style="margin:0;font-size:24px;line-height:1.25;color:#171717;font-weight:800;">${escapeEmailHtml(b.headline || '')}</h1>
+        ${b.subheadline ? `<p style="margin:8px 0 0 0;font-size:14px;line-height:1.5;color:#525252;">${escapeEmailHtml(b.subheadline)}</p>` : ''}
+      </div>`
+    }
+    if (b.type === 'text') {
+      return `<div style="padding:14px 24px;">
+        ${b.title ? `<h2 style="margin:0 0 8px 0;font-size:16px;color:#171717;font-weight:700;">${escapeEmailHtml(b.title)}</h2>` : ''}
+        <p style="margin:0;font-size:13px;line-height:1.65;color:#404040;white-space:pre-line;">${escapeEmailHtml(b.content || '')}</p>
+      </div>`
+    }
+    if (b.type === 'product') {
+      const img = b.productImage ? `<img src="${escapeEmailHtml(b.productImage)}" alt="${escapeEmailHtml(b.productName || '')}" style="width:96px;height:96px;object-fit:cover;border-radius:12px;background:#f5f5f5;flex-shrink:0;" />` : ''
+      return `<div style="padding:12px 24px;">
+        <div style="display:flex;align-items:center;gap:14px;padding:14px;border:1px solid #e5e5e5;border-radius:16px;background:#fafafa;">
+          ${img}
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#171717;">${escapeEmailHtml(b.productName || 'Product')}</div>
+            <div style="font-size:13px;font-weight:700;color:#854d0e;margin:4px 0 8px 0;">${escapeEmailHtml(b.productPrice || '')}</div>
+            <a href="${escapeEmailHtml(b.productUrl || 'https://ystoreza.co.za/')}" style="display:inline-block;padding:6px 14px;background:${dark};color:${accent};font-size:11px;font-weight:700;text-decoration:none;border-radius:${radius};">View Product</a>
+          </div>
+        </div>
+      </div>`
+    }
+    if (b.type === 'promo') {
+      return `<div style="padding:14px 24px;">
+        <div style="padding:18px;border:2px dashed ${dark};border-radius:16px;background:#fefce8;text-align:center;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#737373;font-weight:700;">Promo Code</div>
+          <div style="font-family:monospace;font-size:22px;font-weight:800;color:#171717;margin:6px 0;">${escapeEmailHtml(b.code || 'YELLOW15')}</div>
+          <div style="font-size:12px;color:#525252;">${escapeEmailHtml(b.note || '')}</div>
+        </div>
+      </div>`
+    }
+    if (b.type === 'button') {
+      return `<div style="padding:16px 24px;text-align:center;">
+        <a href="${escapeEmailHtml(b.url || 'https://ystoreza.co.za/')}" style="display:inline-block;padding:12px 26px;background:${dark};color:${accent};font-size:13px;font-weight:700;text-decoration:none;border-radius:${radius};">${escapeEmailHtml(b.label || 'Shop Now')}</a>
+      </div>`
+    }
+    if (b.type === 'divider') {
+      return `<div style="padding:8px 24px;"><hr style="border:0;border-top:1px solid #e5e5e5;" /></div>`
+    }
+    return ''
+  }).join('')
+
+  return `<div style="font-family:Poppins,Arial,sans-serif;background:#ffffff;color:#171717;max-width:600px;margin:0 auto;">
+    ${blocksHtml}
+    <div style="padding:18px 24px;border-top:1px solid #f0f0f0;text-align:center;font-size:11px;color:#737373;line-height:1.5;">
+      ${escapeEmailHtml(companyProfile.value?.companyName || 'Yellow Berry Store')} • ${escapeEmailHtml([companyProfile.value?.city, companyProfile.value?.country].filter(Boolean).join(', ') || 'Cape Town, South Africa')} • <a href="https://${escapeEmailHtml(companyProfile.value?.domain || 'ystoreza.co.za')}/" style="color:#171717;">${escapeEmailHtml(companyProfile.value?.domain || 'ystoreza.co.za')}</a><br />
+      Reply to ${replyTo} anytime to unsubscribe.
+    </div>
+  </div>`
+})
+
+const resolvedMailerRecipients = computed(() => {
+  const emailSet = new Set()
+  const addIfValid = (val) => {
+    const clean = String(val || '').trim().toLowerCase()
+    if (clean && clean.includes('@')) emailSet.add(clean)
+  }
+
+  const aud = mailerForm.value.audience
+  if (aud === 'all-customers') {
+    ;(customers.value || []).forEach((c) => addIfValid(c.email))
+    ;(newsletterSubscribers.value || []).forEach((s) => addIfValid(s.email))
+  } else if (aud === 'registered-customers') {
+    ;(customers.value || []).forEach((c) => {
+      if (!c.isAnonymous) addIfValid(c.email)
+    })
+  } else if (aud === 'newsletter-subscribers') {
+    ;(newsletterSubscribers.value || []).forEach((s) => addIfValid(s.email))
+  } else if (aud.startsWith('segment:')) {
+    const segId = aud.replace('segment:', '')
+    const seg = (allComputedSegments.value || []).find((s) => s.id === segId)
+    if (seg && Array.isArray(seg.customers)) {
+      seg.customers.forEach((c) => addIfValid(c.email))
+    }
+  } else if (aud === 'custom-emails') {
+    String(mailerForm.value.customEmails || '')
+      .split(/[\s,;]+/)
+      .forEach((e) => addIfValid(e))
+  }
+
+  return Array.from(emailSet)
+})
+
+const resetMailerForm = () => {
+  editingCampaignId.value = null
+  mailerBlocks.value = createDefaultBlocks('new-arrivals')
+  mailerForm.value = {
+    name: '',
+    subject: '',
+    preheader: '',
+    audience: 'all-customers',
+    customEmails: '',
+    templatePreset: 'new-arrivals',
+    headline: '',
+    body: '',
+    ctaText: 'Shop Now',
+    ctaUrl: 'https://ystoreza.co.za/',
+    fromName: 'Yellow Berry Store',
+    fromEmail: 'noreply@ystoreza.co.za',
+    replyToEmail: 'info@yberry.co.za'
+  }
+}
+
+const loadCampaignIntoEditor = (camp) => {
+  if (!camp) return
+  editingCampaignId.value = camp.id
+  if (Array.isArray(camp.blocks) && camp.blocks.length > 0) {
+    mailerBlocks.value = camp.blocks.map((b) => ({ ...b }))
+  }
+  if (camp.theme && typeof camp.theme === 'object') {
+    mailerTheme.value = { ...mailerTheme.value, ...camp.theme }
+  }
+  mailerForm.value = {
+    name: camp.name || '',
+    subject: camp.subject || '',
+    preheader: camp.preheader || '',
+    audience: camp.audience || 'all-customers',
+    customEmails: camp.customEmails || '',
+    templatePreset: camp.templatePreset || 'custom',
+    headline: camp.headline || '',
+    body: camp.body || '',
+    ctaText: camp.ctaText || 'Shop Now',
+    ctaUrl: camp.ctaUrl || 'https://ystoreza.co.za/',
+    fromName: camp.fromName || 'Yellow Berry Store',
+    fromEmail: camp.fromEmail || 'noreply@ystoreza.co.za',
+    replyToEmail: camp.replyToEmail || 'info@yberry.co.za'
+  }
+  notify(`Loaded template "${camp.name || 'Draft'}" into builder.`)
+}
+
+const handleSaveMailerDraft = async () => {
+  const saved = await saveMailerCampaign(
+    {
+      ...mailerForm.value,
+      blocks: mailerBlocks.value,
+      theme: mailerTheme.value,
+      htmlBody: generatedMailerHtml.value,
+      name: mailerForm.value.name || mailerForm.value.subject || 'Untitled Template',
+      recipientCount: resolvedMailerRecipients.value.length,
+      status: 'draft'
+    },
+    editingCampaignId.value
+  )
+  editingCampaignId.value = saved.id
+  notify('Mailer template draft saved!')
+}
+
+const handleSendMailerCampaign = async () => {
+  const recipients = resolvedMailerRecipients.value
+  if (recipients.length === 0) {
+    notify('No recipient email addresses found for the selected audience.', 'error')
+    return
+  }
+  if (!mailerForm.value.subject?.trim() || mailerBlocks.value.length === 0) {
+    notify('Please enter a subject line and add at least one template block.', 'error')
+    return
+  }
+  if (!confirm(`Send this HTML mailer template to ${recipients.length} recipient(s)?`)) return
+
+  mailerSending.value = true
+  try {
+    const res = await fetch('/api/send-campaign-mail.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        recipients,
+        subject: mailerForm.value.subject.trim(),
+        htmlBody: generatedMailerHtml.value,
+        fromName: mailerForm.value.fromName.trim(),
+        fromEmail: mailerForm.value.fromEmail.trim(),
+        replyToEmail: mailerForm.value.replyToEmail.trim()
+      })
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok || data.ok === false) {
+      throw new Error(data.error || `Mailer endpoint returned HTTP ${res.status}`)
+    }
+    const saved = await saveMailerCampaign(
+      {
+        ...mailerForm.value,
+        blocks: mailerBlocks.value,
+        theme: mailerTheme.value,
+        htmlBody: generatedMailerHtml.value,
+        name: mailerForm.value.name || mailerForm.value.subject,
+        recipientCount: recipients.length,
+        status: 'sent',
+        sentAt: new Date().toISOString()
+      },
+      editingCampaignId.value
+    )
+    editingCampaignId.value = saved.id
+    notify(data.message || `HTML template dispatched to ${recipients.length} recipient(s)!`)
+  } catch (err) {
+    notify(err?.message || 'Unable to dispatch campaign.', 'error')
+  } finally {
+    mailerSending.value = false
+  }
+}
+
+const copyGeneratedMailerHtml = async () => {
+  if (typeof navigator === 'undefined' || !navigator.clipboard) return
+  await navigator.clipboard.writeText(generatedMailerHtml.value)
+  notify('Generated HTML email template copied to clipboard.')
+}
+
+const copyMailerRecipients = async () => {
+  const list = resolvedMailerRecipients.value
+  if (!list.length || typeof navigator === 'undefined' || !navigator.clipboard) return
+  await navigator.clipboard.writeText(list.join(', '))
+  notify(`Copied ${list.length} email address(es) to clipboard.`)
+}
+
+const handleOpenMailClientBcc = () => {
+  const list = resolvedMailerRecipients.value
+  if (!list.length) return
+  const subject = encodeURIComponent(mailerForm.value.subject || '')
+  const body = encodeURIComponent(
+    `${mailerForm.value.headline ? mailerForm.value.headline + '\n\n' : ''}${mailerForm.value.body || ''}${mailerForm.value.ctaText ? `\n\n${mailerForm.value.ctaText}: ${mailerForm.value.ctaUrl}` : ''}`
+  )
+  window.location.href = `mailto:?bcc=${encodeURIComponent(list.join(','))}&subject=${subject}&body=${body}`
+}
+
+const handleDeleteMailerCampaign = async (id) => {
+  if (!confirm('Delete this mailer campaign?')) return
+  await deleteMailerCampaign(id)
+  if (editingCampaignId.value === id) resetMailerForm()
+  notify('Campaign deleted.')
 }
 
 // ==========================================
@@ -11123,6 +13398,7 @@ const navItems = computed(() => [
   { id: 'discounts', label: 'Discounts', icon: '/images/discount-icon.svg', count: discounts.value.length },
   { id: 'media', label: 'Media files', icon: '/images/media-files-icon.svg' },
   { id: 'blogs', label: 'Blogs', icon: '/images/blogs-icon-1.svg', count: blogs.value.length },
+  { id: 'marketing', label: 'Marketing', icon: 'mail' },
   { id: 'theme', label: 'Theme', icon: 'palette' }
 ])
 
@@ -11852,6 +14128,7 @@ const productForm = ref({
   isBestSeller: false,
   isSpecial: false,
   colors: [],
+  colorVariants: [],
   faqs: [],
   disclosures: {
     material: '',
@@ -11968,6 +14245,31 @@ const removeProductColor = (index) => {
   }
 }
 
+// Colour Variants (Custom Name & Price) Management
+const colorVariantInput = ref({ color: '', name: '', price: '' })
+const addColorVariant = () => {
+  const color = String(colorVariantInput.value.color || '').trim()
+  const name = String(colorVariantInput.value.name || '').trim()
+  const rawPrice = colorVariantInput.value.price
+  if (!color && !name) {
+    notify('Please enter a colour or custom variant name.', 'warning')
+    return
+  }
+  if (!productForm.value.colorVariants) productForm.value.colorVariants = []
+  productForm.value.colorVariants.push({
+    color: color || name,
+    name: name || color,
+    price: rawPrice !== '' && rawPrice !== null && rawPrice !== undefined ? Number(rawPrice) : (Number(productForm.value.price) || 0)
+  })
+  colorVariantInput.value = { color: '', name: '', price: '' }
+}
+
+const removeColorVariant = (index) => {
+  if (productForm.value.colorVariants) {
+    productForm.value.colorVariants.splice(index, 1)
+  }
+}
+
 // Product FAQs Management
 const addProductFaq = () => {
   if (!productForm.value.faqs) productForm.value.faqs = []
@@ -12036,6 +14338,7 @@ const openProductModal = (prod = null) => {
       isBestSeller: !!prod.isBestSeller,
       isSpecial: !!prod.isSpecial,
       colors: Array.isArray(prod.colors) ? [...prod.colors] : [],
+      colorVariants: Array.isArray(prod.colorVariants) ? prod.colorVariants.map((v) => ({ ...v })) : [],
       faqs: Array.isArray(prod.faqs) ? prod.faqs.map((f) => ({ ...f })) : [],
       disclosures: {
         material: prod.disclosures?.material || '',
@@ -12087,6 +14390,7 @@ const openProductModal = (prod = null) => {
       isBestSeller: false,
       isSpecial: false,
       colors: [],
+      colorVariants: [],
       faqs: [],
       disclosures: {
         material: '',
@@ -12214,9 +14518,27 @@ const handleSaveProduct = async (forcedStatus = null) => {
       cleanImages.unshift(mainImg)
     }
 
+    if (String(colorVariantInput.value.color || '').trim() || String(colorVariantInput.value.name || '').trim()) {
+      addColorVariant()
+    }
+
+    const cleanColorVariants = (productForm.value.colorVariants || [])
+      .filter((v) => v && (String(v.name || '').trim() || String(v.color || '').trim()))
+      .map((v) => {
+        const color = String(v.color || '').trim()
+        const name = String(v.name || '').trim()
+        const parsedPrice = Number(v.price)
+        return {
+          color: color || name,
+          name: name || color,
+          price: !Number.isNaN(parsedPrice) && v.price !== '' && v.price !== null ? parsedPrice : (Number(productForm.value.price) || 0)
+        }
+      })
+
     await saveProduct(
       {
         ...productForm.value,
+        colorVariants: cleanColorVariants,
         image: mainImg,
         images: cleanImages,
         status: targetStatus,

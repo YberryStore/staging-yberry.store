@@ -147,7 +147,7 @@
     <!-- Value Proposition Features Bar (4 Distinct Rounded Cards) -->
     <section class="my-6 sm:my-10">
       <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
           <div
             v-for="feature in features"
             :key="feature.title"
@@ -231,7 +231,7 @@
           </p>
         </div>
 
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
           <div
             v-for="product in sortedSpecials"
             :key="product.id"
@@ -347,7 +347,7 @@
           <span v-if="showBadgePills" class="inline-block bg-[#FEFEEB] text-neutral-900 border border-[#F4EB6A] text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-2">
             Curated Bundles
           </span>
-          <h2 class="text-3xl sm:text-4xl font-bold text-neutral-900 tracking-tight">
+          <h2 class="text-3xl sm:text-4xl font-medium text-neutral-900 tracking-tight">
             Bundle &amp; <span class="font-serif italic font-normal text-neutral-700">Save More</span>
           </h2>
           <p class="text-sm sm:text-base text-neutral-600 mt-2">
@@ -376,19 +376,19 @@
     </section>
 
     <!-- "Don't miss out and Subscribe" Newsletter Banner -->
-    <section class="my-16 sm:my-24">
+    <section v-if="subscriptionConfig.enabled !== false" class="my-16 sm:my-24">
       <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div class="rounded-3xl bg-[#D9D9D9] p-8 sm:p-12 lg:p-16 flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-12">
           <!-- Left Heading -->
           <div class="max-w-md text-left w-full">
-            <span class="text-sm sm:text-base text-neutral-800 font-normal block leading-tight">
-              Get secret discounts first
+            <span v-if="subscriptionConfig.eyebrow" class="text-sm sm:text-base text-neutral-800 font-normal block leading-tight">
+              {{ subscriptionConfig.eyebrow }}
             </span>
-            <h2 class="text-4xl sm:text-5xl font-bold text-neutral-900 tracking-tight leading-none my-1.5">
-              Subscribe
+            <h2 class="text-4xl sm:text-5xl font-medium text-neutral-900 tracking-tight leading-none my-1.5">
+              {{ subscriptionConfig.heading || 'Subscribe' }}
             </h2>
-            <p class="text-xs sm:text-sm text-neutral-700 font-light mt-1">
-              Join our VIP list to receive instant flash sale notifications and extra coupons.
+            <p v-if="subscriptionConfig.description" class="text-xs sm:text-sm text-neutral-700 font-light mt-1">
+              {{ subscriptionConfig.description }}
             </p>
           </div>
 
@@ -401,14 +401,15 @@
                   v-model="newsletterEmail"
                   type="email"
                   required
-                  placeholder="Email"
+                  :placeholder="subscriptionConfig.placeholder || 'Email'"
                   class="w-full bg-transparent text-xs sm:text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none pr-3"
                 />
                 <button
                   type="submit"
-                  class="bg-[#F4EB6A] hover:bg-[#FAF7BA] text-neutral-900 font-medium px-7 sm:px-8 py-2.5 sm:py-3 rounded-full text-xs sm:text-sm transition-all shrink-0 cursor-pointer shadow-xs active:scale-95"
+                  :disabled="newsletterSubmitting"
+                  class="bg-[#F4EB6A] hover:bg-[#FAF7BA] text-neutral-900 font-medium px-7 sm:px-8 py-2.5 sm:py-3 rounded-full text-xs sm:text-sm transition-all shrink-0 cursor-pointer shadow-xs active:scale-95 disabled:opacity-60"
                 >
-                  Subscribe
+                  {{ newsletterSubmitting ? 'Sending...' : (subscriptionConfig.buttonText || 'Subscribe') }}
                 </button>
               </div>
 
@@ -421,7 +422,7 @@
                   class="mt-0.5 rounded text-[#F4EB6A] focus:ring-[#F4EB6A] border-neutral-400 shrink-0"
                 />
                 <span>
-                  I agree to receive promotional updates, discount codes, and new arrival alerts from Ystore. Unsubscribe anytime.
+                  {{ subscriptionConfig.consentText || 'I agree to receive promotional updates, discount codes, and new arrival alerts from Ystore. Unsubscribe anytime.' }}
                 </span>
               </label>
 
@@ -432,7 +433,7 @@
                   class="mt-3 p-3 rounded-xl bg-white/90 text-neutral-900 text-xs font-medium flex items-center gap-2 border border-neutral-300"
                 >
                   <FlowbiteIcon name="check" size="16" stroke-width="2" class="text-green-600 shrink-0" />
-                  <span>Welcome to the VIP club! Check your inbox for your 15% coupon.</span>
+                  <span>{{ subscriptionConfig.successMessage || 'Welcome to the VIP club! Check your inbox for your 15% coupon.' }}</span>
                 </div>
               </transition>
             </form>
@@ -455,7 +456,9 @@ const {
   categories: liveCategories,
   discounts: liveDiscounts,
   initContentListeners,
-  showBadgePills
+  showBadgePills,
+  subscriptionConfig,
+  submitNewsletterSubscription
 } = useStoreContent()
 
 const categoryMenuOpen = ref(false)
@@ -463,8 +466,9 @@ const selectedFilter = ref('all')
 const selectedSort = ref('discount-desc')
 const copiedCode = ref('')
 const newsletterEmail = ref('')
-const newsletterAgreed = ref(true)
+const newsletterAgreed = ref(false)
 const newsletterSubmitted = ref(false)
+const newsletterSubmitting = ref(false)
 
 const categoriesList = computed(() => liveCategories.value.map(c => c.name))
 
@@ -565,13 +569,18 @@ const sortedSpecials = computed(() => {
   return list
 })
 
-const handleNewsletterSubmit = () => {
-  if (newsletterEmail.value) {
+const handleNewsletterSubmit = async () => {
+  if (!newsletterEmail.value || newsletterSubmitting.value) return
+  newsletterSubmitting.value = true
+  try {
+    await submitNewsletterSubscription(newsletterEmail.value, 'specials')
     newsletterSubmitted.value = true
     newsletterEmail.value = ''
     setTimeout(() => {
       newsletterSubmitted.value = false
     }, 4500)
+  } finally {
+    newsletterSubmitting.value = false
   }
 }
 </script>

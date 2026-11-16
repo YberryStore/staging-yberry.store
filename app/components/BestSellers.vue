@@ -5,16 +5,16 @@
       <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 sm:mb-12">
         <div>
           <h2 class="text-3xl sm:text-[40px] font-medium text-neutral-900 tracking-tight leading-tight">
-            Best <span class="italic font-light text-neutral-700">sellers</span>
+            {{ headingSlides?.bestSellersPrefix || 'Best' }} <span class="italic font-light text-neutral-700 font-serif">{{ headingSlides?.bestSellersHighlight || 'sellers' }}</span>
           </h2>
           <p class="text-sm sm:text-base text-neutral-500 mt-1">
-            The community favorites loved by children and parents across South Africa.
+            {{ headingSlides?.bestSellersSubtitle || 'The community favorites loved by children and parents across South Africa.' }}
           </p>
         </div>
       </div>
 
       <!-- Product Cards Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
         <ProductCard
           v-for="product in bestSellers"
           :key="product.id"
@@ -36,7 +36,7 @@ import { useStoreContent } from '../composables/useStoreContent'
 
 defineEmits(['add-to-cart', 'quick-view', 'toggle-wishlist', 'view-product'])
 
-const { bestSellerProducts: bestSellers, initContentListeners } = useStoreContent()
+const { bestSellerProducts: bestSellers, headingSlides, initContentListeners } = useStoreContent()
 
 onMounted(() => {
   initContentListeners()

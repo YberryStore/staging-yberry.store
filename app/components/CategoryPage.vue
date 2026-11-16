@@ -25,16 +25,6 @@
             <span>&gt;</span>
             <span class="text-neutral-900 font-semibold">{{ activeCategory }}</span>
           </nav>
-
-          <!-- Quick Return Action -->
-          <button
-            type="button"
-            @click="$emit('back-home')"
-            class="text-xs text-neutral-500 hover:text-neutral-900 flex items-center gap-1 self-start sm:self-auto font-medium transition-colors"
-          >
-            <FlowbiteIcon name="arrow-left" size="14" stroke-width="2" />
-            <span>Back to storefront</span>
-          </button>
         </div>
       </div>
     </section>
@@ -86,17 +76,6 @@
               {{ activeCategoryBanner?.subtitle || currentCategoryMeta.description }}
             </p>
           </div>
-
-          <!-- Quick stats badge -->
-          <div class="flex items-center gap-4 bg-neutral-900/80 backdrop-blur-md border border-neutral-700/80 p-4 rounded-2xl self-start lg:self-auto shadow-lg">
-            <div class="w-12 h-12 rounded-xl bg-[#F4EB6A]/20 text-[#F4EB6A] flex items-center justify-center shrink-0">
-              <FlowbiteIcon name="sparkles" size="24" stroke-width="1.8" />
-            </div>
-            <div>
-              <div class="text-2xl font-bold text-white">{{ filteredProducts.length }}</div>
-              <div class="text-xs text-neutral-400">Products available</div>
-            </div>
-          </div>
         </div>
 
         <!-- Quick Category Selector Chips -->
@@ -128,13 +107,86 @@
     </section>
 
     <!-- Main Products Catalog Layout -->
-    <section class="py-10 sm:py-12 bg-neutral-50/50">
+    <section class="py-6 sm:py-10 bg-neutral-50/50">
       <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Top Active Filters Bar & Filter Menu Dropdown Trigger -->
+        <div class="flex items-center justify-between gap-2 flex-wrap mb-4">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs font-medium text-neutral-500">Active Filters:</span>
+
+            <span
+              v-if="activeCategory !== 'All'"
+              class="inline-flex items-center gap-1.5 bg-[#FAF7BA] text-[#423C27] text-xs font-semibold px-3 py-1 rounded-full border border-[#F4EB6A]"
+            >
+              Category: {{ activeCategory }}
+              <button type="button" @click="selectCategory('All')" class="hover:text-black cursor-pointer">
+                <FlowbiteIcon name="close" size="12" stroke-width="2.5" />
+              </button>
+            </span>
+
+            <span
+              v-if="selectedPriceRange !== 'all'"
+              class="inline-flex items-center gap-1.5 bg-neutral-100 text-neutral-800 text-xs font-semibold px-3 py-1 rounded-full border border-neutral-200"
+            >
+              Price: {{ priceRangeLabel }}
+              <button type="button" @click="selectedPriceRange = 'all'" class="hover:text-black cursor-pointer">
+                <FlowbiteIcon name="close" size="12" stroke-width="2.5" />
+              </button>
+            </span>
+
+            <span
+              v-if="selectedTag"
+              class="inline-flex items-center gap-1.5 bg-neutral-100 text-neutral-800 text-xs font-semibold px-3 py-1 rounded-full border border-neutral-200"
+            >
+              Tag: {{ selectedTag }}
+              <button type="button" @click="selectedTag = ''" class="hover:text-black cursor-pointer">
+                <FlowbiteIcon name="close" size="12" stroke-width="2.5" />
+              </button>
+            </span>
+
+            <span
+              v-if="onlyInStock"
+              class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-200"
+            >
+              In Stock Only
+              <button type="button" @click="onlyInStock = false" class="hover:text-emerald-950 cursor-pointer">
+                <FlowbiteIcon name="close" size="12" stroke-width="2.5" />
+              </button>
+            </span>
+
+            <span v-if="activeFilterCount === 0" class="text-xs text-neutral-400">None</span>
+
+            <button
+              type="button"
+              @click="showFilterMenu = !showFilterMenu"
+              class="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 font-semibold underline underline-offset-2 ml-1 cursor-pointer"
+              :aria-expanded="showFilterMenu"
+            >
+              <span>{{ activeFilterCount > 0 ? 'Reset All' : 'Filters' }}</span>
+              <FlowbiteIcon
+                name="chevron-down"
+                size="13"
+                stroke-width="2.5"
+                :class="['transition-transform duration-200', showFilterMenu ? 'rotate-180' : '']"
+              />
+            </button>
+
+            <button
+              v-if="activeFilterCount > 0"
+              type="button"
+              @click="resetAllFilters"
+              class="text-[11px] text-neutral-500 hover:text-neutral-900 px-2 py-0.5 rounded-full border border-neutral-200 bg-white cursor-pointer"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
         
-        <!-- Controls Toolbar (Search, Categories Dropdown, Price Range Dropdown, Filter drawer toggle, Sort, View mode) -->
+        <!-- Controls Toolbar (Opened by the Filter Dropdown above) -->
         <div
+          v-show="showFilterMenu"
           ref="toolbarDropdownContainerRef"
-          class="bg-white rounded-2xl border border-neutral-200/80 p-4 mb-8 shadow-xs flex flex-col xl:flex-row xl:items-center justify-between gap-4"
+          class="bg-white rounded-2xl border border-neutral-200/80 p-4 mb-6 shadow-xs flex flex-col xl:flex-row xl:items-center justify-between gap-4"
         >
           <!-- Left: Search, Advance Filter & Custom Dropdown Filters -->
           <div class="flex flex-wrap items-center gap-3 w-full xl:w-auto">
@@ -435,59 +487,6 @@
           </div>
         </div>
 
-        <!-- Active Filter Pills (if any) -->
-        <div v-if="activeFilterCount > 0" class="flex items-center gap-2 flex-wrap mb-6">
-          <span class="text-xs font-medium text-neutral-500">Active Filters:</span>
-          
-          <span
-            v-if="activeCategory !== 'All'"
-            class="inline-flex items-center gap-1.5 bg-[#FAF7BA] text-[#423C27] text-xs font-semibold px-3 py-1 rounded-full border border-[#F4EB6A]"
-          >
-            Category: {{ activeCategory }}
-            <button type="button" @click="selectCategory('All')" class="hover:text-black cursor-pointer">
-              <FlowbiteIcon name="close" size="12" stroke-width="2.5" />
-            </button>
-          </span>
-
-          <span
-            v-if="selectedPriceRange !== 'all'"
-            class="inline-flex items-center gap-1.5 bg-neutral-100 text-neutral-800 text-xs font-semibold px-3 py-1 rounded-full border border-neutral-200"
-          >
-            Price: {{ priceRangeLabel }}
-            <button type="button" @click="selectedPriceRange = 'all'" class="hover:text-black cursor-pointer">
-              <FlowbiteIcon name="close" size="12" stroke-width="2.5" />
-            </button>
-          </span>
-
-          <span
-            v-if="selectedTag"
-            class="inline-flex items-center gap-1.5 bg-neutral-100 text-neutral-800 text-xs font-semibold px-3 py-1 rounded-full border border-neutral-200"
-          >
-            Tag: {{ selectedTag }}
-            <button type="button" @click="selectedTag = ''" class="hover:text-black cursor-pointer">
-              <FlowbiteIcon name="close" size="12" stroke-width="2.5" />
-            </button>
-          </span>
-
-          <span
-            v-if="onlyInStock"
-            class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-200"
-          >
-            In Stock Only
-            <button type="button" @click="onlyInStock = false" class="hover:text-emerald-950 cursor-pointer">
-              <FlowbiteIcon name="close" size="12" stroke-width="2.5" />
-            </button>
-          </span>
-
-          <button
-            type="button"
-            @click="resetAllFilters"
-            class="text-xs text-red-600 hover:text-red-700 font-medium underline underline-offset-2 ml-1 cursor-pointer"
-          >
-            Reset All
-          </button>
-        </div>
-
         <!-- Catalog Body: Sidebar + Grid -->
         <div :class="['grid grid-cols-1 gap-8 transition-all duration-300', showAdvancedFilters ? 'lg:grid-cols-4' : 'lg:grid-cols-1']">
           
@@ -767,7 +766,7 @@
           <div
             v-if="contentLoading && masterProducts.length === 0"
             :class="[
-              'grid grid-cols-1 sm:grid-cols-2 gap-6',
+              'grid grid-cols-2 gap-3 sm:gap-6',
               showAdvancedFilters ? 'xl:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'
             ]"
           >
@@ -808,7 +807,7 @@
           <div
             v-else-if="viewMode === 'grid'"
             :class="[
-              'grid grid-cols-1 sm:grid-cols-2 gap-6',
+              'grid grid-cols-2 gap-3 sm:gap-6',
               showAdvancedFilters ? 'xl:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'
             ]"
           >
@@ -1138,6 +1137,7 @@ const onlyInStock = ref(false)
 const sortBy = ref('featured')
 const viewMode = ref('grid')
 const mobileFilterOpen = ref(false)
+const showFilterMenu = ref(false)
 const showAdvancedFilters = ref(false)
 const currentPage = ref(1)
 const itemsPerPage = 12

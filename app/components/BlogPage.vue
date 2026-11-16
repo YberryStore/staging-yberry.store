@@ -445,29 +445,42 @@
       </section>
 
       <!-- Newsletter Invitation Banner -->
-      <section class="py-12 sm:py-16 bg-white border-t border-neutral-100">
+      <section v-if="subscriptionConfig.enabled !== false" class="py-12 sm:py-16 bg-white border-t border-neutral-100">
         <div class="max-w-[1200px] mx-auto px-4 sm:px-6 text-center">
-          <span class="text-xs font-bold uppercase tracking-wider text-amber-700">Stay in the loop</span>
+          <span v-if="subscriptionConfig.eyebrow" class="text-xs font-bold uppercase tracking-wider text-amber-700">{{ subscriptionConfig.eyebrow }}</span>
           <h2 class="text-2xl sm:text-4xl font-medium text-neutral-900 mt-2 tracking-tight">
-            Want fresh product releases, tips &amp; exclusive stories in your inbox?
+            {{ subscriptionConfig.heading || 'Subscribe' }}
           </h2>
-          <p class="text-xs sm:text-sm text-neutral-500 mt-2 max-w-lg mx-auto">
-            Subscribe to our weekly dispatch for Montessori tips, early drops, and exclusive maker stories.
+          <p v-if="subscriptionConfig.description" class="text-xs sm:text-sm text-neutral-500 mt-2 max-w-lg mx-auto">
+            {{ subscriptionConfig.description }}
           </p>
 
-          <form @submit.prevent="subscribed = true" class="mt-6 flex flex-col sm:flex-row gap-2.5 max-w-md mx-auto">
-            <input
-              type="email"
-              required
-              placeholder="Enter your email address"
-              class="flex-1 px-4 py-3 rounded-full border border-neutral-300 text-xs sm:text-sm focus:outline-none focus:border-[#F4EB6A] bg-neutral-50/50"
-            />
-            <button
-              type="submit"
-              class="px-6 py-3 rounded-full bg-neutral-900 hover:bg-neutral-800 text-[#F4EB6A] text-xs sm:text-sm font-semibold transition-colors cursor-pointer shrink-0"
-            >
-              {{ subscribed ? 'Subscribed!' : 'Subscribe' }}
-            </button>
+          <form @submit.prevent="handleBlogSubscribe" class="mt-6 max-w-md mx-auto space-y-2.5">
+            <div class="flex flex-col sm:flex-row gap-2.5">
+              <input
+                v-model="subscriberEmail"
+                type="email"
+                required
+                :placeholder="subscriptionConfig.placeholder || 'Enter your email address'"
+                class="flex-1 px-4 py-3 rounded-full border border-neutral-300 text-xs sm:text-sm focus:outline-none focus:border-[#F4EB6A] bg-neutral-50/50"
+              />
+              <button
+                type="submit"
+                :disabled="submittingSubscription"
+                class="px-6 py-3 rounded-full bg-neutral-900 hover:bg-neutral-800 text-[#F4EB6A] text-xs sm:text-sm font-semibold transition-colors cursor-pointer shrink-0 disabled:opacity-60"
+              >
+                {{ subscribed ? 'Subscribed!' : (submittingSubscription ? 'Sending...' : (subscriptionConfig.buttonText || 'Subscribe')) }}
+              </button>
+            </div>
+            <label class="flex items-start gap-2 text-[11px] text-neutral-500 text-left cursor-pointer px-2">
+              <input
+                v-model="blogSubscribeAgreed"
+                type="checkbox"
+                required
+                class="mt-0.5 rounded border-neutral-300 text-[#F4EB6A] focus:ring-[#F4EB6A] shrink-0"
+              />
+              <span>{{ subscriptionConfig.consentText || 'I agree to receive promotional updates and news from Ystore. Unsubscribe anytime.' }}</span>
+            </label>
           </form>
         </div>
       </section>
@@ -483,7 +496,7 @@ import { useStoreContent } from '../composables/useStoreContent'
 
 defineEmits(['back-home', 'view-product', 'add-to-cart'])
 
-const { blogs: articles, initContentListeners } = useStoreContent()
+const { blogs: articles, subscriptionConfig, submitNewsletterSubscription, initContentListeners } = useStoreContent()
 
 onMounted(() => {
   initContentListeners()
@@ -493,7 +506,25 @@ const activeArticle = ref(null)
 const selectedCategory = ref('All')
 const searchQuery = ref('')
 const copied = ref(false)
+const subscriberEmail = ref('')
+const blogSubscribeAgreed = ref(false)
 const subscribed = ref(false)
+const submittingSubscription = ref(false)
+
+const handleBlogSubscribe = async () => {
+  if (!subscriberEmail.value || submittingSubscription.value) return
+  submittingSubscription.value = true
+  try {
+    await submitNewsletterSubscription(subscriberEmail.value, 'blog')
+    subscribed.value = true
+    subscriberEmail.value = ''
+    setTimeout(() => {
+      subscribed.value = false
+    }, 4500)
+  } finally {
+    submittingSubscription.value = false
+  }
+}
 
 const blogCategories = computed(() => {
   const cats = new Set(['All'])

@@ -275,10 +275,10 @@
               Call &amp; WhatsApp
             </h3>
             <p class="text-xs sm:text-sm text-neutral-500 font-light">
-              +27 71 234 5678
+              {{ companyProfile.primaryPhone }}
             </p>
-            <p class="text-xs sm:text-sm text-neutral-500 font-light">
-              +27 82 987 6543
+            <p v-if="companyProfile.secondaryPhone" class="text-xs sm:text-sm text-neutral-500 font-light">
+              {{ companyProfile.secondaryPhone }}
             </p>
           </div>
 
@@ -288,13 +288,16 @@
               <FlowbiteIcon name="clock" size="20" stroke-width="1.5" class="group-hover:scale-110 transition-transform" />
             </div>
             <h3 class="text-base font-bold text-neutral-900 mb-1.5">
-              Working Hours
+              Working Hours &amp; Studio
             </h3>
             <p class="text-xs sm:text-sm text-neutral-500 font-light">
-              Daily: 8am - 5pm
+              {{ companyProfile.workingHoursWeekday }}
             </p>
             <p class="text-xs sm:text-sm text-neutral-500 font-light">
-              Sundays: Closed
+              {{ companyProfile.workingHoursWeekend }}
+            </p>
+            <p v-if="companyProfile.streetAddress" class="text-xs text-neutral-400 font-light mt-1.5 max-w-xs">
+              {{ companyProfile.streetAddress }}<span v-if="companyProfile.city">, {{ companyProfile.city }}</span><span v-if="companyProfile.postalCode">, {{ companyProfile.postalCode }}</span>
             </p>
           </div>
 
@@ -307,10 +310,10 @@
               Write to Us
             </h3>
             <p class="text-xs sm:text-sm text-neutral-500 font-light">
-              info@ystore.co.za
+              {{ companyProfile.infoEmail }}
             </p>
-            <p class="text-xs sm:text-sm text-neutral-500 font-light">
-              custom@ystore.co.za
+            <p v-if="companyProfile.customEmail" class="text-xs sm:text-sm text-neutral-500 font-light">
+              {{ companyProfile.customEmail }}
             </p>
           </div>
         </div>
@@ -328,7 +331,7 @@
                 Start now
               </span>
 
-              <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-neutral-900 tracking-tight leading-tight mb-4">
+              <h2 class="text-3xl sm:text-4xl lg:text-5xl font-medium text-neutral-900 tracking-tight leading-tight mb-4">
                 Discover your next <br class="hidden sm:inline" />
                 <span class="font-serif italic font-normal text-neutral-700">custom creation</span>
               </h2>
@@ -387,7 +390,7 @@ import { ref } from 'vue'
 import FlowbiteIcon from './FlowbiteIcon.vue'
 import { useStoreContent } from '../composables/useStoreContent'
 
-const { showBadgePills } = useStoreContent()
+const { showBadgePills, companyProfile } = useStoreContent()
 
 defineEmits(['back-home', 'view-specials'])
 

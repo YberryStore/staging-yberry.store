@@ -4,7 +4,7 @@
       <!-- Section Header -->
       <div class="mb-8">
         <h2 class="text-3xl sm:text-[40px] font-medium text-neutral-900 tracking-tight leading-tight flex items-baseline flex-wrap">
-          <span>Feature</span>
+          <span>{{ headingSlides?.featuredPrefix || 'Feature' }}</span>
           <span class="inline-block relative overflow-hidden align-baseline ml-2 min-h-[1.25em]">
             <transition name="heading-slide" mode="out-in">
               <span :key="currentCollectionWord" class="inline-block italic font-light text-neutral-700 font-serif">
@@ -14,7 +14,7 @@
           </span>
         </h2>
         <p class="text-sm sm:text-base text-neutral-500 mt-1 max-w-2xl">
-          Discover our handpicked selection of top-rated products designed to spark joy, imagination, and endless creative play.
+          {{ headingSlides?.featuredSubtitle || 'Discover our handpicked selection of top-rated products designed to spark joy, imagination, and endless creative play.' }}
         </p>
       </div>
 
@@ -50,7 +50,7 @@
       </div>
 
       <!-- Product Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
         <ProductCard
           v-for="product in filteredProducts"
           :key="product.id"
