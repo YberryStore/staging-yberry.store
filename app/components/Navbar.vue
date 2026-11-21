@@ -146,6 +146,24 @@
               ></span>
             </button>
 
+            <!-- Wishlist with Badge -->
+            <button
+              type="button"
+              @click="$emit('navigate-wishlist')"
+              class="relative p-2 text-white hover:text-[#F4EB6A] hover:bg-neutral-800/80 rounded-full transition-all flex items-center justify-center hover:scale-105 active:scale-95 cursor-pointer"
+              :class="{ 'text-[#F4EB6A] bg-neutral-800/80': currentView === 'wishlist' }"
+              aria-label="Wishlist"
+              title="My Wishlist"
+            >
+              <FlowbiteIcon name="heart" size="24" :stroke-width="1.7" :fill="currentView === 'wishlist' || wishlistCount > 0" :class="wishlistCount > 0 ? 'text-[#F4EB6A]' : ''" />
+              <span
+                v-if="wishlistCount > 0"
+                class="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 bg-[#F4EB6A] text-neutral-900 font-bold text-[11px] rounded-full flex items-center justify-center shadow-sm"
+              >
+                {{ wishlistCount }}
+              </span>
+            </button>
+
             <!-- Shopping Cart with Badge -->
             <button
               type="button"
@@ -255,6 +273,10 @@ const props = defineProps({
     type: Number,
     default: 0
   },
+  wishlistCount: {
+    type: Number,
+    default: 0
+  },
   currentView: {
     type: String,
     default: 'home'
@@ -265,7 +287,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['open-cart', 'open-account', 'open-admin', 'search', 'navigate-home', 'navigate-specials', 'navigate-contact', 'navigate-category', 'navigate-blog', 'navigate-about'])
+const emit = defineEmits(['open-cart', 'open-account', 'open-admin', 'search', 'navigate-home', 'navigate-specials', 'navigate-contact', 'navigate-category', 'navigate-blog', 'navigate-about', 'navigate-wishlist'])
 
 const activeNav = ref(
   props.currentView === 'specials' ? 'Specials' :

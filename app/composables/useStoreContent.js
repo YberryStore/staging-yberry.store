@@ -1906,6 +1906,7 @@ export const useStoreContent = () => {
       images: Array.isArray(productData.images)
         ? productData.images.map((img) => String(img || '').trim()).filter(Boolean).slice(0, 7)
         : (productData.image ? [productData.image.trim()] : []),
+      shortDescription: (productData.shortDescription || '').trim(),
       description: productData.description || '',
       status: productData.status || (productData.isDraft ? 'draft' : 'published'),
       inStock: productData.continueSellingWhenOutOfStock ? true : (quantity > 0 || productData.inStock !== false),

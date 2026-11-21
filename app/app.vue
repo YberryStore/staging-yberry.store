@@ -25,6 +25,7 @@
       <!-- Navbar -->
       <Navbar
         :cart-count="totalCartCount"
+        :wishlist-count="wishlistCount"
         :current-view="currentView"
         :user="currentUser"
         @open-cart="isCartOpen = true"
@@ -36,6 +37,7 @@
         @navigate-category="handleCategorySelect('All')"
         @navigate-blog="currentView = 'blog'"
         @navigate-about="currentView = 'about'"
+        @navigate-wishlist="currentView = 'wishlist'"
       />
 
       <!-- Main Content -->
@@ -50,6 +52,17 @@
           @buy-now="handleBuyNow"
           @view-product="handleViewProduct"
           @open-auth="isAuthOpen = true"
+        />
+
+        <!-- Dedicated Wishlist Page -->
+        <WishlistPage
+          v-else-if="currentView === 'wishlist'"
+          @back-home="currentView = 'home'"
+          @select-category="handleCategorySelect"
+          @view-product="handleViewProduct"
+          @add-to-cart="addToCart"
+          @quick-view="openQuickView"
+          @toggle-wishlist="handleWishlist"
         />
 
         <!-- Dedicated Specials & Flash Deals Page -->
@@ -271,6 +284,7 @@ import Navbar from './components/Navbar.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import CmsAuthGateway from './components/CmsAuthGateway.vue'
 import ProductDetailPage from './components/ProductDetailPage.vue'
+import WishlistPage from './components/WishlistPage.vue'
 import SpecialsPage from './components/SpecialsPage.vue'
 import CategoryPage from './components/CategoryPage.vue'
 import BlogPage from './components/BlogPage.vue'
@@ -298,6 +312,7 @@ import QuickViewModal from './components/QuickViewModal.vue'
 import CheckoutModal from './components/CheckoutModal.vue'
 import FlowbiteIcon from './components/FlowbiteIcon.vue'
 import { useFirebaseAuth } from './composables/useFirebaseAuth'
+import { useWishlist } from './composables/useWishlist'
 import { useStoreContent } from './composables/useStoreContent'
 import { useSiteSeo } from './composables/useSiteSeo'
 import { useCookieConsent } from './composables/useCookieConsent'
@@ -327,7 +342,8 @@ const {
   trackEcommerceEvent
 } = useSiteSeo()
 
-const { allowsAnalytics, allowsAdvertising, initConsent } = useCookieConsent()
+const { hasConsented, allowsAnalytics, allowsAdvertising, initConsent } = useCookieConsent()
+const { wishlistCount } = useWishlist()
 
 // Runtime config for secret access keys
 const config = useRuntimeConfig()
@@ -345,7 +361,7 @@ if (config?.public?.cmsSecretKey && !CMS_SECRET_KEYS.includes(config.public.cmsS
 }
 
 // Permitted navigation views (including secret cms-auth gateway and compliance pages)
-const VALID_VIEWS = ['home', 'category', 'product', 'specials', 'blog', 'contact', 'about', 'admin', 'cms-auth', 'privacy', 'terms', 'cookies', 'checkout', 'thank-you']
+const VALID_VIEWS = ['home', 'category', 'product', 'wishlist', 'specials', 'blog', 'contact', 'about', 'admin', 'cms-auth', 'privacy', 'terms', 'cookies', 'checkout', 'thank-you']
 
 // Verify secret URL parameters (e.g. ?cms_auth=..., ?portal=..., ?cms_key=...)
 // Sets session authorization and purges secret parameters from address bar for anti-shoulder-surfing
@@ -438,8 +454,8 @@ useHead(() => {
     { property: 'og:type', content: 'website' }
   ]
 
-  // 1. Google Tag Manager (GTM) - Requires Analytics consent
-  if (validGtmId.value && trackingConfig.enableGtm && allowsAnalytics.value) {
+  // 1. Google Tag Manager (GTM)
+  if (validGtmId.value && trackingConfig.enableGtm && (!hasConsented.value || allowsAnalytics.value)) {
     scripts.push(
       {
         key: 'gtm-script-src',
@@ -453,8 +469,8 @@ useHead(() => {
     )
   }
 
-  // 2. Google Analytics 4 (GA4 Direct gtag.js) - Requires Analytics consent
-  if (validGa4Id.value && trackingConfig.enableGa4 && allowsAnalytics.value) {
+  // 2. Google Analytics 4 (GA4 Direct gtag.js)
+  if (validGa4Id.value && trackingConfig.enableGa4 && (!hasConsented.value || allowsAnalytics.value)) {
     scripts.push(
       {
         key: 'ga4-src',
@@ -468,8 +484,8 @@ useHead(() => {
     )
   }
 
-  // 3. Meta Pixel (Facebook Pixel) - Requires Advertising consent
-  if (validMetaPixelId.value && trackingConfig.enableMetaPixel && allowsAdvertising.value) {
+  // 3. Meta Pixel (Facebook Pixel)
+  if (validMetaPixelId.value && trackingConfig.enableMetaPixel && (!hasConsented.value || allowsAdvertising.value)) {
     scripts.push({
       key: 'meta-pixel-init',
       innerHTML: `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window, document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init', '${validMetaPixelId.value}');fbq('track', 'PageView');`
@@ -513,7 +529,12 @@ const syncUrlWithView = (view) => {
     } else {
       url.searchParams.delete('cat')
     }
-    window.history.pushState({ view, cat: selectedCategoryFilter.value }, '', url.toString())
+    if (view === 'product' && selectedProduct.value?.id) {
+      url.searchParams.set('id', String(selectedProduct.value.id))
+    } else {
+      url.searchParams.delete('id')
+    }
+    window.history.pushState({ view, cat: selectedCategoryFilter.value, productId: selectedProduct.value?.id || null }, '', url.toString())
   } catch {}
 }
 
@@ -538,8 +559,12 @@ const handlePopState = () => {
   const params = new URLSearchParams(window.location.search)
   const viewParam = params.get('view')
   const catParam = params.get('cat')
+  const idParam = params.get('id')
   if (catParam) {
     selectedCategoryFilter.value = catParam
+  }
+  if (viewParam === 'product') {
+    restoreSelectedProduct(idParam)
   }
   if (viewParam && VALID_VIEWS.includes(viewParam)) {
     if ((viewParam === 'admin' || viewParam === 'cms-auth') && !isCmsAuthorized) {
@@ -563,8 +588,12 @@ onMounted(() => {
   if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search)
     const catParam = params.get('cat')
+    const idParam = params.get('id')
     if (catParam) {
       selectedCategoryFilter.value = catParam
+    }
+    if (currentView.value === 'product') {
+      restoreSelectedProduct(idParam)
     }
     window.addEventListener('popstate', handlePopState)
     // Fire initial pageview on mount for public landing
@@ -590,8 +619,34 @@ onUnmounted(() => {
   }
 })
 
-// Selected product state (populated when a real product is selected)
-const selectedProduct = ref(null)
+// Selected product state (restored synchronously on refresh from URL ?id= or storage)
+const buildSelectedProductState = (product) => {
+  const parts = (product.name || '').split(' ')
+  return {
+    ...product,
+    titleLine1: parts.length > 2 ? parts.slice(0, 2).join(' ') : (product.name || ''),
+    titleLine2: parts.length > 2 ? parts.slice(2).join(' ') : (product.category || ''),
+    fullDescription: product.description || ''
+  }
+}
+
+const getInitialSelectedProduct = () => {
+  if (typeof window === 'undefined') return null
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const targetId = params.get('id') || sessionStorage.getItem('ystore_selected_product_id') || localStorage.getItem('ystore_selected_product_id') || ''
+    const cachedRaw = sessionStorage.getItem('ystore_selected_product') || localStorage.getItem('ystore_selected_product')
+    if (cachedRaw) {
+      const cached = JSON.parse(cachedRaw)
+      if (cached && (!targetId || String(cached.id) === String(targetId))) {
+        return buildSelectedProductState(cached)
+      }
+    }
+  } catch {}
+  return null
+}
+
+const selectedProduct = ref(getInitialSelectedProduct())
 
 // Cart State (Starts empty with zero dummy items)
 const cartItems = ref([])
@@ -847,16 +902,87 @@ const handleRequireAuthForCheckout = () => {
   showToast('Sign In or Guest Checkout', 'Please sign in or continue as a Guest Shopper to complete checkout.')
 }
 
+const restoreSelectedProduct = (explicitId = null) => {
+  if (typeof window === 'undefined') return
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const targetId =
+      explicitId ||
+      params.get('id') ||
+      sessionStorage.getItem('ystore_selected_product_id') ||
+      localStorage.getItem('ystore_selected_product_id') ||
+      ''
+    if (targetId) {
+      sessionStorage.setItem('ystore_selected_product_id', String(targetId))
+      localStorage.setItem('ystore_selected_product_id', String(targetId))
+      const liveMatch = (publishedProducts.value || []).find((p) => String(p.id) === String(targetId))
+      if (liveMatch) {
+        selectedProduct.value = buildSelectedProductState(liveMatch)
+        return
+      }
+    }
+    const cachedRaw = sessionStorage.getItem('ystore_selected_product') || localStorage.getItem('ystore_selected_product')
+    if (cachedRaw) {
+      const cached = JSON.parse(cachedRaw)
+      if (cached && (!targetId || String(cached.id) === String(targetId))) {
+        selectedProduct.value = buildSelectedProductState(cached)
+      }
+    }
+  } catch {}
+}
+
+watch(
+  publishedProducts,
+  (list) => {
+    if (currentView.value !== 'product' || !Array.isArray(list) || !list.length) return
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+    const targetId =
+      params?.get('id') ||
+      selectedProduct.value?.id ||
+      (typeof window !== 'undefined'
+        ? sessionStorage.getItem('ystore_selected_product_id') || localStorage.getItem('ystore_selected_product_id')
+        : '')
+    if (!targetId) return
+    const liveMatch = list.find((p) => String(p.id) === String(targetId))
+    if (liveMatch) {
+      const formatted = buildSelectedProductState(liveMatch)
+      selectedProduct.value = formatted
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem('ystore_selected_product', JSON.stringify(formatted))
+          localStorage.setItem('ystore_selected_product', JSON.stringify(formatted))
+          if (!params?.get('id') && liveMatch.id) {
+            const url = new URL(window.location.href)
+            url.searchParams.set('view', 'product')
+            url.searchParams.set('id', String(liveMatch.id))
+            window.history.replaceState({ view: 'product', productId: liveMatch.id }, '', url.toString())
+          }
+        } catch {}
+      }
+    }
+  },
+  { immediate: true }
+)
+
 const handleViewProduct = (product) => {
   if (!product) return
-  const parts = (product.name || '').split(' ')
-  selectedProduct.value = {
-    ...product,
-    titleLine1: parts.length > 2 ? parts.slice(0, 2).join(' ') : (product.name || ''),
-    titleLine2: parts.length > 2 ? parts.slice(2).join(' ') : (product.category || ''),
-    fullDescription: product.description || ''
+  const formatted = buildSelectedProductState(product)
+  selectedProduct.value = formatted
+  if (typeof window !== 'undefined') {
+    try {
+      if (product.id) {
+        sessionStorage.setItem('ystore_selected_product_id', String(product.id))
+        localStorage.setItem('ystore_selected_product_id', String(product.id))
+      }
+      sessionStorage.setItem('ystore_selected_product', JSON.stringify(formatted))
+      localStorage.setItem('ystore_selected_product', JSON.stringify(formatted))
+    } catch {}
   }
+  const wasAlreadyProductView = currentView.value === 'product'
   currentView.value = 'product'
+  if (wasAlreadyProductView) {
+    syncUrlWithView('product')
+  }
   if (typeof window !== 'undefined') {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }

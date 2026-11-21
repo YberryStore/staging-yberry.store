@@ -4,7 +4,7 @@ import { useFirebaseAuth } from './useFirebaseAuth'
 import { useCookieConsent } from './useCookieConsent'
 
 export const defaultTrackingConfig = {
-  gtmId: 'GTM-PNT79WT8',
+  gtmId: 'GTM-WSLWFLHM',
   enableGtm: true,
   ga4Id: 'G-XJ3BF4MRDF',
   enableGa4: true,
@@ -136,11 +136,12 @@ const getInitialTracking = () => {
       const stored = localStorage.getItem(TRACKING_STORAGE_KEY)
       if (stored) {
         const parsed = JSON.parse(stored)
+        const rawGtm = parsed?.gtmId ? sanitizeGtmId(parsed.gtmId) : ''
         return {
           ...defaultTrackingConfig,
           ...(parsed || {}),
           metaPixelId: parsed?.metaPixelId ? sanitizeMetaPixelId(parsed.metaPixelId) : defaultTrackingConfig.metaPixelId,
-          gtmId: parsed?.gtmId ? sanitizeGtmId(parsed.gtmId) : defaultTrackingConfig.gtmId,
+          gtmId: (rawGtm && rawGtm !== 'GTM-PNT79WT8') ? rawGtm : defaultTrackingConfig.gtmId,
           ga4Id: parsed?.ga4Id ? sanitizeGa4Id(parsed.ga4Id) : defaultTrackingConfig.ga4Id
         }
       }
@@ -211,7 +212,8 @@ export const useSiteSeo = () => {
 
   const applyTrackingUpdates = (updates = {}) => {
     if (typeof updates.gtmId === 'string') {
-      sharedTracking.gtmId = sanitizeGtmId(updates.gtmId) || updates.gtmId.trim()
+      const cleanedGtm = sanitizeGtmId(updates.gtmId) || updates.gtmId.trim()
+      sharedTracking.gtmId = cleanedGtm === 'GTM-PNT79WT8' ? defaultTrackingConfig.gtmId : cleanedGtm
     }
     if (typeof updates.ga4Id === 'string') {
       sharedTracking.ga4Id = sanitizeGa4Id(updates.ga4Id) || updates.ga4Id.trim()

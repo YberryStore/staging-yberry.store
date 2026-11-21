@@ -735,7 +735,7 @@
           @click="handleSettingsNavClick"
           :class="[
             'w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm transition-all cursor-pointer group',
-            (activeSection === 'settings' || activeSection === 'settings-payments' || activeSection === 'settings-users')
+            (activeSection === 'settings' || activeSection === 'settings-payments' || activeSection === 'settings-users' || activeSection === 'settings-seo')
               ? 'text-white font-medium bg-neutral-900/80'
               : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900/40 font-normal',
             isSidebarCollapsed ? 'justify-center px-2' : ''
@@ -747,7 +747,7 @@
             alt="Settings"
             :class="[
               'w-5 h-5 object-contain shrink-0 transition-opacity',
-              (activeSection === 'settings' || activeSection === 'settings-payments' || activeSection === 'settings-users') ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'
+              (activeSection === 'settings' || activeSection === 'settings-payments' || activeSection === 'settings-users' || activeSection === 'settings-seo') ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'
             ]"
           />
           <span v-if="!isSidebarCollapsed" class="truncate">Settings</span>
@@ -841,6 +841,33 @@
               :class="activeSection === 'settings-users' ? 'bg-[#F4EB6A]/20 text-[#F4EB6A]' : 'bg-neutral-800 text-neutral-400'"
             >
               {{ adminUsers?.length || 0 }} Users
+            </span>
+          </button>
+
+          <!-- Sub-menu Item: Tracking -->
+          <button
+            type="button"
+            @click="activeSection = 'settings-seo'"
+            :class="[
+              'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer group',
+              activeSection === 'settings-seo'
+                ? 'text-[#F4EB6A] font-semibold bg-neutral-900'
+                : 'text-neutral-400 hover:text-white hover:bg-neutral-900/50 font-normal'
+            ]"
+            title="Manage Google GTM Tag, Meta Pixel & Analytics"
+          >
+            <span class="flex items-center gap-2 truncate">
+              <span
+                class="w-1.5 h-1.5 rounded-full shrink-0 transition-colors"
+                :class="activeSection === 'settings-seo' ? 'bg-[#F4EB6A]' : 'bg-neutral-600 group-hover:bg-neutral-400'"
+              ></span>
+              <span class="truncate">Tracking</span>
+            </span>
+            <span
+              class="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full shrink-0"
+              :class="activeSection === 'settings-seo' ? 'bg-[#F4EB6A]/20 text-[#F4EB6A] font-bold' : 'bg-neutral-800 text-neutral-400'"
+            >
+              Tags
             </span>
           </button>
           </div>
@@ -1620,6 +1647,18 @@
                     <span>⚠️</span>
                     <span>No main image selected. Upload photos above or click "☆ Set Main" on any uploaded image.</span>
                   </div>
+                </div>
+
+                <div class="md:col-span-2">
+                  <label class="block text-xs font-medium text-neutral-700 mb-1">
+                    Short Description <span class="text-[11px] font-normal text-neutral-400">(Optional — displayed under the product title)</span>
+                  </label>
+                  <textarea
+                    v-model="productForm.shortDescription"
+                    rows="2"
+                    placeholder="Brief 1-2 sentence summary shown below the product title..."
+                    class="w-full px-3.5 py-2 rounded-xl border border-neutral-300 bg-white text-xs focus:outline-none focus:border-neutral-900"
+                  ></textarea>
                 </div>
 
                 <div class="md:col-span-2">
@@ -6985,9 +7024,9 @@
             <div>
               <div class="flex items-center gap-2">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Settings /</span>
-                <h2 class="text-xl font-bold text-neutral-900">SEO, Analytics &amp; Conversion Pixels</h2>
+                <h2 class="text-xl font-bold text-neutral-900">Tracking, Analytics &amp; SEO</h2>
               </div>
-              <p class="text-xs text-neutral-500">Configure Google Analytics 4, Google Tag Manager, Meta Pixel, and page SEO metadata.</p>
+              <p class="text-xs text-neutral-500">Edit your Google GTM Tag, Meta Pixel, Google Analytics 4, and page SEO metadata for the live site.</p>
             </div>
           </div>
 
@@ -7103,7 +7142,7 @@
               <input
                 v-model="trackingConfig.gtmId"
                 type="text"
-                placeholder="GTM-PNT79WT8"
+                placeholder="GTM-WSLWFLHM"
                 class="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-xs font-mono uppercase focus:outline-none focus:border-neutral-900"
               />
             </div>
@@ -9455,20 +9494,19 @@
 
                 <span
                   v-if="cat.badge"
-                  class="absolute top-2 right-2 bg-[#F4EB6A] text-neutral-950 text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-2xs"
+                  class="absolute top-2 right-2 bg-[#F4EB6A] text-neutral-900 text-[9px] font-bold px-2 py-0.5 rounded-full"
                 >
                   {{ cat.badge }}
                 </span>
 
-                <div class="absolute bottom-2 left-2 right-2 text-white">
-                  <h4 class="text-xs font-bold truncate">{{ cat.name }}</h4>
-                  <span class="text-[10px] text-neutral-300 block truncate">{{ cat.itemCount || 0 }} items</span>
+                <div class="absolute bottom-2 left-2 right-2">
+                  <div class="text-xs font-bold text-white truncate">{{ cat.name }}</div>
                 </div>
               </div>
             </div>
 
-            <!-- Bottom Actions -->
-            <div class="pt-2 border-t border-neutral-100 flex items-center justify-between gap-1">
+            <!-- Actions Bar -->
+            <div class="flex items-center justify-between pt-2 border-t border-neutral-100">
               <button
                 type="button"
                 @click="handleToggleBannerCategory(cat)"
@@ -11265,8 +11303,30 @@ import FlowbiteIcon from './FlowbiteIcon.vue'
 import { useFirebaseAuth } from '../composables/useFirebaseAuth'
 import { useFirebaseStorage } from '../composables/useFirebaseStorage'
 import { useStoreContent } from '../composables/useStoreContent'
+import { useSiteSeo } from '../composables/useSiteSeo'
 
 const emit = defineEmits(['view-storefront', 'signed-out'])
+
+const {
+  trackingConfig,
+  pagesSeo,
+  isSavingSeo,
+  initTrackingListener,
+  updateTrackingConfig
+} = useSiteSeo()
+
+const handleSaveTracking = async () => {
+  try {
+    await updateTrackingConfig({ ...trackingConfig })
+    notify('Tracking tags & SEO settings saved and synced to the live site!', 'success')
+  } catch (err) {
+    notify(err?.message || 'Failed to save tracking settings', 'error')
+  }
+}
+
+onMounted(() => {
+  initTrackingListener()
+})
 
 const { currentUser, logout, sendTeamMemberInvite } = useFirebaseAuth()
 const {
@@ -12507,7 +12567,7 @@ const handleSettingsNavClick = () => {
   const wasOpen = settingsSubmenuOpen.value
   closeAllSubmenus()
   settingsSubmenuOpen.value = !wasOpen
-  if (settingsSubmenuOpen.value && activeSection.value !== 'settings' && activeSection.value !== 'settings-payments' && activeSection.value !== 'settings-users') {
+  if (settingsSubmenuOpen.value && activeSection.value !== 'settings' && activeSection.value !== 'settings-payments' && activeSection.value !== 'settings-users' && activeSection.value !== 'settings-seo') {
     activeSection.value = 'settings'
   }
 }
@@ -14330,6 +14390,7 @@ const openProductModal = (prod = null) => {
       tag: prod.tag || '',
       image: mainImg,
       images: existingImages.slice(0, 7),
+      shortDescription: prod.shortDescription || '',
       description: prod.description || '',
       status: prod.status || 'published',
       inStock: prod.inStock !== false,
@@ -14382,6 +14443,7 @@ const openProductModal = (prod = null) => {
       tag: '',
       image: '',
       images: [],
+      shortDescription: '',
       description: '',
       status: 'published',
       inStock: true,

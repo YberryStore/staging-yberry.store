@@ -160,8 +160,10 @@
 import { ref, computed } from 'vue'
 import FlowbiteIcon from './FlowbiteIcon.vue'
 import { useStoreContent } from '../composables/useStoreContent'
+import { useWishlist } from '../composables/useWishlist'
 
 const { showBadgePills } = useStoreContent()
+const { isInWishlist, toggleWishlistItem } = useWishlist()
 
 const props = defineProps({
   product: {
@@ -172,7 +174,7 @@ const props = defineProps({
 
 const emit = defineEmits(['add-to-cart', 'quick-view', 'toggle-wishlist', 'view-product'])
 
-const isWishlisted = ref(false)
+const isWishlisted = computed(() => isInWishlist(props.product?.id))
 const imageTrackRef = ref(null)
 const currentImageIndex = ref(0)
 
@@ -215,7 +217,7 @@ const prevCardImage = () => {
 }
 
 const toggleWishlist = () => {
-  isWishlisted.value = !isWishlisted.value
-  emit('toggle-wishlist', { product: props.product, isWishlisted: isWishlisted.value })
+  const result = toggleWishlistItem(props.product)
+  emit('toggle-wishlist', result)
 }
 </script>

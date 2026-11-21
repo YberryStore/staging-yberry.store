@@ -168,7 +168,7 @@
                 class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1.5"
               >
                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                Made to Order / Backorders Allowed
+                Pre-Order
               </span>
             </div>
 
@@ -189,9 +189,9 @@
               </span>
             </div>
 
-            <!-- Description -->
+            <!-- Short Description -->
             <p class="text-xs sm:text-sm text-neutral-500 font-light leading-relaxed mt-4 max-w-md">
-              {{ product.fullDescription || product.description }}
+              {{ product.shortDescription || product.description }}
             </p>
 
             <!-- Price -->
@@ -299,14 +299,14 @@
             <!-- Purchase Actions -->
             <div class="mt-8 flex flex-col gap-3 max-w-sm">
               <template v-if="!isOutOfStockAndBlocked">
-                <!-- Add to Cart Button -->
+                <!-- Add to Cart / Pre-Order Button -->
                 <button
                   type="button"
                   @click="addToCartHandler"
                   class="w-full bg-[#F4EB6A] hover:bg-[#FAF7BA] text-neutral-900 font-medium py-3.5 px-8 rounded-full shadow-xs flex items-center justify-center gap-2.5 transition-all text-sm sm:text-base cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
                 >
                   <img :src="useAsset('/images/cart-icon.svg')" alt="" class="w-5 h-5 object-contain filter brightness-0" />
-                  <span>Add to Cart</span>
+                  <span>{{ isPreOrder ? 'Pre-Order' : 'Add to Cart' }}</span>
                 </button>
 
                 <!-- Buy Now Button -->
@@ -1026,6 +1026,12 @@ const isOutOfStockAndBlocked = computed(() => {
     return true
   }
   return false
+})
+
+const isPreOrder = computed(() => {
+  if (!props.product) return false
+  const qty = props.product.quantity
+  return qty !== undefined && qty !== null && Number(qty) <= 0 && !!props.product.continueSellingWhenOutOfStock
 })
 
 // Disclosures & metafields accordion states
